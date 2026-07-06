@@ -4,6 +4,7 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import StockPage from './StockPage';
 import GenericSummaryReport from './dashboard/GenericSummaryReport';
+import Gstr1Report from './dashboard/Gstr1Report';
 
 // Sales Reports
 import DayWiseSales from './dashboard/DayWiseSales';
@@ -201,11 +202,16 @@ const ReportsPage = () => {
 
     return (
         <div className="dashboard-layout bg-slate-50">
-            <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
+            {/* If GSTR-1 is selected, completely bypass the wrapper and render the standalone component */}
+            {category === 'gst' && filter === 'gstr1' ? (
+                <Gstr1Report />
+            ) : (
+                <>
+                    <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
-            {isMobileSidebarOpen && window.innerWidth <= 768 && (
-                <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
-            )}
+                    {isMobileSidebarOpen && window.innerWidth <= 768 && (
+                        <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
+                    )}
 
             <main className="dashboard-main flex-1 overflow-hidden font-sans bg-slate-50 flex flex-col h-screen">
                 <Header toggleSidebar={toggleSidebar} title={getHeaderTitle()} />
@@ -234,6 +240,8 @@ const ReportsPage = () => {
                     </div>
                 </div>
             </main>
+                </>
+            )}
         </div>
     );
 };

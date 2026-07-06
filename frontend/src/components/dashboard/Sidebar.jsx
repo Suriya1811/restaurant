@@ -99,11 +99,11 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                     pageKey: "party_master"
                 },
                 { label: "Purchase Entry", route: "/dashboard/self-service/purchase", icon: <ShoppingCart size={16} />, pageKey: "purchase" },
-                { 
-                    label: "Voucher", 
-                    route: "/dashboard/self-service/vouchers", 
-                    icon: <Wallet size={16} />, 
-                    pageKey: "vouchers" 
+                {
+                    label: "Voucher",
+                    route: "/dashboard/self-service/vouchers",
+                    icon: <Wallet size={16} />,
+                    pageKey: "vouchers"
                 }
             ]
         },
@@ -130,7 +130,15 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             pageKey: "reports",
             subItems: [
                 { label: "Stock Report", route: "/dashboard/self-service/reports?category=stock&filter=all", pageKey: "reports_stock" },
-                { label: "GST Reports", route: "/dashboard/self-service/reports?category=gst&filter=gstr1", pageKey: "reports_gst" },
+                { 
+                    label: "GST Reports", 
+                    pageKey: "reports_gst",
+                    subItems: [
+                        { label: "GSTR-1", route: "/dashboard/self-service/reports?category=gst&filter=gstr1", pageKey: "reports_gst" },
+                        { label: "GSTR-2", route: "/dashboard/self-service/reports?category=gst&filter=gstr2", pageKey: "reports_gst" },
+                        { label: "GSTR-3B", route: "/dashboard/self-service/reports?category=gst&filter=gstr3b", pageKey: "reports_gst" }
+                    ]
+                },
                 { label: "Sale Summary", route: "/dashboard/self-service/reports?category=sales&filter=day", pageKey: "reports_sales" },
                 { label: "Purchase Summary", route: "/dashboard/self-service/reports?category=purchase&filter=day", pageKey: "reports_purchase" },
                 { label: "Outstanding", route: "/dashboard/self-service/reports?category=outstanding&filter=customer", pageKey: "reports_outstanding" }
@@ -142,7 +150,10 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             subItems: [
                 { label: "Daybook", route: "/dashboard/self-service/accounts/daybook", icon: <List size={16} />, pageKey: "daybook" },
                 { label: "Ledger Statement", route: "/dashboard/self-service/ledger-statement", icon: <FileText size={16} />, pageKey: "ledger_statement" },
-                { label: "Cash & Bank", route: "/dashboard/self-service/accounts/cash-bank", icon: <Landmark size={16} />, pageKey: "cash_bank" }
+                { label: "Cash & Bank", route: "/dashboard/self-service/accounts/cash-bank", icon: <Landmark size={16} />, pageKey: "cash_bank" },
+                { label: "Trial Balance", route: "/dashboard/self-service/accounts/trial-balance", icon: <BarChart size={16} />, pageKey: "trial_balance" },
+                { label: "Balance Sheet", route: "/dashboard/self-service/accounts/balance-sheet", icon: <PieChart size={16} />, pageKey: "balance_sheet" },
+                { label: "Profit & Loss", route: "/dashboard/self-service/accounts/profit-loss", icon: <TrendingUp size={16} />, pageKey: "profit_loss" }
             ]
         },
         {
@@ -171,19 +182,21 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
     const checkIsActive = (menuItem) => {
         if (menuItem.route) {
             const itemUrl = new URL(menuItem.route, window.location.origin);
-            const itemPath = itemUrl.pathname;
-            const itemTab = itemUrl.searchParams.get('tab');
-
-            const queryParams = new URLSearchParams(location.search);
-            const currentTab = queryParams.get('tab');
-
-            const isPathMatch = location.pathname === itemPath;
+            const isPathMatch = location.pathname === itemUrl.pathname;
 
             if (isPathMatch) {
-                if (currentTab) {
-                    return itemTab === currentTab;
+                const itemParams = Array.from(itemUrl.searchParams.entries());
+                const queryParams = new URLSearchParams(location.search);
+
+                if (itemParams.length > 0) {
+                    return itemParams.every(([key, value]) => queryParams.get(key) === value);
                 } else {
-                    return !itemTab;
+                    // If menu item has no parameters, but URL has distinguishing parameters (tab/category),
+                    // it means a DIFFERENT sub-item (which specifies those params) is actually active.
+                    if (queryParams.has('tab') || queryParams.has('category')) {
+                        return false;
+                    }
+                    return true;
                 }
             }
         }
@@ -224,17 +237,17 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
         if (menuItem.module && !hasModuleAccess(menuItem.module)) return false;
 
         const hasSubItems = menuItem.subItems && menuItem.subItems.length > 0;
-        
+
         // If it's a leaf node (no sub-items)
         if (!hasSubItems) {
             return menuItem.pageKey ? hasPageAccess(menuItem.pageKey) : true;
         }
-        
+
         // If it has sub-items
         // It is visible if ANY of its sub-items are visible
         const anyChildVisible = menuItem.subItems.some(sub => checkIsVisible(sub));
         const hasDirectAccess = menuItem.pageKey ? hasPageAccess(menuItem.pageKey) : false;
-        
+
         return hasDirectAccess || anyChildVisible;
     };
 
@@ -259,7 +272,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                         }}
                         style={{ cursor: 'pointer' }}
                     >
-                        <span className="nav-icon">{item.icon}</span>
+                        {!isSub && <span className="nav-icon">{item.icon}</span>}
                         {!isCollapsed && <span className="nav-label">{item.label}</span>}
                         {!isCollapsed && (
                             <span className="nav-arrow" style={{ marginLeft: 'auto' }}>

@@ -1,32 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
-import Header from '@/components/dashboard/Header';
-import {
-    Search,
-    Download,
-    Calendar,
-    Loader2,
-    FileText,
-    Printer,
-    Database,
-    TrendingUp,
-    TrendingDown,
-    ChevronLeft,
-    ChevronRight,
-    ArrowDownCircle,
-    ArrowUpCircle,
-    Activity,
-    Info,
-    Filter,
-    X,
-    Eye,
-    Landmark,
-    Building2,
-    RefreshCw,
-    Layers
-} from 'lucide-react';
-import './Dashboard.css';
+import ReportToolbar, { printReport } from '@/components/common/ReportToolbar';
+import { Loader2, Eye, X, FileText, Printer } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const LedgerStatement = () => {
     const location = useLocation();
@@ -36,9 +14,10 @@ const LedgerStatement = () => {
     const [loading, setLoading] = useState(false);
     const [ledgers, setLedgers] = useState([]);
     const [selectedLedger, setSelectedLedger] = useState('');
-    const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
+    
+    const [filters, setFilters] = useState({
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0]
     });
 
     const [statement, setStatement] = useState(null);
@@ -68,14 +47,17 @@ const LedgerStatement = () => {
     };
 
     const fetchStatementData = useCallback(async () => {
-        if (!selectedLedger) return;
+        if (!selectedLedger) {
+            setStatement(null);
+            return;
+        }
         setLoading(true);
         try {
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
             
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/reports/accounts/ledger-statement?ledgerId=${selectedLedger}&startDate=${dateRange.start}&endDate=${dateRange.end}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/reports/accounts/ledger-statement?ledgerId=${selectedLedger}&startDate=${filters.startDate}&endDate=${filters.endDate}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await res.json();
@@ -85,7 +67,7 @@ const LedgerStatement = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedLedger, dateRange]);
+    }, [selectedLedger, filters]);
 
     useEffect(() => {
         fetchLedgers();
@@ -94,7 +76,7 @@ const LedgerStatement = () => {
 
     useEffect(() => {
         if (selectedLedger) fetchStatementData();
-    }, [selectedLedger, dateRange, fetchStatementData]);
+    }, [selectedLedger, filters, fetchStatementData]);
 
     const fmt = (num) => (num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -103,205 +85,279 @@ const LedgerStatement = () => {
         setIsDrawerOpen(true);
     };
 
+    // Calculate totals for the summary cards based on the fetched data
+    let totalDebit = 0;
+    let totalCredit = 0;
+    let openingBal = 0;
+    let closingBal = 0;
+    let opType = 'Dr';
+    let clType = 'Cr';
+    
+    if (statement && statement.data) {
+        totalDebit = statement.data.reduce((a, b) => a + (b.debit || 0), 0);
+        totalCredit = statement.data.reduce((a, b) => a + (b.credit || 0), 0);
+        openingBal = Math.abs(statement.summary.openingBalance || 0);
+        opType = (statement.summary.openingBalance || 0) >= 0 ? 'Dr' : 'Cr'; // Assuming positive is debit for standard ledger, or adjust based on your specific logic
+        closingBal = Math.abs(statement.summary.currentReceivable || 0);
+        clType = (statement.summary.currentReceivable || 0) >= 0 ? 'Dr' : 'Cr';
+    }
+
     const exportToCSV = () => {
-        if (!statement || !statement.data) return;
-        const headers = ["Date", "Transaction No", "Type", "Inflow", "Outflow", "Balance", "Narration"];
+        if (!selectedLedger || !statement) return alert('Please select a ledger first');
+        const headers = ["Date", "Voucher No", "Particulars", "Vch Type", "Debit", "Credit", "Balance"];
         const rows = [
-            [new Date(dateRange.start).toLocaleDateString(), '-', 'OPENING BALANCE', '-', '-', statement.summary.openingBalance, '-'],
+            [new Date(filters.startDate).toLocaleDateString(), '-', 'Opening Balance', 'Opening', '-', '-', `${openingBal} ${opType}`],
             ...statement.data.map(d => [
                 new Date(d.date).toLocaleDateString(),
                 d.voucher_no,
+                d.narration || '-',
                 d.type,
-                d.credit,
-                d.debit,
-                d.balance,
-                d.narration
+                d.debit || '-',
+                d.credit || '-',
+                d.balance
             ])
         ];
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        rows.push(["Total", "", "", "", totalDebit, totalCredit, ""]);
+        
+        const csvContent = "data:text/csv;charset=utf-8," + 
+            "Ledger Statement\n" + 
+            `Ledger: ${statement.ledger.name} | From: ${filters.startDate} | To: ${filters.endDate}\n\n` +
+            [headers, ...rows].map(e => e.join(",")).join("\n");
+            
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `Statement_${statement.ledger.name}.csv`);
+        link.setAttribute("download", `LedgerStatement_${statement.ledger.name}.csv`);
         link.click();
     };
 
+    const exportToPDF = () => {
+        if (!selectedLedger || !statement) return alert('Please select a ledger first');
+        const doc = new jsPDF('landscape');
+        
+        doc.setFontSize(18);
+        doc.text('Ledger Statement', 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Ledger: ${statement.ledger.name}`, 14, 30);
+        doc.setFontSize(10);
+        doc.text(`Filters - From: ${filters.startDate} | To: ${filters.endDate}`, 14, 36);
+        
+        const head = [['Date', 'Voucher No', 'Particulars', 'Vch Type', 'Debit', 'Credit', 'Balance']];
+        
+        const body = [
+            [new Date(filters.startDate).toLocaleDateString(), '-', 'Opening Balance', 'Opening', '-', '-', `${fmt(openingBal)} ${opType}`],
+            ...statement.data.map(d => [
+                new Date(d.date).toLocaleDateString(),
+                d.voucher_no,
+                d.narration || '-',
+                d.type,
+                d.debit ? fmt(d.debit) : '-',
+                d.credit ? fmt(d.credit) : '-',
+                `${fmt(d.balance)}`
+            ])
+        ];
+
+        body.push([
+            { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }, 
+            { content: fmt(totalDebit), styles: { fontStyle: 'bold' } }, 
+            { content: fmt(totalCredit), styles: { fontStyle: 'bold' } }, 
+            ""
+        ]);
+
+        autoTable(doc, {
+            startY: 40,
+            head: head,
+            body: body,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], halign: 'center' },
+            styles: { fontSize: 9 },
+            columnStyles: {
+                4: { halign: 'right' },
+                5: { halign: 'right' },
+                6: { halign: 'right' }
+            }
+        });
+
+        doc.save(`LedgerStatement_${statement.ledger.name}.pdf`);
+    };
+
+    const handlePrint = () => {
+        if (!statement || !statement.data) return alert('Please select a ledger first');
+        const headers = ['Date', 'Voucher No', 'Particulars', 'Vch Type', 'Debit (Rs)', 'Credit (Rs)', 'Balance (Rs)'];
+        const rows = [
+            [new Date(filters.startDate).toLocaleDateString('en-GB'), 'OP-001', 'Opening Balance', 'Opening', '-', '-', `${fmt(openingBal)} ${opType}`],
+            ...statement.data.map(d => [
+                new Date(d.date).toLocaleDateString('en-GB'),
+                d.voucher_no,
+                d.narration || '-',
+                d.type,
+                d.debit ? fmt(d.debit) : '-',
+                d.credit ? fmt(d.credit) : '-',
+                fmt(d.balance)
+            ])
+        ];
+        printReport(
+            `Ledger Statement - ${statement.ledger.name}`,
+            `Ledger: ${statement.ledger.name} | From: ${filters.startDate} | To: ${filters.endDate}`,
+            headers,
+            rows,
+            { label: 'Total', cells: [fmt(totalDebit), fmt(totalCredit), ''] }
+        );
+    };
+
     return (
-        <div className="dashboard-layout bg-white">
+        <div className="dashboard-layout bg-slate-50 font-sans min-h-screen">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
-                <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
+                <div className="mobile-overlay z-40 fixed inset-0 bg-black/50" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
-            <main className="dashboard-main overflow-hidden font-sans">
-                <Header toggleSidebar={toggleSidebar} />
+            <style>{`
+                @media print {
+                    @page { size: landscape; margin: 10mm; }
+                    body, html, #root { background: white !important; height: auto !important; overflow: visible !important; min-height: 0 !important; }
+                    .no-print, aside, nav, .sidebar, .mobile-overlay, .top-bar { display: none !important; }
+                    .dashboard-main { padding: 0 !important; margin: 0 !important; background: white !important; height: auto !important; overflow: visible !important; }
+                    .print-section { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+                    table { border-collapse: collapse !important; width: 100% !important; }
+                    th, td { padding: 8px !important; }
+                }
+            `}</style>
 
-                <div className="dashboard-content fade-in" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', height: 'calc(100vh - 65px)', padding: '12px 16px', gap: '10px' }}>
-                    
-                    {/* ── Page Header (fixed) ── */}
-                    <div className="shrink-0 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 pb-2.5" style={{borderBottom:'1px solid #e2e8f0'}}>
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center shrink-0">
-                                <Database size={13} className="text-indigo-500" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <h2 className="text-xs font-normal text-slate-600">Ledger Statement</h2>
-                                    <span className="text-[9px] font-medium bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-wide">Audit</span>
-                                </div>
-                                <p className="text-[10px] text-slate-400">View fiscal history and audit trails for any ledger account</p>
-                            </div>
+            <main className="dashboard-main flex flex-col h-screen overflow-hidden bg-slate-50 relative">
+                <ReportToolbar 
+                    title="Ledger Statement"
+                    toggleSidebar={toggleSidebar}
+                    filters={filters}
+                    setFilters={setFilters}
+                    loading={loading}
+                    onRefresh={fetchStatementData}
+                    onExportCSV={exportToCSV}
+                    onExportPDF={exportToPDF}
+                    onPrint={handlePrint}
+                />
+
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 print-section relative">
+                    <div className="hidden print:block mb-6">
+                        <h2 className="text-2xl font-black text-slate-900 uppercase">Ledger Statement</h2>
+                        <p className="text-slate-600 font-medium">Ledger: {statement?.ledger?.name || 'N/A'}</p>
+                        <p className="text-slate-600 text-sm mt-1">Filters - From: {filters.startDate} | To: {filters.endDate}</p>
+                    </div>
+
+                    <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 mb-6">
+                        {/* Ledger Selection */}
+                        <div className="w-full xl:w-64 bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Ledger Name</label>
+                            <select 
+                                className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400"
+                                value={selectedLedger}
+                                onChange={(e) => setSelectedLedger(e.target.value)}
+                            >
+                                <option value="">Select Ledger...</option>
+                                {(() => {
+                                    const grouped = ledgers.reduce((acc, l) => {
+                                        const cat = l.group || 'OTHER';
+                                        if(!acc[cat]) acc[cat] = [];
+                                        acc[cat].push(l);
+                                        return acc;
+                                    }, {});
+                                    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, list]) => (
+                                        <optgroup key={cat} label={`── ${cat.toUpperCase()} ──`}>
+                                            {list.sort((a,b) => (a.name || '').localeCompare(b.name || '')).map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                                        </optgroup>
+                                    ));
+                                })()}
+                            </select>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border border-slate-200 bg-slate-50 p-1 rounded-lg w-full xl:w-auto">
-                            <div className="flex items-center gap-1.5 px-2 border-r border-slate-200 pr-3 min-w-[180px]">
-                                <Search size={12} className="text-indigo-400 shrink-0" />
-                                <select 
-                                    className="bg-transparent border-none focus:outline-none text-[11px] font-medium text-slate-700 w-full cursor-pointer"
-                                    value={selectedLedger}
-                                    onChange={(e) => setSelectedLedger(e.target.value)}
-                                >
-                                    <option value="">Select Ledger...</option>
-                                    {(() => {
-                                        const grouped = ledgers.reduce((acc, l) => {
-                                            const cat = l.group || 'OTHER';
-                                            if(!acc[cat]) acc[cat] = [];
-                                            acc[cat].push(l);
-                                            return acc;
-                                        }, {});
-                                        return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, list]) => (
-                                            <optgroup key={cat} label={`── ${cat.toUpperCase()} ──`}>
-                                                {list.sort((a,b) => (a.name || '').localeCompare(b.name || '')).map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
-                                            </optgroup>
-                                        ));
-                                    })()}
-                                </select>
+                        {/* Summary Cards */}
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Opening Balance (Dr.)</span>
+                                <span className="text-lg font-black text-orange-600">₹ {fmt(openingBal)} {opType}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 px-2">
-                                <Calendar size={12} className="text-slate-400 shrink-0" />
-                                <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({...p, start: e.target.value}))} className="bg-transparent border-none outline-none text-[11px] font-medium text-slate-700 w-[100px]"/>
-                                <span className="text-slate-300 text-xs">–</span>
-                                <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({...p, end: e.target.value}))} className="bg-transparent border-none outline-none text-[11px] font-medium text-slate-700 w-[100px]"/>
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Debit</span>
+                                <span className="text-lg font-black text-blue-600">₹ {fmt(totalDebit)}</span>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Credit</span>
+                                <span className="text-lg font-black text-blue-600">₹ {fmt(totalCredit)}</span>
+                            </div>
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Closing Balance (Cr.)</span>
+                                <span className="text-lg font-black text-orange-600">₹ {fmt(closingBal)} {clType}</span>
                             </div>
                         </div>
                     </div>
 
                     {statement ? (
-                        <>
-                        {/* ── Summary Cards (fixed) ── */}
-                        <div className="shrink-0 grid grid-cols-3 gap-2.5">
-                            {[
-                                { label: 'Total Debits', value: statement.summary.totalSales, icon: <TrendingUp size={13}/>, color: 'indigo' },
-                                { label: 'Amount Received', value: statement.summary.totalReceived, icon: <ArrowDownCircle size={13}/>, color: 'emerald' },
-                                { label: 'Net Receivable', value: statement.summary.currentReceivable, icon: <Activity size={13}/>, color: 'slate' },
-                            ].map((c, i) => (
-                                <div key={i} className="bg-white border border-slate-200 rounded-lg flex items-center gap-2.5 p-2.5">
-                                    <div className={`w-7 h-7 rounded-md bg-${c.color}-50 flex items-center justify-center text-${c.color}-500 shrink-0`}>
-                                        {c.icon}
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wide">{c.label}</p>
-                                        <p className={`text-sm font-bold text-${c.color === 'slate' ? 'slate-800' : c.color + '-600'} leading-tight mt-0.5`}>₹{fmt(c.value)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* ── Toolbar (fixed) ── */}
-                        <div className="shrink-0 flex items-center justify-between gap-2 pb-1" style={{borderBottom:'1px solid #f1f5f9'}}>
-                            <span className="text-[10px] text-slate-500">Viewing: <span className="font-semibold text-slate-700">{statement.ledger.name}</span></span>
-                            <div className="flex items-center gap-2">
-                                <button onClick={exportToCSV} className="h-7 px-3 bg-white border border-slate-200 rounded text-[10px] font-medium text-slate-600 hover:border-slate-400 transition-all flex items-center gap-1.5">
-                                    <Download size={11} /> Export CSV
-                                </button>
-                                <button onClick={() => window.print()} className="h-7 px-3 bg-slate-800 text-white rounded text-[10px] font-medium hover:bg-slate-700 transition-all flex items-center gap-1.5">
-                                    <Printer size={11} /> Print
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* ── Table Section (scrollable only) ── */}
-                        <div className="flex-1 min-h-0 overflow-y-auto border border-slate-200 rounded-lg bg-white">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-50 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10">
-                                    <tr>
-                                        <th className="px-3 py-2 bg-slate-50">Date</th>
-                                        <th className="px-3 py-2 text-center bg-slate-50">Ref No.</th>
-                                        <th className="px-3 py-2 bg-slate-50">Type</th>
-                                        <th className="px-3 py-2 text-right text-emerald-700 bg-emerald-50/30">Inflow (Cr)</th>
-                                        <th className="px-3 py-2 text-right text-rose-700 bg-rose-50/30 border-r border-slate-100">Outflow (Dr)</th>
-                                        <th className="px-3 py-2 text-right text-slate-700 bg-slate-100/50">Balance</th>
-                                        <th className="px-3 py-2 text-center bg-slate-50 w-10"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 text-xs">
-                                    {/* Opening Balance Row */}
-                                    <tr className="bg-slate-50/60">
-                                        <td className="px-3 py-2 text-[10px] font-medium text-slate-500">{new Date(dateRange.start).toLocaleDateString('en-GB')}</td>
-                                        <td className="px-3 py-2 text-center text-slate-300 text-[10px]">—</td>
-                                        <td className="px-3 py-2">
-                                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Opening Balance</span>
-                                        </td>
-                                        <td className="px-3 py-2 text-right text-slate-300 font-medium">—</td>
-                                        <td className="px-3 py-2 text-right text-slate-300 font-medium border-r border-slate-100">—</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-slate-700">₹{fmt(statement.summary.openingBalance)}</td>
-                                        <td className="px-3 py-2"></td>
-                                    </tr>
-
-                                    {statement.data.map((d, i) => (
-                                        <tr key={i} className="hover:bg-slate-50 group transition-colors cursor-pointer" onClick={() => handleRowClick(d)}>
-                                            <td className="px-3 py-2 text-slate-600 font-medium whitespace-nowrap">
-                                                {new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                            </td>
-                                            <td className="px-3 py-2 text-center">
-                                                <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{d.voucher_no}</span>
-                                            </td>
-                                            <td className="px-3 py-2">
-                                                <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wide">{d.type}</span>
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-medium text-emerald-600">
-                                                {d.credit > 0 ? `₹${fmt(d.credit)}` : <span className="text-slate-200">—</span>}
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-medium text-rose-600 border-r border-slate-100">
-                                                {d.debit > 0 ? `₹${fmt(d.debit)}` : <span className="text-slate-200">—</span>}
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-semibold text-slate-800">₹{fmt(d.balance)}</td>
-                                            <td className="px-3 py-2 text-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="w-5 h-5 rounded bg-slate-100 text-slate-500 flex items-center justify-center mx-auto hover:bg-slate-800 hover:text-white transition-colors">
-                                                    <Eye size={9} />
-                                                </div>
-                                            </td>
+                        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[300px]">
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-left min-w-[900px]">
+                                    <thead className="bg-[#0f172a] text-white sticky top-0 z-10">
+                                        <tr>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700">Date</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-center">Voucher No.</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700">Particulars</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-center">Vch Type</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Debit (₹)</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Credit (₹)</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 text-right border-r border-slate-700">Balance (₹)</th>
+                                            <th className="px-2 py-3 w-10 border-slate-700 no-print"></th>
                                         </tr>
-                                    ))}
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        <tr className="bg-slate-50">
+                                            <td className="px-4 py-3 text-xs font-semibold text-slate-700">{new Date(filters.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                            <td className="px-4 py-3 text-xs text-center text-slate-400">OP-001</td>
+                                            <td className="px-4 py-3 text-xs font-bold text-slate-700">Opening Balance</td>
+                                            <td className="px-4 py-3 text-xs text-center text-slate-600">Opening</td>
+                                            <td className="px-4 py-3 text-xs text-right text-slate-400">-</td>
+                                            <td className="px-4 py-3 text-xs text-right text-slate-400">-</td>
+                                            <td className="px-4 py-3 text-xs text-right font-bold text-orange-600">{fmt(openingBal)} {opType}</td>
+                                            <td className="px-2 py-3 no-print"></td>
+                                        </tr>
 
-                                    {/* Closing Total Row */}
-                                    <tr className="bg-slate-800 text-white">
-                                        <td className="px-3 py-2.5 text-[10px] font-medium text-slate-400" colSpan={3}>Closing Balance</td>
-                                        <td className="px-3 py-2.5 text-right font-semibold text-emerald-400 text-xs">₹{fmt(statement.data.reduce((a,b)=>a+b.credit, 0))}</td>
-                                        <td className="px-3 py-2.5 text-right font-semibold text-rose-400 text-xs border-r border-white/10">₹{fmt(statement.data.reduce((a,b)=>a+b.debit, 0))}</td>
-                                        <td className="px-3 py-2.5 text-right font-bold text-white text-sm">₹{fmt(statement.summary.currentReceivable)}</td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        </>
-                    ) : (
-                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg bg-slate-50">
-                            <div className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center mb-3 shadow-sm">
-                                <Database size={22} className="text-slate-300" />
+                                        {statement.data.map((d, i) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => handleRowClick(d)}>
+                                                <td className="px-4 py-3 text-xs font-semibold text-slate-700">{new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                                <td className="px-4 py-3 text-xs text-center text-slate-600">{d.voucher_no}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-800">{d.narration || '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-center text-slate-600">{d.type}</td>
+                                                <td className="px-4 py-3 text-xs text-right font-medium text-slate-800">{d.debit > 0 ? fmt(d.debit) : '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-right font-medium text-slate-800">{d.credit > 0 ? fmt(d.credit) : '-'}</td>
+                                                <td className="px-4 py-3 text-xs text-right font-bold text-orange-600">{fmt(d.balance)}</td>
+                                                <td className="px-2 py-3 text-center opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                                                    <div className="w-5 h-5 rounded bg-slate-200 text-slate-600 flex items-center justify-center mx-auto hover:bg-slate-800 hover:text-white transition-colors">
+                                                        <Eye size={10} />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t-2 border-orange-100">
+                                        <tr>
+                                            <td className="px-4 py-3 text-sm font-black text-slate-900" colSpan={4}>Total</td>
+                                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">₹ {fmt(totalDebit)}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">₹ {fmt(totalCredit)}</td>
+                                            <td className="px-4 py-3"></td>
+                                            <td className="px-2 py-3 no-print"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                            <p className="text-xs font-medium text-slate-400 mb-1">No Ledger Selected</p>
-                            <p className="text-[10px] text-slate-300 max-w-xs text-center">Select a ledger account from the dropdown above to view its statement</p>
                         </div>
-                    )}
-
-                    {loading && (
-                        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center">
-                            <Loader2 size={32} className="text-indigo-500 animate-spin mb-2" />
-                            <p className="text-slate-600 font-medium text-xs">Loading statement...</p>
+                    ) : (
+                        <div className="flex-1 min-h-[400px] flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg bg-white">
+                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                <FileText size={24} className="text-slate-300" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-600 mb-1">No Ledger Selected</p>
+                            <p className="text-xs text-slate-400 max-w-xs text-center">Select a ledger account from the dropdown above to view its statement</p>
                         </div>
                     )}
                 </div>
@@ -310,7 +366,7 @@ const LedgerStatement = () => {
                 <div className={`fixed inset-0 z-[200] transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)}></div>
                     <div className={`absolute top-0 right-0 w-full max-w-[480px] h-full bg-white shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.15)] transition-transform duration-500 ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                        {selectedTransaction && (
+                        {selectedTransaction && statement && (
                             <div className="flex flex-col h-full bg-white">
                                 <div className="p-10 border-b border-slate-50 flex items-center justify-between">
                                     <div>
@@ -373,8 +429,6 @@ const LedgerStatement = () => {
                     </div>
                 </div>
             </main>
-
-
         </div>
     );
 };

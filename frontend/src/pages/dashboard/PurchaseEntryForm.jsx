@@ -6,7 +6,7 @@ import './Dashboard.css';
 import './PurchaseEntryForm.css';
 import {
     Settings, ChevronDown, Plus, Trash2, Loader2,
-    Upload, FileText, BarChart2, Printer, Save
+    Upload, FileText, BarChart2, Printer, Save, XCircle
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
@@ -429,23 +429,45 @@ export default function PurchaseEntryForm() {
                                 <Upload size={14} /> 
                                 <span className="text-[10px] uppercase font-black">Import</span>
                             </button>
-                            <div className="relative">
+                            <div>
                                 <button className="btn-premium-primary !py-2 !px-3 !bg-slate-100 !text-slate-700" title="Column Settings"
-                                    onClick={() => setShowColSettings(!showColSettings)}>
+                                    onClick={() => setShowColSettings(true)}>
                                     <Settings size={16} />
                                 </button>
                                 {showColSettings && (
-                                    <div className="absolute top-full right-0 mt-2 w-64 bg-white shadow-2xl rounded-2xl z-[500] border border-slate-100 p-4">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Display Columns</h4>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {Object.keys(colConfig).map(k => (
-                                                <label key={k} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition-colors">
-                                                    <input type="checkbox" checked={colConfig[k]} 
-                                                        onChange={() => setColConfig(prev => ({...prev, [k]: !prev[k]})) }
-                                                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500" />
-                                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{k.replace('_', ' ')}</span>
-                                                </label>
-                                            ))}
+                                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
+                                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                                            {/* Modal Header */}
+                                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                                <div>
+                                                    <h3 className="text-lg font-black text-slate-800 tracking-tight">Display Columns</h3>
+                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Configure active table grid columns</p>
+                                                </div>
+                                                <button onClick={() => setShowColSettings(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                                    <XCircle size={20} className="text-slate-400" />
+                                                </button>
+                                            </div>
+
+                                            {/* Modal Body */}
+                                            <div className="p-6">
+                                                <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1">
+                                                    {Object.keys(colConfig).map(k => (
+                                                        <label key={k} className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2.5 rounded-xl border border-slate-100 transition-all">
+                                                            <input type="checkbox" checked={colConfig[k]} 
+                                                                onChange={() => setColConfig(prev => ({...prev, [k]: !prev[k]})) }
+                                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300" />
+                                                            <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{k.replace('_', ' ')}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Modal Footer */}
+                                            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+                                                <button onClick={() => setShowColSettings(false)} className="w-full py-3 bg-slate-900 hover:bg-black text-white text-center rounded-xl font-bold tracking-widest uppercase text-xs transition-all">
+                                                    Done
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

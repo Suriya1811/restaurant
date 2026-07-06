@@ -80,6 +80,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    tax_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Tax'
+    },
     unit: {
         type: String,
         trim: true

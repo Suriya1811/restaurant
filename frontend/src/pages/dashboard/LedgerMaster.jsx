@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/dashboard/Header';
 import Sidebar from '../../components/dashboard/Sidebar';
-import { 
-    Save, X, Calendar, User, Phone, Mail, Hash, CreditCard, 
-    MapPin, Building, Briefcase, ChevronLeft, Layers, 
-    ChevronDown, Search, PlusCircle, Edit, Trash2, 
+import {
+    Save, X, Calendar, User, Phone, Mail, Hash, CreditCard,
+    MapPin, Building, Briefcase, ChevronLeft, Layers,
+    ChevronDown, Search, PlusCircle, Edit, Trash2,
     Loader2, AlertCircle, CheckCircle2, XCircle, ChevronRight,
     ArrowRight, Globe, Info, Clock, MoreVertical, RefreshCw, FileText, Printer
 } from 'lucide-react';
@@ -175,7 +175,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 ...formData,
                 print_name: formData.print_name || formData.name
             };
-            
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -291,7 +291,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         }
         const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.key) && c.key !== 'action');
         const headers = activeColumns.map(c => c.label);
-        
+
         const rows = filteredLedgers.map((l, index) => {
             return activeColumns.map(col => {
                 switch (col.key) {
@@ -313,8 +313,12 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 }
             }).map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',');
         });
-        
-        const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
+
+        const filterText = `Filters - Group: ${groupFilter} | Active Type: ${activeTypeFilter}${searchTerm ? ` | Search: "${searchTerm}"` : ''}`;
+        const csvContent = "data:text/csv;charset=utf-8," +
+            "Ledger Master Report\n" +
+            filterText + "\n\n" +
+            headers.join(',') + "\n" + rows.join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -331,17 +335,22 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         }
 
         const doc = new jsPDF('landscape');
-        
+
         doc.setFontSize(18);
         doc.text('Ledger Master Report', 14, 22);
-        
+
         doc.setFontSize(11);
         doc.setTextColor(100);
         doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 30);
-        
+
+        const filterText = `Filters - Group: ${groupFilter} | Active Type: ${activeTypeFilter}${searchTerm ? ` | Search: "${searchTerm}"` : ''}`;
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.text(filterText, 14, 36);
+
         const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.key) && c.key !== 'action');
         const head = [activeColumns.map(c => c.label)];
-        
+
         const body = filteredLedgers.map((l, index) => {
             return activeColumns.map(col => {
                 switch (col.key) {
@@ -365,7 +374,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         });
 
         autoTable(doc, {
-            startY: 36,
+            startY: 42,
             head: head,
             body: body,
             theme: 'grid',
@@ -464,10 +473,65 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     .ledger-action-menu button:hover {
                         background: #F8FAFC;
                     }
+                    @media print {
+                        @page { size: landscape; margin: 10mm; }
+                        body, html, #root {
+                            background: white !important;
+                            height: auto !important;
+                            min-height: 0 !important;
+                            overflow: visible !important;
+                            -webkit-print-color-adjust: exact;
+                        }
+                        .no-print, aside, nav, .sidebar, .mobile-overlay {
+                            display: none !important;
+                        }
+                        .dashboard-layout {
+                            display: block !important;
+                            height: auto !important;
+                            overflow: visible !important;
+                        }
+                        .dashboard-main {
+                            display: block !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            height: auto !important;
+                            min-height: 0 !important;
+                            width: 100% !important;
+                            background: white !important;
+                            overflow: visible !important;
+                        }
+                        .dashboard-content {
+                            border: none !important;
+                            box-shadow: none !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            overflow: visible !important;
+                        }
+                        .bg-white.rounded-xl.border.border-slate-200.shadow-sm.overflow-hidden.mb-6 {
+                            border: none !important;
+                            box-shadow: none !important;
+                            margin: 0 !important;
+                            overflow: visible !important;
+                        }
+                        .overflow-x-auto, .overflow-hidden, [class*="overflow-"] {
+                            overflow: visible !important;
+                        }
+                        table {
+                            width: 100% !important;
+                            page-break-inside: auto;
+                        }
+                        tr {
+                            page-break-inside: avoid;
+                            page-break-after: auto;
+                        }
+                        thead {
+                            display: table-header-group;
+                        }
+                    }
                 `}</style>
 
                 {/* Header Section */}
-                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-white shadow-sm">
+                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-white shadow-sm no-print">
                     <h2 className="text-xl font-bold text-slate-800 tracking-tight">Ledger Master</h2>
                     <div className="flex items-center gap-2">
                         <button onClick={exportToCSV} className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors">
@@ -482,22 +546,32 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         <button onClick={() => { resetForm(); setShowDrawer(true); }} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm uppercase tracking-wide">
                             <PlusCircle size={16} /> Create Ledger
                         </button>
-                        <button onClick={() => navigate('/dashboard')} className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors uppercase tracking-wide">
+                        <button onClick={() => navigate('/dashboard/self-service/home')} className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors uppercase tracking-wide">
                             <X size={16} /> Close
                         </button>
                     </div>
                 </div>
 
-                <div className="dashboard-content">
+                <div className="dashboard-content print-section">
+                    {/* Print Only Header */}
+                    <div className="hidden print:block mb-6">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Ledger Master Report</h2>
+                        <p className="text-sm text-slate-500 mb-1">Generated on: {new Date().toLocaleString('en-GB')}</p>
+                        <p className="text-sm text-slate-500 font-semibold">
+                            Filters - Group: {groupFilter} | Active Type: {activeTypeFilter}
+                            {searchTerm && ` | Search: "${searchTerm}"`}
+                        </p>
+                    </div>
+
                     {/* Filters Toolbar */}
-                    <div className="flex items-end justify-between gap-4 flex-wrap mb-6 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex items-end justify-between gap-4 flex-wrap mb-6 bg-white p-4 rounded-xl border border-slate-100 shadow-sm no-print">
                         <div className="flex items-center gap-4 flex-1 min-w-[300px]">
                             {/* Search bar */}
                             <div className="relative flex-1 min-w-[200px]">
                                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search by Name, Print Name, Mobile No, GST No..." 
+                                <input
+                                    type="text"
+                                    placeholder="Search by Name, Print Name, Mobile No, GST No..."
                                     className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md text-sm outline-none focus:border-indigo-500 transition-colors"
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -507,8 +581,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             {/* Group Filter */}
                             <div className="flex flex-col">
                                 <span className="filter-label">Group Filter</span>
-                                <select 
-                                    value={groupFilter} 
+                                <select
+                                    value={groupFilter}
                                     onChange={e => { setGroupFilter(e.target.value); setCurrentPage(1); }}
                                     className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
                                 >
@@ -521,8 +595,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             {/* Active type filter */}
                             <div className="flex flex-col">
                                 <span className="filter-label">Active Type</span>
-                                <select 
-                                    value={activeTypeFilter} 
+                                <select
+                                    value={activeTypeFilter}
                                     onChange={e => { setActiveTypeFilter(e.target.value); setCurrentPage(1); }}
                                     className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
                                 >
@@ -538,11 +612,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         </div>
 
                         {/* Columns Selection Dropdown */}
-                        <div className="relative">
-                            <button 
+                        <div>
+                            <button
                                 onClick={() => {
                                     setTempVisibleColumns(visibleColumns);
-                                    setShowColumnDropdown(!showColumnDropdown);
+                                    setShowColumnDropdown(true);
                                 }}
                                 className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-slate-700 bg-white"
                             >
@@ -550,37 +624,42 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             </button>
 
                             {showColumnDropdown && (
-                                <div className="absolute right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl w-60 z-30 p-4 animate-in fade-in slide-in-from-top-1 duration-150">
-                                    <h4 className="font-bold text-xs text-slate-700 uppercase tracking-widest border-b border-slate-100 pb-2 mb-3">Visible Columns</h4>
-                                    <div className="max-h-60 overflow-y-auto space-y-2 mb-4 pr-1">
-                                        {ALL_COLUMNS.map(col => (
-                                            <label key={col.key} className="flex items-center gap-2 cursor-pointer py-0.5 hover:bg-slate-50 rounded px-1 transition-colors">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={tempVisibleColumns.includes(col.key)} 
-                                                    onChange={() => toggleTempColumn(col.key)}
-                                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
-                                                />
-                                                <span className="text-xs font-semibold text-slate-700">{col.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    <div className="flex justify-between border-t border-slate-100 pt-3">
-                                        <button 
-                                            onClick={() => setTempVisibleColumns(DEFAULT_COLUMNS)} 
-                                            className="px-3 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-500 hover:bg-slate-50 uppercase tracking-wide"
-                                        >
-                                            Reset
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setVisibleColumns(tempVisibleColumns);
-                                                setShowColumnDropdown(false);
-                                            }} 
-                                            className="px-4 py-1 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-700 uppercase tracking-wide"
-                                        >
-                                            Apply
-                                        </button>
+                                <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center animate-in fade-in duration-200" onClick={() => setShowColumnDropdown(false)}>
+                                    <div className="bg-white rounded-xl shadow-xl w-80 max-w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                                        <div className="flex justify-between items-center p-4 border-b border-slate-100">
+                                            <h4 className="font-bold text-sm text-slate-700 uppercase tracking-widest">Visible Columns</h4>
+                                            <button onClick={() => setShowColumnDropdown(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                                        </div>
+                                        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                                            {ALL_COLUMNS.map(col => (
+                                                <label key={col.key} className="flex items-center gap-3 cursor-pointer py-1 hover:bg-slate-50 rounded px-2 transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={tempVisibleColumns.includes(col.key)}
+                                                        onChange={() => toggleTempColumn(col.key)}
+                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-slate-300"
+                                                    />
+                                                    <span className="text-sm font-semibold text-slate-700">{col.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-between items-center p-4 border-t border-slate-100 bg-slate-50">
+                                            <button
+                                                onClick={() => setTempVisibleColumns(DEFAULT_COLUMNS)}
+                                                className="px-4 py-2 border border-slate-200 bg-white rounded text-xs font-bold text-slate-600 hover:bg-slate-50 uppercase tracking-wide"
+                                            >
+                                                Reset
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setVisibleColumns(tempVisibleColumns);
+                                                    setShowColumnDropdown(false);
+                                                }}
+                                                className="px-6 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 uppercase tracking-wide shadow-sm"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -607,7 +686,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                         {columnVisible('gst') && <th className="py-3.5 px-5">GST Number</th>}
                                         {columnVisible('reg_type') && <th className="py-3.5 px-5">Registration Type</th>}
                                         {columnVisible('state') && <th className="py-3.5 px-5">State</th>}
-                                        {columnVisible('action') && <th className="py-3.5 px-5 text-center w-24">Action</th>}
+                                        {columnVisible('action') && <th className="py-3.5 px-5 text-center w-24 no-print">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
@@ -627,8 +706,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                             <tr key={ledger._id} className="hover:bg-slate-50/50 transition-colors">
                                                 {columnVisible('name') && (
                                                     <td className="py-4 px-5">
-                                                        <button 
-                                                            onClick={() => handleEdit(ledger)} 
+                                                        <button
+                                                            onClick={() => handleEdit(ledger)}
                                                             className="font-bold text-blue-600 hover:underline text-left outline-none"
                                                         >
                                                             {ledger.name}
@@ -652,19 +731,18 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 {columnVisible('gst') && <td className="py-4 px-5 font-mono font-semibold uppercase text-slate-600">{ledger.gstin || '—'}</td>}
                                                 {columnVisible('reg_type') && (
                                                     <td className="py-4 px-5 font-bold">
-                                                        <span className={`px-2 py-0.5 rounded text-xs ${
-                                                            ledger.registration_type === 'Regular' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                                                            ledger.registration_type === 'Composition' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
-                                                            'bg-amber-50 text-amber-600 border border-amber-100'
-                                                        }`}>
+                                                        <span className={`px-2 py-0.5 rounded text-xs ${ledger.registration_type === 'Regular' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                                ledger.registration_type === 'Composition' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+                                                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                                            }`}>
                                                             {ledger.registration_type || 'Regular'}
                                                         </span>
                                                     </td>
                                                 )}
                                                 {columnVisible('state') && <td className="py-4 px-5 font-semibold text-slate-600">{ledger.state || '—'}</td>}
                                                 {columnVisible('action') && (
-                                                    <td className="py-4 px-5 text-center relative">
-                                                        <button 
+                                                    <td className="py-4 px-5 text-center relative no-print">
+                                                        <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setActiveActionMenuId(activeActionMenuId === ledger._id ? null : ledger._id);
@@ -705,38 +783,37 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                     {/* Pagination Controls */}
                     {!loading && filteredLedgers.length > 0 && (
-                        <div className="flex justify-between items-center mt-4">
+                        <div className="flex justify-between items-center mt-4 no-print">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                                 Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLedgers.length)} of {filteredLedgers.length} entries
                             </span>
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1.5">
-                                    <button 
+                                    <button
                                         disabled={currentPage === 1}
                                         onClick={() => setCurrentPage(currentPage - 1)}
                                         className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
                                     >
                                         <ChevronLeft size={16} />
                                     </button>
-                                    
+
                                     {Array.from({ length: totalPages }).map((_, idx) => {
                                         const p = idx + 1;
                                         return (
-                                            <button 
-                                                key={p} 
+                                            <button
+                                                key={p}
                                                 onClick={() => setCurrentPage(p)}
-                                                className={`w-8 h-8 rounded border text-xs font-bold uppercase ${
-                                                    currentPage === p 
+                                                className={`w-8 h-8 rounded border text-xs font-bold uppercase ${currentPage === p
                                                         ? 'bg-blue-600 border-blue-600 text-white shadow'
                                                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                }`}
+                                                    }`}
                                             >
                                                 {p}
                                             </button>
                                         );
                                     })}
-                                    
-                                    <button 
+
+                                    <button
                                         disabled={currentPage === totalPages}
                                         onClick={() => setCurrentPage(currentPage + 1)}
                                         className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
@@ -767,8 +844,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             <h2 className="text-xl font-bold uppercase tracking-wide text-slate-800">
                                 {isEditing ? 'Modify Account Details' : 'Ledger Creation'}
                             </h2>
-                            <button 
-                                onClick={() => { resetForm(); setShowDrawer(false); }} 
+                            <button
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
                                 className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
                             >
                                 <X size={16} /> Close
@@ -1012,9 +1089,9 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                                 {/* Save Button */}
                                 <div className="flex justify-center mt-8 border-t border-slate-100 pt-6">
-                                    <button 
-                                        type="submit" 
-                                        disabled={saving} 
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
                                         className="px-10 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md"
                                     >
                                         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} SAVE

@@ -19,6 +19,7 @@ import {
     Calendar,
     CreditCard,
     Users,
+    Camera,
     X
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';

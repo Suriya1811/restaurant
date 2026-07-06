@@ -140,139 +140,145 @@ const GroupMaster = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
-            <main className="dashboard-main overflow-hidden font-sans">
+            <main className="dashboard-main flex flex-col h-screen relative" style={{ overflowY: 'auto' }}>
                 <Header
                     toggleSidebar={toggleSidebar}
                     title="Group Master"
                     actions={
-                        <button className="h-8 px-4 bg-slate-900 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shadow-sm" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={13} /> New Group
+                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                            <PlusCircle size={18} />
+                            <span className="text-[10px] uppercase font-black">New Group</span>
                         </button>
                     }
                 />
 
-                <div className="dashboard-content fade-in p-3 max-w-[2000px] mx-auto w-full gap-3" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', height: 'calc(100vh - 65px)' }}>
-
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-shrink-0">
-                        <div className="flex items-center gap-2">
-                            <Layers size={18} className="text-indigo-500" />
-                            <h2 className="text-base font-bold text-slate-800 tracking-tight">Ledger Groups</h2>
-                            <span className="text-[9px] font-semibold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-wider">Master</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 hidden sm:block">Organize ledger accounts by group and nature classification.</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
+                <div className="p-6 bg-slate-100 fade-in flex flex-col gap-4">
+                    
+                    {/* Nature Cards Summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                         {Object.entries(NATURE_CONFIG).map(([key, cfg]) => (
                             <button
                                 key={key}
                                 onClick={() => setFilterNature(filterNature === key ? 'ALL' : key)}
-                                className={`bg-white p-2.5 rounded-xl border shadow-sm flex items-center gap-3 transition-all hover:shadow-md hover:-translate-y-0.5 text-left ${filterNature === key ? 'border-slate-900 ring-1 ring-slate-900' : 'border-slate-200/80'
-                                    }`}
+                                className={`bg-white p-3.5 rounded-xl border flex items-center gap-4 transition-all hover:shadow-md ${
+                                    filterNature === key 
+                                    ? 'border-indigo-600 ring-2 ring-indigo-600/10 shadow-sm shadow-indigo-100' 
+                                    : 'border-slate-200/80 shadow-sm'
+                                }`}
                             >
-                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: cfg.bg, color: cfg.color }}>
                                     {cfg.icon}
                                 </div>
                                 <div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{cfg.label}</p>
-                                    <h4 className="text-base font-extrabold text-slate-800 leading-none mt-0.5">{natureCounts[key] || 0}</h4>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{cfg.label}</p>
+                                    <h4 className="text-xl font-black text-slate-800 leading-none mt-1">{natureCounts[key] || 0}</h4>
                                 </div>
                             </button>
                         ))}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0">
-                        <div className="relative w-full sm:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+                    <div className="toolbar-premium">
+                        <div className="search-premium">
+                            <Search size={20} />
                             <input
                                 type="text"
                                 placeholder="Search groups..."
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-9 pr-3 text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200/60">
-                            {['ALL', 'ASSETS', 'LIABILITIES', 'INCOME', 'EXPENSES'].map(n => (
-                                <button key={n} onClick={() => setFilterNature(n)}
-                                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${filterNature === n ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'
-                                        }`}>
-                                    {n}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200/60">
+                                {['ALL', 'ASSETS', 'LIABILITIES', 'INCOME', 'EXPENSES'].map(n => (
+                                    <button 
+                                        key={n} 
+                                        onClick={() => setFilterNature(n)}
+                                        className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            filterNature === n 
+                                            ? 'bg-white text-slate-900 shadow-sm font-black' 
+                                            : 'text-slate-500 hover:text-slate-800'
+                                        }`}
+                                    >
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-sm">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-slate-50 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10">
+                    <div className="table-container-premium">
+                        <table className="table-premium">
+                            <thead>
                                 <tr>
-                                    <th className="p-2.5 bg-slate-50">Group Name</th>
-                                    <th className="p-2.5 bg-slate-50">Parent Group</th>
-                                    <th className="p-2.5 bg-slate-50">Nature</th>
-                                    <th className="p-2.5 bg-slate-50">Type</th>
-                                    <th className="p-2.5 text-right bg-slate-50">Actions</th>
+                                    <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>Group Name</th>
+                                    <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>Parent Group</th>
+                                    <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>Nature</th>
+                                    <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>Type</th>
+                                    <th className="text-right" style={{ fontSize: '11px', letterSpacing: '0.05em' }}>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50 text-xs">
+                            <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="5" className="p-8 text-center text-slate-400">
-                                        <Loader2 className="animate-spin text-indigo-500 mb-2 mx-auto" size={24} />
-                                        <p className="text-[9px] font-bold uppercase tracking-wider">Loading Groups...</p>
-                                    </td></tr>
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-10 text-slate-400">
+                                            <Loader2 className="animate-spin text-indigo-600 mb-2 mx-auto" size={24} />
+                                            <p className="text-[10px] font-black uppercase tracking-wider">Loading Groups...</p>
+                                        </td>
+                                    </tr>
                                 ) : filteredGroups.length === 0 ? (
-                                    <tr><td colSpan="5" className="p-8 text-center">
-                                        <Layers size={36} className="mx-auto mb-2 text-slate-200" />
-                                        <p className="font-bold text-slate-300 uppercase tracking-widest text-[9px]">No Groups Found</p>
-                                    </td></tr>
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-10">
+                                            <Layers size={36} className="mx-auto mb-2 text-slate-200" />
+                                            <p className="font-black text-slate-300 uppercase tracking-widest text-[10px]">No Groups Found</p>
+                                        </td>
+                                    </tr>
                                 ) : filteredGroups.map(group => {
                                     const cfg = NATURE_CONFIG[group.nature] || NATURE_CONFIG.ASSETS;
                                     return (
-                                        <tr key={group._id} className="hover:bg-slate-50/40 group/row transition-all">
-                                            <td className="p-2.5">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover/row:scale-110"
-                                                        style={{ background: cfg.bg, color: cfg.color }}>
-                                                        <Layers size={13} />
+                                        <tr key={group._id} className="group/row">
+                                            <td style={{ fontSize: '13px' }}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-slate-50 text-slate-500 group-hover/row:bg-indigo-50 group-hover/row:text-indigo-600 transition-colors">
+                                                        <Layers size={14} />
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-slate-900 text-[12px]">{group.name}</div>
+                                                        <div className="font-bold text-[14px] text-[#0F172A]">{group.name}</div>
                                                         {group.description && (
-                                                            <div className="text-[9px] text-slate-400 mt-0.5 max-w-[200px] truncate">{group.description}</div>
+                                                            <div className="text-[11px] text-slate-400 mt-0.5 max-w-[250px] truncate">{group.description}</div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-2.5">
+                                            <td style={{ fontSize: '13px' }}>
                                                 {group.parent ? (
-                                                    <span className="px-2 py-0.5 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-100">{group.parent}</span>
+                                                    <span className="px-2.5 py-1 bg-slate-100 rounded text-[11px] font-bold text-slate-600 border border-slate-200">{group.parent}</span>
                                                 ) : (
-                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Primary</span>
+                                                    <span className="text-[11px] font-bold text-slate-300 uppercase">Primary</span>
                                                 )}
                                             </td>
-                                            <td className="p-2.5">
-                                                <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest"
+                                            <td style={{ fontSize: '13px' }}>
+                                                <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest"
                                                     style={{ background: cfg.bg, color: cfg.color }}>
                                                     {cfg.label}
                                                 </span>
                                             </td>
-                                            <td className="p-2.5">
+                                            <td style={{ fontSize: '13px' }}>
                                                 {group.is_system ? (
-                                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-blue-100">System</span>
+                                                    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase border border-blue-100">System</span>
                                                 ) : (
-                                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100">Custom</span>
+                                                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-black uppercase border border-emerald-100">Custom</span>
                                                 )}
                                             </td>
-                                            <td className="p-2.5 text-right">
-                                                <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                            <td>
+                                                <div className="flex justify-end gap-2">
                                                     <button onClick={() => handleEdit(group)}
-                                                        className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all">
-                                                        <Edit size={12} />
+                                                        className="action-icon-btn edit">
+                                                        <Edit size={16} />
                                                     </button>
                                                     {!group.is_system && (
                                                         <button onClick={() => handleDelete(group)}
-                                                            className="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all">
-                                                            <Trash2 size={12} />
+                                                            className="action-icon-btn delete">
+                                                            <Trash2 size={16} />
                                                         </button>
                                                     )}
                                                 </div>
@@ -286,39 +292,33 @@ const GroupMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-white shadow-[0_0_100px_rgba(0,0,0,0.2)] z-[1000] flex flex-col">
-                            <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200" style={{ maxHeight: '90vh' }}>
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
                                 <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
-                                            <Layers size={20} />
-                                        </div>
-                                        <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full">{isEditing ? 'EDIT GROUP' : 'NEW GROUP'}</span>
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">
-                                        {isEditing ? 'Modify Account Group' : 'Create Account Group'}
-                                    </h3>
+                                    <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">{isEditing ? 'Modify Group' : 'New Group'}</h3>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Master Entity Registry</p>
                                 </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }}
-                                    className="w-12 h-12 rounded-full hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center transition-all bg-slate-100 text-slate-400">
-                                    <X size={32} />
+                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all">
+                                    <X size={20} />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                            {/* Modal Body */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-white">
                                 {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm">
-                                        <AlertCircle size={20} /> {error}
+                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-4 animate-in fade-in duration-300">
+                                        <AlertCircle size={20} className="shrink-0" /> {error}
                                     </div>
                                 )}
-                                <form id="group-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
+                                <form id="group-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-5">
                                     <div className="form-group-premium">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-3 block">Group Name *</label>
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Group Name *</label>
                                         <input
                                             required
-                                            className="w-full bg-slate-50 border-0 rounded-xl py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500"
+                                            type="text"
+                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white"
                                             placeholder="e.g. Sundry Debtors"
                                             value={formData.name}
                                             disabled={isEditing && formData.is_system}
@@ -330,50 +330,44 @@ const GroupMaster = () => {
                                     </div>
 
                                     <div className="form-group-premium">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-3 block">Parent Group *</label>
-                                        <div className="relative">
-                                            <select
-                                                required
-                                                className="w-full bg-slate-50 border-0 rounded-xl py-3 px-4 text-sm font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-500"
-                                                value={formData.parent || ''}
-                                                onChange={e => setFormData({ ...formData, parent: e.target.value })}
-                                            >
-                                                <option value="" disabled>-- Select Standard Group --</option>
-                                                {(() => {
-                                                    const grouped = {};
-                                                    Object.entries(STANDARD_GROUPS).forEach(([nat, gList]) => {
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Parent Group *</label>
+                                        <select
+                                            required
+                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white cursor-pointer"
+                                            value={formData.parent || ''}
+                                            onChange={e => setFormData({ ...formData, parent: e.target.value })}
+                                        >
+                                            <option value="" disabled>-- Select Standard Group --</option>
+                                            {(() => {
+                                                const grouped = {};
+                                                Object.entries(STANDARD_GROUPS).forEach(([nat, gList]) => {
+                                                    if (!grouped[nat]) grouped[nat] = new Set();
+                                                    gList.forEach(g => grouped[nat].add(g));
+                                                });
+                                                if (groups && groups.length > 0) {
+                                                    groups.forEach(g => {
+                                                        const nat = g.nature || getNatureForGroup(g.name) || 'ASSETS';
                                                         if (!grouped[nat]) grouped[nat] = new Set();
-                                                        gList.forEach(g => grouped[nat].add(g));
+                                                        grouped[nat].add(g.name);
                                                     });
-                                                    if (groups && groups.length > 0) {
-                                                        groups.forEach(g => {
-                                                            const nat = g.nature || getNatureForGroup(g.name) || 'ASSETS';
-                                                            if (!grouped[nat]) grouped[nat] = new Set();
-                                                            grouped[nat].add(g.name);
-                                                        });
-                                                    }
-                                                    return Object.entries(grouped).map(([nature, gSet]) => (
-                                                        <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
-                                                            {Array.from(gSet).sort().map(g => <option key={g} value={g}>{g}</option>)}
-                                                        </optgroup>
-                                                    ));
-                                                })()}
-                                            </select>
-                                            <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                        </div>
+                                                }
+                                                return Object.entries(grouped).map(([nature, gSet]) => (
+                                                    <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
+                                                        {Array.from(gSet).sort().map(g => <option key={g} value={g}>{g}</option>)}
+                                                    </optgroup>
+                                                ));
+                                            })()}
+                                        </select>
                                     </div>
                                 </form>
                             </div>
 
-                            <div className="p-8 border-t border-slate-50 flex gap-4">
-                                <button type="submit" form="group-form" disabled={submitting}
-                                    className="bg-slate-900 text-white flex-1 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all">
-                                    {submitting ? <Loader2 className="animate-spin" size={18} /> : <><CheckCircle2 size={18} /> {isEditing ? 'Save Changes' : 'Create Group'}</>}
+                            {/* Modal Footer */}
+                            <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
+                                <button type="submit" form="group-form" disabled={submitting} className="flex-1 h-11 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {submitting ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? 'Confirm Changes' : 'Execute Registration')}
                                 </button>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }}
-                                    className="w-16 rounded-2xl border-2 border-slate-100 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:border-rose-100 transition-all">
-                                    <X size={24} />
-                                </button>
+                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-5 h-11 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-bold hover:bg-slate-50 hover:border-slate-300 transition-all">Discard</button>
                             </div>
                         </div>
                         <SaveConfirmationModal 
@@ -381,7 +375,7 @@ const GroupMaster = () => {
                             onConfirm={confirmSave} 
                             onCancel={cancelSave} 
                         />
-                    </>
+                    </div>
                 )}
             </main>
         </div>

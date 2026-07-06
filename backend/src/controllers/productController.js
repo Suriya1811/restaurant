@@ -13,7 +13,7 @@ exports.getProducts = async (req, res) => {
             query.is_active = is_active === 'true';
         }
 
-        const products = await Product.find(query).sort({ created_at: -1 });
+        const products = await Product.find(query).populate('tax_id').sort({ created_at: -1 });
 
         res.status(200).json({
             success: true,

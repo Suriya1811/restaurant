@@ -358,7 +358,85 @@ const DisplayPage = () => {
     };
 
     const handlePrint = () => {
-        window.print();
+        const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.id));
+        const printWindow = window.open('', '_blank', 'width=1200,height=800');
+        
+        const rows = filteredRecords.map((record, i) => {
+            const formattedType = record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'Sales Bill';
+            const formattedNumber = formatDisplayNumber(record.type, record.type === 'KOT' ? record.kot_no : record.bill_no);
+            const dateStr = new Date(record.date).toLocaleDateString('en-GB');
+            return `<tr>${activeColumns.map(col => {
+                let val = '-';
+                switch(col.id) {
+                    case 'sno': val = i + 1; break;
+                    case 'type': val = formattedType; break;
+                    case 'kot_bill_no': val = formattedNumber; break;
+                    case 'date': val = dateStr; break;
+                    case 'time': val = record.time || '-'; break;
+                    case 'customer_name': val = record.customer_name || '-'; break;
+                    case 'mobile_no': val = record.mobile_no || '-'; break;
+                    case 'captain': val = record.captain || 'N/A'; break;
+                    case 'waiter': val = record.waiter || 'N/A'; break;
+                    case 'table': val = record.table || 'N/A'; break;
+                    case 'amount': val = record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.amount||0).toFixed(2)}`; break;
+                    case 'cash_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cashAmt||0).toFixed(2)}`) : '-'; break;
+                    case 'card_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cardAmt||0).toFixed(2)}`) : '-'; break;
+                    case 'upi_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.upiAmt||0).toFixed(2)}`) : '-'; break;
+                    default: val = '-';
+                }
+                return `<td>${val}</td>`;
+            }).join('')}</tr>`;
+        }).join('');
+
+        const totalSales = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((a,r) => a + parseFloat(r.amount||0), 0);
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Sales Display Report</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: white; padding: 16px; }
+                    h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+                    .meta { font-size: 11px; color: #555; margin-bottom: 4px; }
+                    .summary { display: flex; gap: 24px; margin: 12px 0; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+                    .summary span { font-size: 12px; font-weight: bold; }
+                    .summary .label { color: #64748b; font-weight: normal; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+                    th { background: #0f172a; color: white; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 7px 8px; text-align: left; }
+                    td { padding: 6px 8px; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
+                    tr:nth-child(even) td { background: #f8fafc; }
+                    .total-row td { font-weight: bold; background: #fff7ed; border-top: 2px solid #f97316; }
+                    @page { size: landscape; margin: 10mm; }
+                </style>
+            </head>
+            <body>
+                <h1>Sales Display Report</h1>
+                <p class="meta">Generated on: ${new Date().toLocaleString('en-GB')} &nbsp;|&nbsp; From: ${fromDate} To: ${toDate} &nbsp;|&nbsp; Total Records: ${filteredRecords.length}</p>
+                <div class="summary">
+                    <span><span class="label">KOT: </span>${rangeKotCount}</span>
+                    <span><span class="label">Bills: </span>${rangeBillCount}</span>
+                    <span><span class="label">Today Sales: </span>Rs.${rangeSalesAmount.toFixed(2)}</span>
+                    <span><span class="label">Cash: </span>Rs.${rangeCashAmount.toFixed(2)}</span>
+                    <span><span class="label">Bank: </span>Rs.${rangeBankAmount.toFixed(2)}</span>
+                </div>
+                <table>
+                    <thead><tr>${activeColumns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="${activeColumns.length - 1}" style="text-align:right">TOTAL SALES</td>
+                            <td>Rs.${totalSales.toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
     };
 
     const headerActions = (

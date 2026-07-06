@@ -1781,3 +1781,161 @@ exports.getCashBankReport = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get GSTR-1 Report data
+// @route   GET /api/reports/gst/gstr1?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+// @access  Private (Admin, Owner)
+exports.getGstr1Report = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Parse dates or use today as default
+        let start = new Date();
+        let end = new Date();
+
+        if (startDate) {
+            start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+        } else {
+            start.setHours(0, 0, 0, 0);
+        }
+
+        if (endDate) {
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            end.setHours(23, 59, 59, 999);
+        }
+
+        const bills = await Bill.find({
+            company_id: req.user.restaurant_id,
+            status: { $in: ['PAID', 'CREDIT'] },
+            is_deleted: false,
+            createdAt: { $gte: start, $lte: end }
+        }).populate('customer_id').populate('items.product_id').lean();
+
+        const b2b = [];
+        const b2cLarge = [];
+        const b2cSmall = [];
+        const hsnMap = {};
+
+        bills.forEach(bill => {
+            const customer = bill.customer_id;
+            const hasGst = customer && customer.gst_number && customer.gst_number.trim() !== '';
+            
+            // Format dates
+            const invDate = new Date(bill.createdAt).toLocaleDateString('en-IN', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            }).replace(/\//g, '-');
+            
+            // Base values
+            const invValue = bill.grand_total;
+            const taxableValue = bill.sub_total - (bill.discount_amount || 0);
+            
+            // Default POS (State) to company state (assume Tamil Nadu for now as per mock, or derive from address)
+            let pos = 'Tamil Nadu'; 
+            if (customer && customer.address) {
+                // simple heuristic
+                if (customer.address.toLowerCase().includes('karnataka')) pos = 'Karnataka';
+                else if (customer.address.toLowerCase().includes('maharashtra')) pos = 'Maharashtra';
+                else if (customer.address.toLowerCase().includes('kerala')) pos = 'Kerala';
+            }
+
+            if (hasGst) {
+                b2b.push({
+                    gstin: customer.gst_number,
+                    receiver: customer.name,
+                    invNo: bill.bill_number,
+                    invDate,
+                    invValue,
+                    pos,
+                    revCharge: 'N',
+                    appTaxRate: '18%', // Defaulting to 18% or derived from items
+                    invType: 'Regular',
+                    ecommGstin: '-',
+                    rate: 18,
+                    taxableValue,
+                    cess: 0
+                });
+            } else {
+                if (invValue > 250000) {
+                    b2cLarge.push({
+                        invNo: bill.bill_number,
+                        invDate,
+                        invValue,
+                        pos,
+                        appTaxRate: '18%',
+                        taxableValue,
+                        cess: 0,
+                        ecommGstin: '-'
+                    });
+                } else {
+                    b2cSmall.push({
+                        type: pos === 'Tamil Nadu' ? 'Intra-State' : 'Inter-State', // simple logic
+                        pos,
+                        appTaxRate: '18%',
+                        taxableValue,
+                        cess: 0,
+                        ecommGstin: '-'
+                    });
+                }
+            }
+
+            // HSN Aggregation
+            if (bill.items && bill.items.length > 0) {
+                bill.items.forEach(item => {
+                    const product = item.product_id;
+                    const hsn = product?.hsn_code || '00000000';
+                    const taxRate = product?.gst_sales || 0;
+                    
+                    if (!hsnMap[hsn]) {
+                        hsnMap[hsn] = {
+                            hsn,
+                            desc: product?.name || item.name,
+                            uqc: product?.unit || 'NOS',
+                            qty: 0,
+                            val: 0,
+                            rate: taxRate + '%',
+                            taxVal: 0,
+                            igst: 0,
+                            cgst: 0,
+                            sgst: 0,
+                            cess: 0
+                        };
+                    }
+                    
+                    const itemTaxable = item.total_price;
+                    const taxAmount = (itemTaxable * taxRate) / 100;
+                    
+                    hsnMap[hsn].qty += item.quantity;
+                    hsnMap[hsn].taxVal += itemTaxable;
+                    hsnMap[hsn].val += (itemTaxable + taxAmount);
+                    
+                    // Simple logic: if Tamil Nadu, split to CGST/SGST, else IGST
+                    if (pos === 'Tamil Nadu') {
+                        hsnMap[hsn].cgst += taxAmount / 2;
+                        hsnMap[hsn].sgst += taxAmount / 2;
+                    } else {
+                        hsnMap[hsn].igst += taxAmount;
+                    }
+                });
+            }
+        });
+
+        const hsn = Object.values(hsnMap);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                b2b,
+                b2cLarge,
+                b2cSmall,
+                hsn
+            }
+        });
+
+    } catch (error) {
+        console.error('GSTR1 report error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

@@ -5,7 +5,7 @@ import './Dashboard.css';
 import {
     Search, Trash2, Loader2, FileText, Calendar,
     Eye, XCircle, AlertCircle, Package, Truck,
-    ClipboardList, CheckCircle2, Clock, AlertTriangle
+    ClipboardList, CheckCircle2, Clock, AlertTriangle, PlusCircle
 } from 'lucide-react';
 
 const PurchaseBillManagement = () => {

@@ -19,10 +19,11 @@ const VouchersPage = () => {
     const [ledgers, setLedgers] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [filterType, setFilterType] = useState('ALL');
+    const [cancelFilter, setCancelFilter] = useState('ALL');
     
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -190,12 +191,25 @@ const VouchersPage = () => {
     const filteredVouchers = vouchers.filter(v => {
         if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();
-            return (
+            const matchesSearch = (
                 v.voucher_number?.toLowerCase().includes(searchLower) ||
                 v.narration?.toLowerCase().includes(searchLower) ||
                 v.voucher_type?.toLowerCase().includes(searchLower)
             );
+            if (!matchesSearch) return false;
         }
+        if (filterType !== 'ALL' && v.voucher_type !== filterType) {
+            return false;
+        }
+        if (fromDate && new Date(v.date).toISOString().split('T')[0] < fromDate) {
+            return false;
+        }
+        if (toDate && new Date(v.date).toISOString().split('T')[0] > toDate) {
+            return false;
+        }
+        // Cancel type filter
+        if (cancelFilter === 'ACTIVE' && v.is_deleted) return false;
+        if (cancelFilter === 'CANCELLED' && !v.is_deleted) return false;
         return true;
     });
 
@@ -322,17 +336,30 @@ const VouchersPage = () => {
                                 <h1 className="text-xl font-bold text-slate-800">Voucher</h1>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end no-print">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 mb-1">Filter By</label>
-                                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                                        <option>All</option>
+                                    <select 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700"
+                                        value={filterType}
+                                        onChange={e => setFilterType(e.target.value)}
+                                    >
+                                        <option value="ALL">All</option>
+                                        {voucherSeries.map(s => (
+                                            <option key={s._id} value={s.series_name}>{s.series_name}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 mb-1">Cancel Type</label>
-                                    <select className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                                        <option>All</option>
+                                    <select 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700"
+                                        value={cancelFilter}
+                                        onChange={e => setCancelFilter(e.target.value)}
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="CANCELLED">Cancelled</option>
                                     </select>
                                 </div>
                                 <div>
@@ -348,14 +375,14 @@ const VouchersPage = () => {
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-2 col-span-1 md:col-span-2">
+                                <div className="flex gap-2 col-span-1 md:col-span-2 no-print">
                                     <div className="flex-1">
                                         <label className="block text-xs font-semibold text-slate-500 mb-1">From Date</label>
-                                        <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+                                        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
                                     </div>
                                     <div className="flex-1">
                                         <label className="block text-xs font-semibold text-slate-500 mb-1">To Date</label>
-                                        <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+                                        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
                                     </div>
                                     <div className="flex-none flex items-end">
                                         <button onClick={handleCreateClick} className="h-[38px] px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors whitespace-nowrap">
@@ -461,7 +488,7 @@ const VouchersPage = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-500 flex justify-between items-center">
+                            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-500 flex justify-between items-center no-print">
                                 <span>Showing 1 to {filteredVouchers.length} of {filteredVouchers.length} entries</span>
                                 <div className="flex items-center gap-1">
                                     <button className="px-2 py-1 border border-slate-200 rounded bg-white text-slate-400">&lt;</button>

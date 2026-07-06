@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './Dashboard.css';
 import {
     Bell,
@@ -128,6 +130,7 @@ const ProductMaster = () => {
         igst_sales: '',
         igst_purchase: '',
         hsn_code: '',
+        tax_id: '',
         unit: '',
         opening_stock: '',
         min_stock: '',
@@ -289,6 +292,44 @@ const ProductMaster = () => {
         URL.revokeObjectURL(url);
     };
 
+    const exportPDF = () => {
+        if (!products.length) return;
+        const doc = new jsPDF();
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("Product Master Report", 14, 20);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 27);
+        doc.text(`Active Registry: ${filteredProducts.length} items`, 14, 32);
+
+        const head = [["Item Name", "Item Code", "Category", "Brand", "Food Type", "Unit", "Purchase Rate", "Selling Price", "MRP"]];
+        const body = filteredProducts.map((p) => [
+            p.name || '',
+            p.code || 'Auto',
+            p.category || '',
+            p.brand || '-',
+            p.food_type !== 'NONE' ? p.food_type : '-',
+            p.unit || '',
+            `Rs. ${p.purchase_price || 0}`,
+            `Rs. ${p.selling_price || 0}`,
+            `Rs. ${p.mrp || 0}`
+        ]);
+
+        autoTable(doc, {
+            startY: 38,
+            head: head,
+            body: body,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [79, 70, 229], textColor: 255 }
+        });
+
+        doc.save(`Product_Master_Report_${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}.pdf`);
+    };
+
     const handleCSVImport = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -446,13 +487,25 @@ const ProductMaster = () => {
             return;
         }
 
-        // Handle specific fields
         if (name === 'category') {
             const selectedCat = categories.find(c => c.name === value);
             setFormData(prev => ({
                 ...prev,
                 [name]: value,
                 hsn_code: selectedCat?.hsn_code || ''
+            }));
+            return;
+        }
+
+        if (name === 'tax_id') {
+            const selectedTax = taxes.find(t => t._id === value);
+            setFormData(prev => ({
+                ...prev,
+                tax_id: value,
+                gst_sales: selectedTax ? String(selectedTax.percentage) : '',
+                gst_purchase: selectedTax ? String(selectedTax.percentage) : '',
+                igst_sales: selectedTax ? String(selectedTax.percentage) : '',
+                igst_purchase: selectedTax ? String(selectedTax.percentage) : ''
             }));
             return;
         }
@@ -605,7 +658,12 @@ const ProductMaster = () => {
             const v = product[f];
             productAsStrings[f] = (v === 0 || v === null || v === undefined) ? '' : String(v);
         });
-        setFormData({ ...initialFormState, ...productAsStrings, serve_types: product.serve_types || initialFormState.serve_types });
+        setFormData({ 
+            ...initialFormState, 
+            ...productAsStrings, 
+            tax_id: product.tax_id?._id || product.tax_id || '',
+            serve_types: product.serve_types || initialFormState.serve_types 
+        });
         setIsEditing(true);
         setShowDrawer(true);
     };
@@ -733,7 +791,7 @@ const ProductMaster = () => {
                             <button
                                 type="button"
                                 className="btn-premium-outline !py-2 !px-4 flex items-center gap-2"
-                                onClick={() => window.print()}
+                                onClick={exportPDF}
                                 title="Export to PDF"
                             >
                                 <Download size={14} />
@@ -758,7 +816,7 @@ const ProductMaster = () => {
                 {!showDrawer ? (
                     <div className="master-content-layout fade-in !pt-2">
 
-                        <div className="toolbar-premium">
+                        <div className="toolbar-premium no-print">
                             <div className="flex flex-row items-center gap-4 flex-1">
                                 <div className="search-premium" style={{ width: '400px', flexShrink: 0 }}>
                                     <Search size={20} />
@@ -848,7 +906,7 @@ const ProductMaster = () => {
                                         <th>Evening (Begin)</th>
                                         <th>Evening (Terminate)</th>
                                         <th>Status (Active/Halted)</th>
-                                        <th className="sticky-col right-0" style={{ background: '#f8fafc', zIndex: 20, textAlign: 'right' }}>Management</th>
+                                        <th className="sticky-col right-0 no-print" style={{ background: '#f8fafc', zIndex: 20, textAlign: 'right' }}>Management</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -915,7 +973,7 @@ const ProductMaster = () => {
                                                     {p.is_active ? 'OPERATIONAL' : 'DEACTIVATED'}
                                                 </span>
                                             </td>
-                                            <td className="sticky-col right-0 group-hover:bg-slate-50" style={{ background: !p.is_active ? '#f8fafc' : 'white', zIndex: 10 }}>
+                                            <td className="sticky-col right-0 group-hover:bg-slate-50 no-print" style={{ background: !p.is_active ? '#f8fafc' : 'white', zIndex: 10 }}>
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={() => p.is_active && handleEdit(p)} className={`action-icon-btn edit shadow-sm scale-75 ${!p.is_active ? 'cursor-not-allowed opacity-30 shadow-none' : ''}`} disabled={!p.is_active}><Edit size={18} /></button>
                                                     <button onClick={() => handleDelete(p._id)} className={`action-icon-btn delete shadow-sm scale-75 ${!p.is_active ? 'cursor-not-allowed opacity-30 shadow-none' : ''}`} disabled={!p.is_active}><Trash size={18} /></button>
@@ -987,16 +1045,27 @@ const ProductMaster = () => {
                                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mt-1 mb-0 border-b border-slate-100 pb-0.5">Tax Details</h4>
 
                                             <div className="flex items-center">
-                                                <label className="w-1/3 text-sm font-semibold text-[#0F172A]">GST Sale</label>
-                                                <div className="w-2/3">
-                                                    <input type="text" inputMode="decimal" name="gst_sales" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={formData.gst_sales || ''} onChange={handleInputChange} />
+                                                <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Tax slab</label>
+                                                <div className="w-2/3 flex items-center gap-1">
+                                                    <select name="tax_id" className="flex-1 px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={formData.tax_id} onChange={handleInputChange}>
+                                                        <option value="">Select GST Slab</option>
+                                                        {taxes.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                                                    </select>
+                                                    <button type="button" onClick={() => setShowTaxModal(true)} className="text-[#0F172A] bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-sm px-2 py-1.5 transition-colors font-bold">+</button>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center">
-                                                <label className="w-1/3 text-sm font-semibold text-[#0F172A]">GST Purchase</label>
+                                                <label className="w-1/3 text-sm font-semibold text-slate-400">GST Sale (%)</label>
                                                 <div className="w-2/3">
-                                                    <input type="text" inputMode="decimal" name="gst_purchase" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={formData.gst_purchase || ''} onChange={handleInputChange} />
+                                                    <input type="text" readOnly name="gst_sales" className="w-full px-2 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-sm text-sm text-slate-500 outline-none cursor-not-allowed" value={formData.gst_sales || ''} />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <label className="w-1/3 text-sm font-semibold text-slate-400">GST Purchase (%)</label>
+                                                <div className="w-2/3">
+                                                    <input type="text" readOnly name="gst_purchase" className="w-full px-2 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-sm text-sm text-slate-500 outline-none cursor-not-allowed" value={formData.gst_purchase || ''} />
                                                 </div>
                                             </div>
 
@@ -1080,16 +1149,16 @@ const ProductMaster = () => {
                                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mt-1 mb-0 border-b border-slate-100 pb-0.5 opacity-0 pointer-events-none select-none">Tax Space</h4>
 
                                             <div className="flex items-center">
-                                                <label className="w-1/3 text-sm font-semibold text-[#0F172A]">IGST Sale</label>
+                                                <label className="w-1/3 text-sm font-semibold text-slate-400">IGST Sale (%)</label>
                                                 <div className="w-2/3">
-                                                    <input type="text" inputMode="decimal" name="igst_sales" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={formData.igst_sales || ''} onChange={handleInputChange} />
+                                                    <input type="text" readOnly name="igst_sales" className="w-full px-2 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-sm text-sm text-slate-500 outline-none cursor-not-allowed" value={formData.igst_sales || ''} />
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center">
-                                                <label className="w-1/3 text-sm font-semibold text-[#0F172A]">IGST Purchase</label>
+                                                <label className="w-1/3 text-sm font-semibold text-slate-400">IGST Purchase (%)</label>
                                                 <div className="w-2/3">
-                                                    <input type="text" inputMode="decimal" name="igst_purchase" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={formData.igst_purchase || ''} onChange={handleInputChange} />
+                                                    <input type="text" readOnly name="igst_purchase" className="w-full px-2 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-sm text-sm text-slate-500 outline-none cursor-not-allowed" value={formData.igst_purchase || ''} />
                                                 </div>
                                             </div>
 

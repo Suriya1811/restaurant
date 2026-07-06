@@ -193,7 +193,6 @@
     background: transparent !important;
     border-radius: 6px;
     margin-left: 0;
-    border-left: 3px solid transparent;
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -201,9 +200,10 @@
     text-decoration: none;
     white-space: nowrap;
     font-family: inherit;
-    border: none;
+    border: none !important;
     width: 100%;
     font-weight: 500;
+    box-shadow: none !important;
 }
 
 .sub-nav-item:hover {
@@ -213,8 +213,7 @@
 
 .sub-nav-item.active {
     color: #FFFFFF;
-    border-left: 3px solid var(--primary, #7ea1c4);
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     font-weight: 600;
 }
 
@@ -1783,4 +1782,69 @@
 .filter-select-premium:focus {
     border-color: #7ea1c4;
     box-shadow: 0 0 0 3px rgba(126, 161, 196, 0.1);
+}
+
+/* ============================================================
+   PRINT LAYOUT
+   ============================================================ */
+@media print {
+    /* Hide non-printable elements */
+    .no-print,
+    .dashboard-sidebar,
+    .dashboard-header,
+    header,
+    .mobile-overlay,
+    .pef-action-bar,
+    .pef-modal-overlay,
+    .modal,
+    button,
+    select,
+    input,
+    th:last-child,
+    td:last-child {
+        display: none !important;
+    }
+
+    /* Reset background and layout constraints */
+    body, html, #root, .dashboard-layout, .dashboard-main, main, .flex-1, .dashboard-content, .master-content-layout, .table-container-premium {
+        height: auto !important;
+        width: 100% !important;
+        overflow: visible !important;
+        display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+    }
+
+    /* Print styling for data tables */
+    table, .modern-table-premium, .table-premium {
+        min-width: 100% !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-top: 1.5rem !important;
+        background: white !important;
+    }
+
+    thead {
+        display: table-header-group !important;
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+    }
+
+    th, td {
+        border: 1px solid #94a3b8 !important;
+        padding: 8px 12px !important;
+        font-size: 10px !important;
+        color: black !important;
+        background: white !important;
+    }
+
+    th {
+        font-weight: bold !important;
+        text-transform: uppercase !important;
+    }
 }

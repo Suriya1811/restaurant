@@ -50,6 +50,9 @@ const SupplierOutstanding = lazy(() => import('./pages/dashboard/SupplierOutstan
 const AccountsReceivable = lazy(() => import('./pages/dashboard/AccountsReceivable.jsx'));
 const AccountsPayable = lazy(() => import('./pages/dashboard/AccountsPayable.jsx'));
 const Daybook = lazy(() => import('./pages/dashboard/Daybook.jsx'));
+const TrialBalance = lazy(() => import('./pages/dashboard/TrialBalance.jsx'));
+const BalanceSheet = lazy(() => import('./pages/dashboard/BalanceSheet.jsx'));
+const ProfitLoss = lazy(() => import('./pages/dashboard/ProfitLoss.jsx'));
 const CashBalance = lazy(() => import('./pages/dashboard/CashBalance.jsx'));
 const BankBalance = lazy(() => import('./pages/dashboard/BankBalance.jsx'));
 const CashAndBank = lazy(() => import('./pages/dashboard/CashAndBank.jsx'));
@@ -251,6 +254,9 @@ function AppRoutes() {
 
                             {/* Accounts */}
                             <Route path="accounts/daybook" element={<PermissionRoute pageKey="daybook"><Daybook /></PermissionRoute>} />
+                            <Route path="accounts/trial-balance" element={<PermissionRoute pageKey="trial_balance"><TrialBalance /></PermissionRoute>} />
+                            <Route path="accounts/balance-sheet" element={<PermissionRoute pageKey="balance_sheet"><BalanceSheet /></PermissionRoute>} />
+                            <Route path="accounts/profit-loss" element={<PermissionRoute pageKey="profit_loss"><ProfitLoss /></PermissionRoute>} />
                              <Route path="accounts/cash" element={<PermissionRoute pageKey="cash_bank"><CashBalance /></PermissionRoute>} />
                              <Route path="accounts/bank" element={<PermissionRoute pageKey="cash_bank"><BankBalance /></PermissionRoute>} />
                              <Route path="accounts/cash-bank" element={<PermissionRoute pageKey="cash_bank"><CashAndBank /></PermissionRoute>} />

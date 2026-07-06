@@ -26,9 +26,6 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions }
     return (
         <header className={`dashboard-header ${title ? 'master-header-mode' : ''}`}>
             <div className="header-left">
-                <button className="icon-btn menu-toggle" onClick={toggleSidebar}>
-                    <Menu size={22} />
-                </button>
                 {title && (
                     <h2 className="premium-page-title">{title}</h2>
                 )}
@@ -54,10 +51,6 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions }
                                 {headerActions}
                             </div>
                         )}
-                        <button className="icon-btn relative bg-slate-50 border border-slate-100 shadow-sm" title="Notifications">
-                            <Bell size={18} className="text-slate-600" />
-                            <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
-                        </button>
 
                         <div className="relative" ref={profileRef}>
                             <div className="user-profile bg-slate-50 border border-slate-100 shadow-sm !p-1.5" onClick={() => setIsProfileOpen(!isProfileOpen)}>

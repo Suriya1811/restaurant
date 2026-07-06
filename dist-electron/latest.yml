@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: Restaurant-POS-Setup-1.0.0.exe
-    sha512: kNYCbwXuTZ0u6hObFnygAgkYOzWyD10R78cPnq+kk7+o/t/Dn4W4Hr0pcXmhJO8HuVhPkGkGJbwetJAZuq0Dkw==
-    size: 127181249
+    sha512: TlZXnyNCpqj9r3hJKiCfyJY44UO+mH4QwDVbB4K9sL8xHp+043Oduq+zrvahLqI4oy3jJ/1DSSO06yXD2od0mQ==
+    size: 127401567
 path: Restaurant-POS-Setup-1.0.0.exe
-sha512: kNYCbwXuTZ0u6hObFnygAgkYOzWyD10R78cPnq+kk7+o/t/Dn4W4Hr0pcXmhJO8HuVhPkGkGJbwetJAZuq0Dkw==
-releaseDate: '2026-07-02T15:48:27.370Z'
+sha512: TlZXnyNCpqj9r3hJKiCfyJY44UO+mH4QwDVbB4K9sL8xHp+043Oduq+zrvahLqI4oy3jJ/1DSSO06yXD2od0mQ==
+releaseDate: '2026-07-06T12:33:39.494Z'

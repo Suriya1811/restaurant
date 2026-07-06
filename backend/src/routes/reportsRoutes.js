@@ -25,7 +25,8 @@ const {
     getSalesTransactionSummary,
     getDaybookReport,
     getCashBankReport,
-    getSalesSummary
+    getSalesSummary,
+    getGstr1Report
 } = require('../controllers/reportsController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -106,5 +107,8 @@ router.get('/account-balances', getAccountBalances);
 router.get('/accounts/daybook', getDaybookReport);
 router.get('/accounts/ledger-statement', getLedgerStatement);
 router.get('/accounts/cash-bank', getCashBankReport);
+
+// GST Reports
+router.get('/gst/gstr1', getGstr1Report);
 
 module.exports = router;
