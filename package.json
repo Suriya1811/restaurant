@@ -1,0 +1,87 @@
+{
+  "name": "restaurant-pos",
+  "version": "1.0.0",
+  "description": "Restaurant POS Desktop Application",
+  "main": "electron/main.js",
+  "author": "Restaurant POS",
+  "license": "ISC",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev-backend": "cd backend && npm run dev",
+    "dev-frontend": "cd frontend && npm run dev",
+    "dev": "npx concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "electron-dev": "set NODE_ENV=development && npx electron .",
+    "build-frontend": "cd frontend && npm run build",
+    "build-backend": "node scripts/bundle-backend.js",
+    "download-mongo": "node scripts/download-mongo.js",
+    "build": "npm run build-frontend && npm run build-backend && npx electron-builder --win --x64",
+    "build-dir": "npm run build-frontend && npm run build-backend && npx electron-builder --win --x64 --dir",
+    "pack": "npx electron-builder --win --x64 --dir",
+    "postinstall": "npx electron-builder install-app-deps",
+    "setup-signing": "node scripts/setup-self-sign.js"
+  },
+  "build": {
+    "appId": "com.restaurant.pos",
+    "productName": "Restaurant POS",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "resources"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist",
+        "to": "backend/dist"
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist"
+      },
+      {
+        "from": "resources/mongod",
+        "to": "mongod",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Restaurant POS",
+      "license": "resources/license.txt",
+      "include": "resources/installer.nsh"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*"
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.4",
+    "jimp": "^1.6.1",
+    "png-to-ico": "^3.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1",
+    "esbuild": "^0.28.0"
+  }
+}

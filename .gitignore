@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+dist-electron/*.exe
+dist-electron/win-unpacked/
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log

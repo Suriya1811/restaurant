@@ -1,0 +1,603 @@
+/* ═══════════════════════════════════════════════════
+   PREMIUM SCROLLBAR
+   ═══════════════════════════════════════════════════ */
+.scrollbar-premium::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* Ensure no double scrolling when embedded */
+.is-embedded .dashboard-content {
+    overflow: hidden !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+@media (max-width: 1024px) {
+    .is-embedded .dashboard-content {
+        padding: 0.75rem !important;
+    }
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.chart-card {
+    background: #ffffff;
+    padding: 0.85rem;
+    border-radius: 0.9rem;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    height: fit-content;
+}
+
+.chart-container {
+    height: 240px;
+    padding: 0.5rem 0;
+    position: relative;
+    width: 100%;
+}
+
+.pie-container {
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Date filter */
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #ffffff;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.9rem;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    flex-wrap: wrap;
+}
+
+.date-filter label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.date-filter .input-field {
+    width: 160px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.date-filter input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: var(--primary, #7ea1c4);
+}
+
+/* Rank badge */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, var(--primary, #7ea1c4), var(--primary-dk, #5788b7));
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-right: 0.875rem;
+    box-shadow: 0 2px 6px rgba(126, 161, 196, 0.3);
+    flex-shrink: 0;
+}
+
+.quantity-badge {
+    background: #F1F5F9;
+    color: #475569;
+    padding: 0.28rem 0.875rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border: 1px solid #E2E8F0;
+}
+
+/* Loading */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    gap: 1rem;
+    color: #64748B;
+}
+
+.loading-spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid #E2E8F0;
+    border-top: 3px solid var(--primary, #7ea1c4);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Refresh button */
+.refresh-btn {
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(126, 161, 196, 0.18);
+}
+
+.refresh-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(126, 161, 196, 0.28);
+}
+
+.refresh-btn:active {
+    transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------
+   RESPONSIVE
+   ---------------------------------------------------------------- */
+@media (max-width: 1200px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        height: 240px;
+    }
+
+    .pie-container {
+        height: 240px;
+    }
+
+    .data-card {
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .date-filter {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .date-filter .input-field {
+        width: 100%;
+    }
+
+    .date-filter .refresh-btn {
+        width: 100%;
+        margin-left: 0 !important;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .pie-container {
+        height: 200px;
+    }
+
+    .widgets-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.875rem;
+    }
+
+    .custom-table {
+        min-width: 650px;
+    }
+}
+
+@media (max-width: 480px) {
+    .widgets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        height: 180px;
+    }
+
+    .pie-container {
+        height: 180px;
+    }
+
+    .date-filter {
+        padding: 0.75rem;
+    }
+
+    .chart-card {
+        padding: 0.875rem;
+    }
+
+    .rank-badge {
+        width: 22px;
+        height: 22px;
+        font-size: 0.7rem;
+    }
+}
+
+/* ================================================================
+   DYNAMIC HUB SPECIFIC OVERRIDES
+   ================================================================ */
+
+@media (max-width: 1024px) {
+    .dashboard-layout.bg-slate-50 .fade-in.px-6 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   INTEGRATED NAVIGATION HUB
+   ═══════════════════════════════════════════════════ */
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.reports-nav-header button {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.reports-nav-header button:active {
+    transform: scale(0.95);
+}
+
+.reports-nav-header .bg-slate-900 {
+    position: relative;
+    overflow: hidden;
+}
+
+.reports-nav-header .bg-slate-900::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 200%;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   EMBEDDED DASHBOARD LAYOUT LOCKS
+   ═══════════════════════════════════════════════════ */
+
+/* Force the dashboard content inside the report to fill height and use flexbox */
+.is-embedded .dashboard-content {
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0.5rem !important;
+    gap: 0.5rem !important;
+}
+
+/* Make headers more compact inside embedded view */
+.is-embedded .dashboard-content > div[class*="border-b"],
+.is-embedded .dashboard-content div[class*="master-header-premium"],
+.is-embedded .dashboard-content div[class*="pb-6"],
+.is-embedded .dashboard-content div[class*="pb-10"] {
+    margin-bottom: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+    gap: 0.25rem !important;
+}
+.is-embedded .dashboard-content h2,
+.is-embedded .dashboard-content .premium-page-title {
+    font-size: 1rem !important;
+    margin-bottom: 0.1rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+}
+.is-embedded .dashboard-content p {
+    font-size: 0.7rem !important;
+    line-height: 1.25 !important;
+    margin-bottom: 0 !important;
+}
+.is-embedded .dashboard-content .flex-shrink-0 {
+    flex-shrink: 1 !important;
+}
+
+/* Compact Summary Bento Counters */
+.is-embedded .dashboard-content .grid {
+    gap: 0.5rem !important;
+    margin-bottom: 0.35rem !important;
+}
+.is-embedded .dashboard-content .grid > div {
+    padding: 0.5rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+.is-embedded .dashboard-content .grid h4 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0 !important;
+}
+.is-embedded .dashboard-content .grid p {
+    font-size: 8px !important;
+}
+
+/* Compact Tool Hub / Actions bar / Search */
+.is-embedded .dashboard-content .flex-wrap,
+.is-embedded .dashboard-content div[class*="toolbar-premium"],
+.is-embedded .dashboard-content div[class*="justify-end"] {
+    margin-bottom: 0.25rem !important;
+    padding-bottom: 0 !important;
+    padding-top: 0.25rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+.is-embedded .dashboard-content .toolbar-premium {
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* Force table container to expand and scroll internally */
+.is-embedded .dashboard-content div[class*="bg-white"][class*="border"],
+.is-embedded .dashboard-content div[class*="overflow-hidden"][class*="rounded"],
+.is-embedded .dashboard-content div[class*="table-container-premium"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    margin-bottom: 0 !important;
+}
+
+.is-embedded .dashboard-content div[class*="bg-white"][class*="border"] > div[class*="overflow-x-auto"],
+.is-embedded .dashboard-content div[class*="overflow-hidden"][class*="rounded"] > div[class*="overflow-x-auto"],
+.is-embedded .dashboard-content div[class*="table-container-premium"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+}
+
+/* Make table headers sticky inside embedded reports */
+.is-embedded table thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-color: #f8fafc !important;
+}
+
+.is-embedded table th {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 9px !important;
+}
+
+.is-embedded table td {
+    padding: 0.35rem 0.6rem !important;
+    font-size: 11px !important;
+}
+
+/* Lock grid columns when side-by-side (like MonthWiseSales charts and tables) */
+.is-embedded .dashboard-content div[class*="xl:grid-cols-3"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: grid !important;
+    gap: 0.75rem !important;
+    margin-bottom: 0 !important;
+}
+
+.is-embedded .dashboard-content div[class*="xl:grid-cols-3"] > div {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0.75rem !important;
+}
+
+.is-embedded .dashboard-content div[class*="xl:grid-cols-3"] canvas {
+    max-height: 100% !important;
+}
+.is-embedded .dashboard-content div[class*="xl:grid-cols-3"] div[class*="h-[450px]"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   MASTER-CONTENT-LAYOUT EMBEDDED OVERRIDES
+   (AccountsReceivable, AccountsPayable)
+   ═══════════════════════════════════════════════════ */
+
+/* Force master-content-layout to fill and flex when embedded */
+.is-embedded .master-content-layout {
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0.5rem !important;
+    gap: 0.5rem !important;
+}
+
+/* Compact the toolbar-premium strip */
+.is-embedded .master-content-layout .toolbar-premium {
+    padding: 0.3rem 0.75rem !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Compact the master-header-premium (non-embedded hides it, but just in case) */
+.is-embedded .master-header-premium {
+    display: none !important;
+}
+
+/* Make the grid (chart col + table col) fill remaining space and not overflow */
+.is-embedded .master-content-layout > .grid,
+.is-embedded .master-content-layout > div > .grid {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: grid !important;
+    overflow: hidden !important;
+    margin-bottom: 0 !important;
+    gap: 0.5rem !important;
+}
+
+/* Each grid child should also be flex column and non-overflowing */
+.is-embedded .master-content-layout > .grid > div,
+.is-embedded .master-content-layout > div > .grid > div {
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Chart wrapper inside the grid column - constrain it */
+.is-embedded .master-content-layout > .grid > div > div[class*="bg-white"],
+.is-embedded .master-content-layout > div > .grid > div > div[class*="bg-white"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Fixed-height chart wrapper — remove fixed height in embedded */
+.is-embedded .master-content-layout > .grid div[style*="height: 240px"],
+.is-embedded .master-content-layout > div > .grid div[style*="height: 240px"] {
+    height: auto !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+
+/* Make table-container-premium scroll instead of cutting off */
+.is-embedded .master-content-layout .table-container-premium {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* table-container-premium with explicit max-height — override it */
+.is-embedded .master-content-layout div[class*="max-h-[360px]"],
+.is-embedded .master-content-layout div[class*="max-h-"] {
+    max-height: none !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* Sticky headers in master-content-layout tables */
+.is-embedded .master-content-layout table thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-color: #f8fafc !important;
+}
+
+.is-embedded .master-content-layout table th {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 9px !important;
+}
+
+.is-embedded .master-content-layout table td {
+    padding: 0.35rem 0.6rem !important;
+    font-size: 11px !important;
+}
+
+/* ─── Ensure the un-wrapped embedded returns fill the parent ─── */
+/* CustomerOutstanding / SupplierOutstanding when isEmbedded = return content; */
+.is-embedded > div[class*="h-full"] {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* p-0 embedded content wrappers */
+.is-embedded > div[class*="p-0"].fade-in {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* toolbar-premium strip inside is-embedded (CustomerOutstanding etc.) */
+.is-embedded .toolbar-premium {
+    flex-shrink: 0 !important;
+    padding: 0.3rem 0.75rem !important;
+}
+
+/* flex-1 overflow-hidden table containers inside is-embedded */
+.is-embedded .flex-1.overflow-hidden.flex.flex-col.min-h-0 {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Scrollable table containers inside is-embedded */
+.is-embedded .table-container-premium.flex-1.overflow-y-auto {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* ─── Fix GenericSummaryReport when isEmbedded = return content ─── */
+/* Row count bar at the bottom — keep it compact */
+.is-embedded .dashboard-content > div[class*="flex"][class*="border-t"] {
+    flex-shrink: 0 !important;
+    padding: 0.25rem 0.75rem !important;
+}
+
+/* GenericSummaryReport filter strip */
+.is-embedded .dashboard-content > div[class*="FAFAFB"] {
+    padding: 0.25rem 0.75rem !important;
+    flex-shrink: 0 !important;
+}

@@ -1,0 +1,278 @@
+/* ================================================================
+   BILLS & SALES PAGE — RestoBoard Theme
+   ================================================================ */
+
+.bills-page-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+/* Metrics grid */
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #ffffff;
+    padding: 1.1rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+    border-color: #7ea1c4;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0F172A;
+    margin-top: 0.4rem;
+}
+
+/* Charts Section */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.chart-card {
+    background: #ffffff;
+    padding: 1.1rem;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    height: fit-content;
+}
+
+.chart-container {
+    height: 280px;
+    position: relative;
+    width: 100%;
+}
+
+.pie-container {
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Data Table */
+.data-card {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.card-title {
+    padding: 1rem 1.25rem;
+    background-color: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1E293B;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+/* Table */
+.custom-table th {
+    background-color: #F8FAFC;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: #64748B;
+    padding: 0.875rem 1.1rem;
+    border-bottom: 1px solid #E2E8F0;
+    white-space: nowrap;
+}
+
+.custom-table td {
+    padding: 0.875rem 1.1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #F1F5F9;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.custom-table tr:last-child td {
+    border-bottom: none;
+}
+
+.custom-table tbody tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #F1F5F9;
+}
+
+/* Column widths */
+.col-sno {
+    width: 48px;
+    text-align: center;
+    color: #94A3B8;
+}
+
+.col-bill-no {
+    width: 100px;
+    font-weight: 700;
+    color: var(--primary-dk, #5788b7);
+    font-family: monospace;
+}
+
+.col-date {
+    min-width: 120px;
+    color: #64748B;
+    font-size: 0.82rem;
+}
+
+.col-items {
+    max-width: 240px;
+}
+
+.col-qty {
+    width: 65px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.col-total {
+    width: 100px;
+    text-align: right;
+    font-weight: 700;
+    color: #0F172A;
+}
+
+.quantity-badge {
+    background: #F1F5F9;
+    color: #475569;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* Date filter */
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    background: white;
+    padding: 0.5rem 0.875rem;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    flex-wrap: wrap;
+}
+
+.date-filter label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+}
+
+.date-filter .input-field {
+    width: 180px;
+    padding: 0.45rem 0.875rem;
+    font-size: 0.875rem;
+}
+
+.date-filter input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: var(--primary, #7ea1c4);
+}
+
+/* Action button */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #64748B;
+}
+
+.action-btn.delete {
+    color: #ef4444;
+}
+
+.action-btn.delete:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.action-btn:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+/* ----------------------------------------------------------------
+   RESPONSIVE
+   ---------------------------------------------------------------- */
+@media (max-width: 1024px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-card {
+        overflow-x: auto;
+    }
+
+    .chart-container {
+        height: 240px;
+    }
+
+    .pie-container {
+        height: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .widgets-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .date-filter {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .date-filter .input-field {
+        width: 100%;
+    }
+
+    .bills-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .custom-table {
+        min-width: 600px;
+    }
+}

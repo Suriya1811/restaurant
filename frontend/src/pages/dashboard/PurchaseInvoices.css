@@ -1,0 +1,669 @@
+/* ========================
+   PurchaseInvoices.css
+   Matches the design from the
+   "PURCHASE INVOICES" screen image
+======================== */
+
+.pi-container {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: #f5f3f0;
+    min-height: calc(100vh - 60px);
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Header ── */
+.pi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1a1333;
+    padding: 0 1.75rem;
+    height: 52px;
+}
+
+.pi-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.pi-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pi-btn-export {
+    background: transparent;
+    border: none;
+    color: #e2d9ff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.pi-btn-export:hover {
+    color: #fff;
+}
+
+.pi-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid #4a3f6b;
+    background: #2a1f4d;
+    color: #c4b8e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pi-icon-btn:hover {
+    background: #3d3175;
+    border-color: #6c5fc7;
+    color: #fff;
+}
+
+/* ── Stats Cards ── */
+.pi-stats-row {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem 1.75rem 1rem;
+    background: #f5f3f0;
+}
+
+.pi-stat-card {
+    background: #fff;
+    border: 2px solid #d6c8e0;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 200px;
+    flex: 0 0 auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.pi-stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #7c6b8a;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pi-stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1a1333;
+    font-family: 'Inter', monospace;
+}
+
+/* ── Toolbar ── */
+.pi-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.75rem 1rem;
+    flex-wrap: wrap;
+}
+
+.pi-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 2px solid #d6c8e0;
+    border-radius: 10px;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+    min-width: 280px;
+}
+
+.pi-search-icon {
+    color: #9b86aa;
+    flex-shrink: 0;
+}
+
+.pi-search-input {
+    border: none;
+    outline: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1a1333;
+    letter-spacing: 0.05em;
+    padding: 0.6rem 0;
+    background: transparent;
+    width: 100%;
+}
+
+.pi-search-input::placeholder {
+    color: #b8a8c8;
+    font-weight: 600;
+}
+
+.pi-date-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7c6b8a;
+    letter-spacing: 0.08em;
+}
+
+.pi-date-input {
+    border: 2px solid #d6c8e0;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a1333;
+    outline: none;
+    width: 130px;
+    transition: border-color 0.2s;
+}
+
+.pi-date-input:focus {
+    border-color: #6c5fc7;
+}
+
+.pi-btn-create {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #fff;
+    border: 2px solid #d6c8e0;
+    border-radius: 10px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #1a1333;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+}
+
+.pi-btn-create:hover {
+    background: #1a1333;
+    color: #fff;
+    border-color: #1a1333;
+}
+
+/* ── Table ── */
+.pi-table-wrap {
+    padding: 0 1.75rem;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.pi-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: transparent;
+}
+
+.pi-table thead tr {
+    background: transparent;
+}
+
+.pi-table th {
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #7c6b8a;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 2px solid #e0d5ea;
+}
+
+.pi-table td {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #2d2040;
+    border-bottom: 1px solid #eee8f5;
+    background: #fff;
+}
+
+.pi-table tbody tr:hover td {
+    background: #faf7ff;
+}
+
+.pi-table tbody tr:first-child td:first-child { border-top-left-radius: 8px; }
+.pi-table tbody tr:first-child td:last-child { border-top-right-radius: 8px; }
+
+.pi-row-overdue td {
+    background: #fff8f8 !important;
+}
+
+.pi-invoice-no {
+    font-weight: 800;
+    color: #1a1333;
+}
+
+.pi-amount {
+    font-weight: 800;
+    color: #1a1333;
+    font-family: 'Inter', monospace;
+}
+
+/* Status badges */
+.pi-status {
+    display: inline-block;
+    padding: 0.25rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pi-status.paid {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.pi-status.unpaid {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.pi-status.partial {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Due badges */
+.pi-due-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6c5fc7;
+}
+
+.pi-due-badge.overdue {
+    color: #ef4444;
+}
+
+.pi-cash-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #22c55e;
+    background: #dcfce7;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+}
+
+/* Action buttons */
+.pi-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.pi-act-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.pi-act-btn.view {
+    background: #ede9ff;
+    color: #6c5fc7;
+}
+
+.pi-act-btn.view:hover {
+    background: #6c5fc7;
+    color: #fff;
+}
+
+.pi-act-btn.delete {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.pi-act-btn.delete:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* Empty / loading state */
+.pi-empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: #b8a8c8;
+    font-size: 0.85rem;
+}
+
+.pi-spinner {
+    animation: pi-spin 1s linear infinite;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+@keyframes pi-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Footer total */
+.pi-footer-total {
+    display: flex;
+    gap: 2rem;
+    padding: 0.75rem 1.75rem;
+    background: #1a1333;
+    color: #c4b8e8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    flex-wrap: wrap;
+}
+
+.pi-footer-total strong {
+    color: #fff;
+}
+
+/* ── Delete Modal ── */
+.pi-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.pi-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2.5rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+}
+
+.pi-modal-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+
+.pi-modal h3 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1a1333;
+    margin-bottom: 0.5rem;
+}
+
+.pi-modal p {
+    font-size: 0.85rem;
+    color: #7c6b8a;
+    margin-bottom: 1.5rem;
+}
+
+.pi-modal-btns {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.pi-modal-cancel {
+    flex: 1;
+    padding: 0.7rem;
+    border: 2px solid #e2d9ff;
+    border-radius: 10px;
+    background: transparent;
+    color: #7c6b8a;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pi-modal-cancel:hover {
+    background: #f5f3f0;
+}
+
+.pi-modal-confirm {
+    flex: 1;
+    padding: 0.7rem;
+    border: none;
+    border-radius: 10px;
+    background: #ef4444;
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.pi-modal-confirm:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+.pi-modal-confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Drawer for Details ── */
+.pi-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+}
+
+.pi-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 650px;
+    background: #fff;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 50px rgba(0,0,0,0.15);
+}
+
+.pi-drawer-header {
+    background: #1a1333;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pi-drawer-subtitle {
+    font-size: 10px;
+    font-weight: 900;
+    color: #c4b8e8;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 2px;
+}
+
+.pi-drawer-title {
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.02em;
+}
+
+.pi-drawer-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pi-drawer-close:hover {
+    background: #ef4444;
+}
+
+.pi-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    background: #f8fafc;
+}
+
+.pi-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.pi-detail-card {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.pi-detail-card label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
+
+.pi-detail-card p {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1a1333;
+}
+
+.pi-items-section {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+}
+
+.pi-section-title {
+    background: #f1f5f9;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #475569;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.pi-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pi-items-table th {
+    text-align: left;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #94a3b8;
+    text-transform: uppercase;
+    background: #fafafa;
+}
+
+.pi-items-table td {
+    padding: 1rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pi-summary-calc {
+    margin-left: auto;
+    width: 100%;
+    max-width: 320px;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pi-calc-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.pi-calc-total {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px dashed #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #1a1333;
+}
+
+.animate-in { animation-duration: 0.3s; animation-fill-mode: both; }
+.slide-in-from-right { animation-name: slideInRight; }
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}

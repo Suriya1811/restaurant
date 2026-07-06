@@ -1,0 +1,8 @@
+Restaurant POS - Desktop Application
+
+Copyright (c) 2025 Restaurant POS
+
+All rights reserved.
+
+This software is provided for use by licensed users only.
+Unauthorized copying, distribution, or modification is prohibited.
