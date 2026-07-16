@@ -1479,250 +1479,253 @@ const ProductMaster = () => {
 
                             {/* bottom actions bar & popups */}
                             <div className="pt-3 border-t border-slate-100 flex flex-row justify-between items-center bg-white flex-shrink-0 relative">
-                                {/* popover implementations opening directly above the bottom bar */}
-                                {activePopover === 'variations' && (
-                                    <div className="absolute bottom-14 left-0 w-80 bg-white border-2 border-orange-500 rounded-lg shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom duration-200">
-                                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
-                                            <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Variations</span>
-                                            <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                                        </div>
-                                        <div className="max-h-40 overflow-y-auto mb-2 space-y-2 pr-1">
-                                            {formData.variations?.map((v, idx) => (
-                                                <div key={idx} className="flex gap-2 items-center">
-                                                    <input
-                                                        type="text"
-                                                        value={v.name}
-                                                        placeholder="e.g. Small"
-                                                        onChange={(e) => handleVariationChange(idx, 'name', e.target.value)}
-                                                        className="flex-1 px-2 py-1 bg-white border border-orange-500 rounded text-xs outline-none focus:ring-1 focus:ring-orange-500"
-                                                        style={{ borderColor: '#f97316' }}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={v.amount}
-                                                        placeholder="Rate"
-                                                        onChange={(e) => handleVariationChange(idx, 'amount', e.target.value.replace(/[^0-9.]/g, ''))}
-                                                        className="w-20 px-2 py-1 bg-white border border-orange-500 rounded text-xs outline-none focus:ring-1 focus:ring-orange-500"
-                                                        style={{ borderColor: '#f97316' }}
-                                                    />
-                                                    <button type="button" onClick={() => handleRemoveVariation(idx)} className="text-rose-500 hover:text-rose-700"><Trash2 size={14} /></button>
-                                                </div>
-                                            ))}
-                                            {(!formData.variations || formData.variations.length === 0) && (
-                                                <p className="text-[11px] text-slate-400 font-bold italic">No variations added.</p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-2 gap-2">
-                                            <button type="button" onClick={handleAddVariation} className="px-2 py-1 text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
-                                            <div className="flex gap-1.5 justify-end">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({ ...prev, variations: [] }));
-                                                        setActivePopover(null);
-                                                    }}
-                                                    className="px-2.5 py-1 text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100 transition-colors uppercase"
-                                                >
-                                                    Delete
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActivePopover(null)}
-                                                    className="px-3 py-1 text-[10px] font-black text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors uppercase"
-                                                >
-                                                    Save
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Modal popup implementations - centered on screen */}
+                                {activePopover && (
+                                    <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setActivePopover(null)}>
+                                        <div className="absolute inset-0 bg-black/30" />
 
-                                {activePopover === 'addons' && (
-                                    <div className="absolute bottom-14 left-10 w-80 bg-white border-2 border-orange-500 rounded-lg shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom duration-200">
-                                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
-                                            <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Addons</span>
-                                            <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                                        </div>
-                                        <div className="max-h-40 overflow-y-auto mb-2 space-y-2 pr-1">
-                                            {formData.addons?.map((addon, idx) => (
-                                                <div key={idx} className="flex gap-2 items-center">
-                                                    <input
-                                                        type="text"
-                                                        value={addon.name}
-                                                        placeholder="e.g. Cheese"
-                                                        onChange={(e) => handleAddonChange(idx, 'name', e.target.value)}
-                                                        className="flex-1 px-2 py-1 bg-white border border-orange-500 rounded text-xs outline-none focus:ring-1 focus:ring-orange-500"
-                                                        style={{ borderColor: '#f97316' }}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={addon.rate}
-                                                        placeholder="Rate"
-                                                        onChange={(e) => handleAddonChange(idx, 'rate', e.target.value.replace(/[^0-9.]/g, ''))}
-                                                        className="w-20 px-2 py-1 bg-white border border-orange-500 rounded text-xs outline-none focus:ring-1 focus:ring-orange-500"
-                                                        style={{ borderColor: '#f97316' }}
-                                                    />
-                                                    <button type="button" onClick={() => handleRemoveAddon(idx)} className="text-rose-500 hover:text-rose-700"><Trash2 size={14} /></button>
+                                        {/* VARIATIONS POPUP */}
+                                        {activePopover === 'variations' && (
+                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Variations</span>
+                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
                                                 </div>
-                                            ))}
-                                            {(!formData.addons || formData.addons.length === 0) && (
-                                                <p className="text-[11px] text-slate-400 font-bold italic">No addons added.</p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-2 gap-2">
-                                            <button type="button" onClick={handleAddAddon} className="px-2 py-1 text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
-                                            <div className="flex gap-1.5 justify-end">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({ ...prev, addons: [] }));
-                                                        setActivePopover(null);
-                                                    }}
-                                                    className="px-2.5 py-1 text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100 transition-colors uppercase"
-                                                >
-                                                    Delete
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActivePopover(null)}
-                                                    className="px-3 py-1 text-[10px] font-black text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors uppercase"
-                                                >
-                                                    Save
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activePopover === 'otherInfo' && (
-                                    <div className="absolute bottom-14 left-20 w-80 bg-white border-2 border-orange-500 rounded-lg shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom duration-200">
-                                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
-                                            <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Other Info</span>
-                                            <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                                        </div>
-                                        <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-                                            <div className="space-y-1">
-                                                <label className="block text-[10px] font-bold text-slate-700 uppercase">Food Type</label>
-                                                <select
-                                                    name="food_type"
-                                                    value={formData.food_type}
-                                                    onChange={handleInputChange}
-                                                    className="w-full px-2 py-1 bg-white border border-orange-500 rounded text-xs outline-none focus:ring-1 focus:ring-orange-500 font-semibold"
-                                                    style={{ borderColor: '#f97316' }}
-                                                >
-                                                    <option value="NONE">None</option>
-                                                    <option value="VEG">Veg</option>
-                                                    <option value="NON_VEG">Non-Veg</option>
-                                                </select>
-                                            </div>
-                                            <div className="flex items-center justify-between border-t border-slate-50 pt-2">
-                                                <span className="text-[10px] font-bold text-slate-700 uppercase">Online Order Available</span>
-                                                <input
-                                                    type="checkbox"
-                                                    name="online_order"
-                                                    checked={formData.online_order}
-                                                    onChange={(e) => setFormData(p => ({ ...p, online_order: e.target.checked }))}
-                                                    className="w-4 h-4 text-orange-500 border-orange-500 rounded focus:ring-orange-500 cursor-pointer"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5 border-t border-slate-50 pt-2">
-                                                <span className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">Serve Types</span>
-                                                <div className="grid grid-cols-2 gap-1.5">
-                                                    {Object.entries({
-                                                        dine_in: 'Dine In',
-                                                        delivery: 'Delivery',
-                                                        pickup: 'Pickup',
-                                                        party_order: 'Party Order'
-                                                    }).map(([key, label]) => (
-                                                        <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                                                <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
+                                                    {formData.variations?.map((v, idx) => (
+                                                        <div key={idx} className="flex gap-2 items-center">
                                                             <input
-                                                                type="checkbox"
-                                                                checked={!!formData.serve_types[key]}
-                                                                onChange={() => handleServeTypeChange(key)}
-                                                                className="w-3.5 h-3.5 text-orange-500 border-orange-500 rounded focus:ring-orange-500"
+                                                                type="text"
+                                                                value={v.name}
+                                                                placeholder="e.g. Small"
+                                                                onChange={(e) => handleVariationChange(idx, 'name', e.target.value)}
+                                                                className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                                             />
-                                                            <span className="text-[10px] font-bold text-slate-700 uppercase">{label}</span>
-                                                        </label>
+                                                            <input
+                                                                type="text"
+                                                                value={v.amount}
+                                                                placeholder="Rate"
+                                                                onChange={(e) => handleVariationChange(idx, 'amount', e.target.value.replace(/[^0-9.]/g, ''))}
+                                                                className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                            />
+                                                            <button type="button" onClick={() => handleRemoveVariation(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
+                                                        </div>
                                                     ))}
+                                                    {(!formData.variations || formData.variations.length === 0) && (
+                                                        <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No variations added.</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                    <button type="button" onClick={handleAddVariation} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setFormData(prev => ({ ...prev, variations: [] })); setActivePopover(null); }}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#ef4444' }}
+                                                        >
+                                                            DELETE
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActivePopover(null)}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#f97316' }}
+                                                        >
+                                                            SAVE
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex justify-end gap-1.5 pt-3 border-t border-slate-100 mt-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        food_type: 'NONE',
-                                                        online_order: false,
-                                                        serve_types: { dine_in: true, delivery: true, pickup: true, party_order: true }
-                                                    }));
-                                                    setActivePopover(null);
-                                                }}
-                                                className="px-2.5 py-1 text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100 transition-colors uppercase"
-                                            >
-                                                Delete
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setActivePopover(null)}
-                                                className="px-3 py-1 text-[10px] font-black text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors uppercase"
-                                            >
-                                                Save
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                        )}
 
-                                {activePopover === 'image' && (
-                                    <div className="absolute bottom-14 left-[21rem] w-80 bg-white border-2 border-orange-500 rounded-lg shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom duration-200">
-                                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
-                                            <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Item Image</span>
-                                            <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                                        </div>
-                                        <div className="flex flex-col items-center gap-3 py-2">
-                                            {formData.image ? (
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <div className="w-24 h-24 rounded border border-orange-500 overflow-hidden shadow-inner bg-slate-50">
-                                                        <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                        {/* ADDONS POPUP */}
+                                        {activePopover === 'addons' && (
+                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Add Ons</span>
+                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                </div>
+                                                <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
+                                                    {formData.addons?.map((addon, idx) => (
+                                                        <div key={idx} className="flex gap-2 items-center">
+                                                            <input
+                                                                type="text"
+                                                                value={addon.name}
+                                                                placeholder="e.g. Cheese"
+                                                                onChange={(e) => handleAddonChange(idx, 'name', e.target.value)}
+                                                                className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={addon.rate}
+                                                                placeholder="Rate"
+                                                                onChange={(e) => handleAddonChange(idx, 'rate', e.target.value.replace(/[^0-9.]/g, ''))}
+                                                                className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                            />
+                                                            <button type="button" onClick={() => handleRemoveAddon(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
+                                                        </div>
+                                                    ))}
+                                                    {(!formData.addons || formData.addons.length === 0) && (
+                                                        <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No addons added.</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                    <button type="button" onClick={handleAddAddon} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setFormData(prev => ({ ...prev, addons: [] })); setActivePopover(null); }}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#ef4444' }}
+                                                        >
+                                                            DELETE
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActivePopover(null)}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#f97316' }}
+                                                        >
+                                                            SAVE
+                                                        </button>
                                                     </div>
-                                                    <span className="text-[10px] text-slate-500 font-medium">Image Uploaded Successfully</span>
                                                 </div>
-                                            ) : (
-                                                <div className="w-24 h-24 rounded border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
-                                                    <ImageIcon size={28} className="stroke-[1.5]" />
-                                                    <span className="text-[9px] font-bold mt-1 uppercase">No Image</span>
-                                                </div>
-                                            )}
+                                            </div>
+                                        )}
 
-                                            <div className="flex gap-2 w-full mt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => imageUploadInputRef.current?.click()}
-                                                    className="flex-1 px-3 py-1.5 bg-orange-50 text-orange-500 border border-orange-200 hover:bg-orange-100 rounded text-xs font-bold uppercase transition-colors text-center"
-                                                >
-                                                    {formData.image ? 'Change File' : 'Upload File'}
-                                                </button>
-                                                {formData.image && (
+                                        {/* OTHER INFO POPUP */}
+                                        {activePopover === 'otherInfo' && (
+                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Other Info</span>
+                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                </div>
+                                                <div className="px-5 py-4 space-y-4 max-h-[50vh] overflow-y-auto">
+                                                    <div className="space-y-1.5">
+                                                        <label className="block text-xs font-bold text-slate-700 uppercase">Food Type</label>
+                                                        <select
+                                                            name="food_type"
+                                                            value={formData.food_type}
+                                                            onChange={handleInputChange}
+                                                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold"
+                                                        >
+                                                            <option value="NONE">None</option>
+                                                            <option value="VEG">Veg</option>
+                                                            <option value="NON_VEG">Non-Veg</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                                                        <span className="text-xs font-bold text-slate-700 uppercase">Online Order Available</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            name="online_order"
+                                                            checked={formData.online_order}
+                                                            onChange={(e) => setFormData(p => ({ ...p, online_order: e.target.checked }))}
+                                                            className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 cursor-pointer accent-orange-500"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2 border-t border-slate-100 pt-3">
+                                                        <span className="block text-xs font-bold text-slate-700 uppercase">Serve Types</span>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {Object.entries({
+                                                                dine_in: 'Dine In',
+                                                                delivery: 'Delivery',
+                                                                pickup: 'Pickup',
+                                                                party_order: 'Party Order'
+                                                            }).map(([key, label]) => (
+                                                                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!formData.serve_types[key]}
+                                                                        onChange={() => handleServeTypeChange(key)}
+                                                                        className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 accent-orange-500"
+                                                                    />
+                                                                    <span className="text-xs font-bold text-slate-700 uppercase">{label}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50/50">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setFormData(p => ({ ...p, image: '' }))}
-                                                        className="px-3 py-1.5 bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 rounded text-xs font-bold uppercase transition-colors"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                food_type: 'NONE',
+                                                                online_order: false,
+                                                                serve_types: { dine_in: true, delivery: true, pickup: true, party_order: true }
+                                                            }));
+                                                            setActivePopover(null);
+                                                        }}
+                                                        className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                        style={{ backgroundColor: '#ef4444' }}
                                                     >
-                                                        Delete
+                                                        DELETE
                                                     </button>
-                                                )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActivePopover(null)}
+                                                        className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                        style={{ backgroundColor: '#f97316' }}
+                                                    >
+                                                        SAVE
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex justify-end gap-1.5 pt-2 border-t border-slate-100 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActivePopover(null)}
-                                                className="px-4 py-1.5 text-[10px] font-black text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors uppercase"
-                                            >
-                                                Save
-                                            </button>
-                                        </div>
+                                        )}
+
+                                        {/* IMAGE POPUP */}
+                                        {activePopover === 'image' && (
+                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Item Image</span>
+                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                </div>
+                                                <div className="px-5 py-5 flex flex-col items-center gap-4">
+                                                    {formData.image ? (
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <div className="w-28 h-28 rounded border border-orange-300 overflow-hidden shadow-inner bg-slate-50">
+                                                                <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                                            </div>
+                                                            <span className="text-xs text-slate-500 font-medium">Image uploaded</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-28 h-28 rounded border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
+                                                            <ImageIcon size={32} className="stroke-[1.5]" />
+                                                            <span className="text-[10px] font-bold mt-1.5 uppercase">No Image</span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => imageUploadInputRef.current?.click()}
+                                                        className="w-full px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 rounded text-sm font-bold uppercase transition-colors text-center"
+                                                    >
+                                                        {formData.image ? 'CHANGE FILE' : 'UPLOAD FILE'}
+                                                    </button>
+                                                    {formData.image && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData(p => ({ ...p, image: '' }))}
+                                                            className="w-full px-4 py-2 bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 rounded text-sm font-bold uppercase transition-colors text-center"
+                                                        >
+                                                            DELETE IMAGE
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-end px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActivePopover(null)}
+                                                        className="px-5 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                        style={{ backgroundColor: '#f97316' }}
+                                                    >
+                                                        SAVE
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
