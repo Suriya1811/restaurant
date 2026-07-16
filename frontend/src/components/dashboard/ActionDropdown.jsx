@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, PenSquare, MinusCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { ChevronDown, X, Edit, XCircle, CheckCircle, Trash2 } from 'lucide-react';
 
 const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -54,7 +54,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                                     }}
                                     className="w-full px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
-                                    <PenSquare size={16} className="text-blue-500" /> Alter
+                                    <Edit size={16} className="text-blue-500" /> Alter
                                 </button>
                             )}
 
@@ -74,7 +74,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                                                 : 'text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed'
                                         }`}
                                     >
-                                        <MinusCircle size={16} className={isActive ? 'text-orange-500' : 'text-slate-400'} /> Deactivate
+                                        <XCircle size={16} className={isActive ? 'text-orange-500' : 'text-slate-400'} /> Deactivate
                                     </button>
                                     <button
                                         type="button"
@@ -90,7 +90,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                                                 : 'text-slate-700 hover:bg-green-50 hover:text-green-600'
                                         }`}
                                     >
-                                        <CheckCircle2 size={16} className={isActive ? 'text-slate-400' : 'text-green-500'} /> Activate
+                                        <CheckCircle size={16} className={isActive ? 'text-slate-400' : 'text-green-500'} /> Activate
                                     </button>
                                 </>
                             )}

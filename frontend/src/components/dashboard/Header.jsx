@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 
-const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions }) => {
+const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, onClose, showClose = true }) => {
     const { user, logout, hasModuleAccess } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -123,9 +123,9 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions }
                         </div>
                     </div>
                 )}
-                {!isHomeScreen && (
+                {!isHomeScreen && showClose && (
                     <button
-                        onClick={() => navigate('/dashboard/self-service/home')}
+                        onClick={onClose || (() => navigate('/dashboard/self-service/home'))}
                         className="btn-action-close ml-2"
                         title="Close and Return to Home"
                     >
