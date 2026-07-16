@@ -1,5 +1,5 @@
 import { useState, useEffect, memo, useRef } from 'react';
-import { Menu, User, LogOut, XCircle, Bell, Mail, Phone, Building2, UserCircle } from 'lucide-react';
+import { Menu, User, LogOut, XCircle, X, Bell, Mail, Phone, Building2, UserCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -126,10 +126,10 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions }
                 {!isHomeScreen && (
                     <button
                         onClick={() => navigate('/dashboard/self-service/home')}
-                        className="flex items-center justify-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 px-4 py-2 rounded-xl font-black text-sm transition-all border border-rose-100 shadow-sm ml-2"
+                        className="btn-action-close ml-2"
                         title="Close and Return to Home"
                     >
-                        <XCircle size={18} /> CLOSE
+                        <X size={16} /> <span className="text-[10px] uppercase font-black">CLOSE</span>
                     </button>
                 )}
             </div>

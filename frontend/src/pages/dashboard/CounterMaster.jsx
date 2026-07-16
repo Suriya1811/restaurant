@@ -15,7 +15,7 @@ import {
     Cpu,
     CheckCircle2,
     X
-} from 'lucide-react';
+, Download, Printer} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 
@@ -173,11 +173,41 @@ const CounterMaster = () => {
                     toggleSidebar={toggleSidebar} 
                     title="Counter Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={() => {}}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={() => {}}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={() => window.print()}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                             <PlusCircle size={18} /> 
                             <span className="text-[10px] uppercase font-black">Initialize Terminal</span>
                         </button>
-                    }
+                    </>
+}
                 />
                 <div className="master-content-layout fade-in">
                     {/* Header relocated */}
@@ -365,7 +395,7 @@ const CounterMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium !p-4">
-                                <button type="submit" form="counter-form" disabled={submitting} className="btn-premium-primary flex-1 justify-center !py-2.5 !text-sm">
+                                <button type="submit" form="counter-form" disabled={submitting} className="btn-action-add flex-1 justify-center !py-2.5 !text-sm">
                                     {submitting ? <Loader2 className="animate-spin" size={18} /> : (isEditing ? 'COMMIT CONFIGURATION' : 'INITIALIZE NODE')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline !py-2.5 !text-sm">TERMINATE</button>

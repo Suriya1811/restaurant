@@ -15,9 +15,11 @@ import {
     Activity,
     Layers,
     X
+    , Download, Printer
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 
 const TableMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -231,6 +233,13 @@ const TableMaster = () => {
 
     const groups = buildGroups();
 
+
+    const exportCols = ['#', 'Table Name', 'Capacity', 'Status'];
+    const getExportRows = () => filteredTables.map((t, i) => [i + 1, t.name, t.capacity || '-', t.status || '-']);
+    const handleExcelExport = () => exportToCSV('Table Master', exportCols, getExportRows(), 'Table_Master');
+    const handlePDFExport = () => exportToPDF('Table Master', exportCols, getExportRows(), 'Table_Master');
+    const handlePrint = () => printTable('Table Master', `Total: ${filteredTables.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -240,14 +249,44 @@ const TableMaster = () => {
             )}
 
             <main className="dashboard-main">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
+                <Header
+                    toggleSidebar={toggleSidebar}
                     title="Table Creation"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} /> 
-                            <span className="text-[10px] uppercase font-black">Add New Table</span>
-                        </button>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Add New Table</span>
+                            </button>
+                        </>
                     }
                 />
                 <div className="master-content-layout fade-in">
@@ -298,7 +337,7 @@ const TableMaster = () => {
                                         const isPrinted = table.status === 'PRINTED';
                                         const isReserved = table.status === 'RESERVED';
                                         const isActive = isOccupied || isPrinted;
-                                        
+
                                         const colorScheme = isOccupied
                                             ? { border: '#fdba74', bg: '#fffaf5', text: '#ea580c', glow: '#fb923c22' }
                                             : isPrinted
@@ -306,9 +345,9 @@ const TableMaster = () => {
                                                 : isReserved
                                                     ? { border: '#c4b5fd', bg: '#fbfaff', text: '#7c3aed', glow: '#a78bfa22' }
                                                     : { border: '#e2e8f0', bg: '#ffffff', text: '#334155', glow: 'transparent' };
-                                                    
+
                                         const { border, bg, text, glow } = colorScheme;
-                                        
+
                                         return (
                                             <div key={table._id} style={{ display: 'flex', flexDirection: 'row', gap: '6px', flexShrink: 0, width: '164px', height: '108px', opacity: table.is_active ? 1 : 0.6, filter: table.is_active ? 'none' : 'grayscale(100%)', transition: 'all 0.2s ease' }}
                                                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
@@ -331,23 +370,23 @@ const TableMaster = () => {
                                                             <Users size={12} strokeWidth={3} /> {table.seating_capacity || '-'}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
                                                         {table.captain && (
                                                             <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                <span style={{color: '#cbd5e1', marginRight: '3px'}}>C:</span>{table.captain}
+                                                                <span style={{ color: '#cbd5e1', marginRight: '3px' }}>C:</span>{table.captain}
                                                             </div>
                                                         )}
                                                         {table.waiter && (
                                                             <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                <span style={{color: '#cbd5e1', marginRight: '3px'}}>W:</span>{table.waiter}
+                                                                <span style={{ color: '#cbd5e1', marginRight: '3px' }}>W:</span>{table.waiter}
                                                             </div>
                                                         )}
                                                         {!table.captain && !table.waiter && (
                                                             <div style={{ fontSize: '10px', fontWeight: 800, color: '#cbd5e1' }}>Unassigned</div>
                                                         )}
                                                     </div>
-                                                    
+
                                                     <div style={{ height: '14px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', width: '100%' }}>
                                                         <span style={{ fontSize: '9px', fontWeight: 900, color: text, letterSpacing: '0.05em' }}>{table.status}</span>
                                                     </div>
@@ -355,19 +394,19 @@ const TableMaster = () => {
 
                                                 {/* Actions Column */}
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '42px', height: '100%' }}>
-                                                    <button onClick={() => handleEdit(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }} 
+                                                    <button onClick={() => handleEdit(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                         title="Edit Table"
                                                         onMouseEnter={e => { e.currentTarget.style.background = '#eef2ff'; e.currentTarget.style.borderColor = '#c7d2fe'; }}
                                                         onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                                                         <Edit size={16} strokeWidth={2.5} />
                                                     </button>
-                                                    <button onClick={() => handleToggleStatus(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: table.is_active ? '#15803d' : '#9a3412', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }} 
+                                                    <button onClick={() => handleToggleStatus(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: table.is_active ? '#15803d' : '#9a3412', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                         title={table.is_active ? "Deactivate" : "Activate"}
                                                         onMouseEnter={e => { e.currentTarget.style.background = table.is_active ? '#f0fdf4' : '#fff7ed'; e.currentTarget.style.borderColor = table.is_active ? '#bbf7d0' : '#ffedd5'; }}
                                                         onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                                                         {table.is_active ? <CheckCircle2 size={16} strokeWidth={2.5} /> : <XCircle size={16} strokeWidth={2.5} />}
                                                     </button>
-                                                    <button onClick={() => handleDelete(table)} style={{ flex: 1.2, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }} 
+                                                    <button onClick={() => handleDelete(table)} style={{ flex: 1.2, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
                                                         title="Delete Table"
                                                         onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
                                                         onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}>
@@ -486,16 +525,16 @@ const TableMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium">
-                                <button type="submit" form="table-form" disabled={submitting} className="btn-premium-primary flex-1 justify-center py-4">
+                                <button type="submit" form="table-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Commit Configuration' : 'Launch Unit')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

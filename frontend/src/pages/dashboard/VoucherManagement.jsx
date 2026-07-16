@@ -314,13 +314,13 @@ const VouchersPage = () => {
                     isCollapsed={isCollapsed} 
                     headerActions={
                         <>
-                            <button onClick={exportToCSV} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors shadow-sm">
+                            <button onClick={exportToCSV} className="btn-export excel">
                                 <FileSpreadsheet size={16} /> Excel
                             </button>
-                            <button onClick={exportToPDF} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-rose-700 bg-rose-50 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors shadow-sm">
+                            <button onClick={exportToPDF} className="btn-export pdf">
                                 <FileIcon size={16} /> PDF
                             </button>
-                            <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm">
+                            <button onClick={handlePrint} className="btn-export print">
                                 <Printer size={16} /> Print
                             </button>
                         </>
@@ -516,7 +516,7 @@ const VouchersPage = () => {
                                 </div>
                                 <h2 className="text-xl font-bold text-slate-800">Create Voucher</h2>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-rose-500 hover:bg-rose-50 font-semibold text-sm transition-colors border border-rose-100">
+                            <button onClick={() => setShowModal(false)} className="btn-action-close">
                                 <XCircle size={16} /> Close
                             </button>
                         </div>

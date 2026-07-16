@@ -295,11 +295,11 @@ const ProductMaster = () => {
     const exportPDF = () => {
         if (!products.length) return;
         const doc = new jsPDF();
-        
+
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.text("Product Master Report", 14, 20);
-        
+
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 27);
@@ -658,11 +658,11 @@ const ProductMaster = () => {
             const v = product[f];
             productAsStrings[f] = (v === 0 || v === null || v === undefined) ? '' : String(v);
         });
-        setFormData({ 
-            ...initialFormState, 
-            ...productAsStrings, 
+        setFormData({
+            ...initialFormState,
+            ...productAsStrings,
             tax_id: product.tax_id?._id || product.tax_id || '',
-            serve_types: product.serve_types || initialFormState.serve_types 
+            serve_types: product.serve_types || initialFormState.serve_types
         });
         setIsEditing(true);
         setShowDrawer(true);
@@ -1347,10 +1347,10 @@ const ProductMaster = () => {
                         </div>
                     </section>
                 )}
-                <SaveConfirmationModal 
-                    isOpen={showSaveConfirm} 
-                    onConfirm={confirmSave} 
-                    onCancel={cancelSave} 
+                <SaveConfirmationModal
+                    isOpen={showSaveConfirm}
+                    onConfirm={confirmSave}
+                    onCancel={cancelSave}
                 />
             </main>
 

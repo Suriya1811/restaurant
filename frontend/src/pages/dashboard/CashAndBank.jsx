@@ -421,7 +421,7 @@ const CashAndBank = () => {
                                     <button className="h-14 bg-white border border-slate-200 text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-slate-900 transition-all flex items-center justify-center gap-2">
                                         <Download size={16} /> Receipt
                                     </button>
-                                    <button className="h-14 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                                    <button className="btn-export print">
                                         <Printer size={16} /> Print Audit
                                     </button>
                                 </div>

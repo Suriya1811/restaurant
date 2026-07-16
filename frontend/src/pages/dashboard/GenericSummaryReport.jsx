@@ -277,7 +277,7 @@ const GenericSummaryReport = ({ title, subtitle, endpoint, groupBy, isEmbedded =
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-sm font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center gap-2"
+                        className="btn-export print"
                     >
                         <FileText size={14} /> Print
                     </button>

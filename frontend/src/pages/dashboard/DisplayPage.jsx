@@ -443,17 +443,17 @@ const DisplayPage = () => {
         <div className="flex items-center gap-2">
             <button 
                 onClick={exportToCSV}
-                className="flex items-center justify-center gap-2 bg-white text-green-600 border border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl font-bold text-[13px] transition-all shadow-sm">
+                className="btn-export excel">
                 <FileSpreadsheet size={16} /> Excel
             </button>
             <button 
                 onClick={exportToPDF}
-                className="flex items-center justify-center gap-2 bg-white text-red-600 border border-red-500 hover:bg-red-50 px-4 py-2 rounded-xl font-bold text-[13px] transition-all shadow-sm">
+                className="btn-export pdf">
                 <FileIcon size={16} /> PDF
             </button>
             <button 
                 onClick={handlePrint}
-                className="flex items-center justify-center gap-2 bg-white text-blue-600 border border-blue-500 hover:bg-blue-50 px-4 py-2 rounded-xl font-bold text-[13px] transition-all shadow-sm">
+                className="btn-export print">
                 <Printer size={16} /> Print
             </button>
         </div>

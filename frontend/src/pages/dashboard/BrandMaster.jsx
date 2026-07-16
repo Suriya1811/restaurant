@@ -13,10 +13,14 @@ import {
     Tag,
     AlertCircle,
     Award,
-    X
+    X,
+    Download,
+    Printer
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const BrandMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -26,17 +30,12 @@ const BrandMaster = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: ''
-    });
+    const [formData, setFormData] = useState({ name: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
-    const handleFormSubmitRequest = () => {
-        setShowSaveConfirm(true);
-    };
-
+    const handleFormSubmitRequest = () => { setShowSaveConfirm(true); };
     const { formRef, handleKeyDown } = useFormNavigation([showDrawer], handleFormSubmitRequest);
 
     const toggleSidebar = () => {
@@ -54,14 +53,11 @@ const BrandMaster = () => {
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
-
             const response = await fetch(`${import.meta.env.VITE_API_URL}/brands`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-            if (data.success) {
-                setBrands(data.data);
-            }
+            if (data.success) setBrands(data.data);
         } catch (err) {
             console.error("Failed to fetch brands", err);
         } finally {
@@ -69,40 +65,26 @@ const BrandMaster = () => {
         }
     };
 
-    useEffect(() => {
-        fetchBrands();
-    }, []);
+    useEffect(() => { fetchBrands(); }, []);
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         setSubmitting(true);
         setError('');
-
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             const url = isEditing
                 ? `${import.meta.env.VITE_API_URL}/brands/${formData._id}`
                 : `${import.meta.env.VITE_API_URL}/brands`;
-
             const method = isEditing ? 'PUT' : 'POST';
-
             const response = await fetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(formData)
             });
-
             const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error || result.message);
-            }
-
+            if (!result.success) throw new Error(result.error || result.message);
             fetchBrands();
             setShowDrawer(false);
             resetForm();
@@ -117,68 +99,44 @@ const BrandMaster = () => {
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             await fetch(`${import.meta.env.VITE_API_URL}/brands/${brand._id}/toggle-status`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             fetchBrands();
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const handleDelete = async (brand) => {
-        if (!window.confirm(`Are you sure you want to delete the brand "${brand.name}"?`)) {
-            return;
-        }
-
+        if (!window.confirm(`Are you sure you want to delete the brand "${brand.name}"?`)) return;
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             const response = await fetch(`${import.meta.env.VITE_API_URL}/brands/${brand._id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-
             const result = await response.json();
-
-            if (result.success) {
-                fetchBrands();
-            } else {
-                alert(`Error: ${result.error || result.message}`);
-            }
+            if (result.success) fetchBrands();
+            else alert(`Error: ${result.error}`);
         } catch (err) {
             console.error('Error deleting brand:', err);
             alert('An error occurred while deleting the brand.');
         }
     };
 
-    const handleEdit = (brand) => {
-        setFormData(brand);
-        setIsEditing(true);
-        setShowDrawer(true);
-    };
+    const handleEdit = (brand) => { setFormData(brand); setIsEditing(true); setShowDrawer(true); };
+    const resetForm = () => { setFormData({ name: '' }); setIsEditing(false); setError(''); };
+    const confirmSave = () => { setShowSaveConfirm(false); handleSubmit(); };
+    const cancelSave = () => { setShowSaveConfirm(false); };
 
-    const resetForm = () => {
-        setFormData({ name: '' });
-        setIsEditing(false);
-        setError('');
-    };
+    const filteredBrands = brands.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const confirmSave = () => {
-        setShowSaveConfirm(false);
-        handleSubmit();
-    };
-
-    const cancelSave = () => {
-        setShowSaveConfirm(false);
-    };
-
-    const filteredBrands = brands.filter(b =>
-        b.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const COLS = ['#', 'Brand Name', 'Status'];
+    const getRows = () => filteredBrands.map((b, i) => [i + 1, b.name, b.is_active ? 'Active' : 'Inactive']);
+    const handleExcelExport = () => exportToCSV('Brand Master', COLS, getRows(), 'Brand_Master');
+    const handlePDFExport   = () => exportToPDF('Brand Master', COLS, getRows(), 'Brand_Master');
+    const handlePrint       = () => printTable('Brand Master', `Total: ${filteredBrands.length}`, COLS, getRows());
 
     return (
         <div className="dashboard-layout">
@@ -193,16 +151,27 @@ const BrandMaster = () => {
                     toggleSidebar={toggleSidebar}
                     title="Brand Creation"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} />
-                            <span className="text-[10px] uppercase font-black">Add New Brand</span>
-                        </button>
+                        <>
+                            <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+                            <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Add New Brand</span>
+                            </button>
+                        </>
                     }
                 />
                 <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
                     <div className="toolbar-premium">
                         <div className="search-premium">
                             <Search size={20} />
@@ -260,14 +229,8 @@ const BrandMaster = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(brand)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleToggleStatus(brand)} className="action-icon-btn" style={{ background: brand.is_active ? '#fff7ed' : '#f0fdf4', color: brand.is_active ? '#9a3412' : '#15803d' }}>
-                                                    {brand.is_active ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                </button>
-                                                <button onClick={() => handleDelete(brand)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
+                                                            <ActionDropdown item={brand} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -310,16 +273,16 @@ const BrandMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium">
-                                <button type="submit" form="brand-form" disabled={submitting} className="btn-premium-primary flex-1 justify-center py-4">
+                                <button type="submit" form="brand-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Confirm Changes' : 'Execute Registration')}
                                 </button>
                                 <button onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

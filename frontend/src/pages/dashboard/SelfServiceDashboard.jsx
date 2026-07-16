@@ -319,60 +319,60 @@ const SelfServiceDashboard = () => {
                     ) : (
                         <>
                             {/* Top Stat Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 flex-shrink-0">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 flex-shrink-0">
                         {/* Card 1: SALES */}
-                        <div className="bg-blue-50 rounded-2xl border border-blue-200 p-4 flex flex-col justify-between h-[95px] shadow-sm">
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl border-transparent p-5 flex flex-col justify-between h-[105px] shadow-lg shadow-blue-500/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">SALES</h3>
-                                    <div className="text-[26px] font-bold text-slate-700 leading-none">₹{fmt(dashboardData.todaySales)}</div>
+                                    <h3 className="text-[11px] font-bold text-blue-100 uppercase tracking-widest mb-1">SALES</h3>
+                                    <div className="text-[28px] font-black text-white leading-none">₹{fmt(dashboardData.todaySales)}</div>
                                 </div>
                             </div>
                             <div className="flex justify-between items-end mt-2">
-                                <span className="text-[10px] font-semibold text-slate-400">{dashboardData.todayBills || 0} Bills</span>
-                                <span className="text-[10px] font-semibold text-blue-500">Avg: ₹{dashboardData.todayBills ? fmt(dashboardData.todaySales / dashboardData.todayBills) : '0.00'}</span>
+                                <span className="text-[11px] font-semibold text-blue-100">{dashboardData.todayBills || 0} Bills</span>
+                                <span className="text-[11px] font-bold text-white">Avg: ₹{dashboardData.todayBills ? fmt(dashboardData.todaySales / dashboardData.todayBills) : '0.00'}</span>
                             </div>
                         </div>
                         
                         {/* Card 2: RETURN */}
-                        <div className="bg-rose-50 rounded-2xl border border-rose-200 p-4 flex flex-col justify-between h-[95px] shadow-sm">
+                        <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl border-transparent p-5 flex flex-col justify-between h-[105px] shadow-lg shadow-rose-500/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">RETURN</h3>
-                                    <div className="text-[26px] font-bold text-slate-700 leading-none">₹{fmt(dashboardData.todayReturns)}</div>
+                                    <h3 className="text-[11px] font-bold text-rose-100 uppercase tracking-widest mb-1">RETURN</h3>
+                                    <div className="text-[28px] font-black text-white leading-none">₹{fmt(dashboardData.todayReturns)}</div>
                                 </div>
                             </div>
                             <div className="flex justify-between items-end mt-2">
-                                <span className="text-[10px] font-semibold text-rose-400">Cancelled Bills</span>
-                                <span className="text-[10px] font-semibold text-rose-500">Today</span>
+                                <span className="text-[11px] font-semibold text-rose-100">Cancelled Bills</span>
+                                <span className="text-[11px] font-bold text-white">Today</span>
                             </div>
                         </div>
 
                         {/* Card 3: PURCHASE */}
-                        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 flex flex-col justify-between h-[95px] shadow-sm">
+                        <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl border-transparent p-5 flex flex-col justify-between h-[105px] shadow-lg shadow-orange-500/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">PURCHASE</h3>
-                                    <div className="text-[26px] font-bold text-slate-700 leading-none">₹{fmt(dashboardData.todayPurchases)}</div>
+                                    <h3 className="text-[11px] font-bold text-orange-50 uppercase tracking-widest mb-1">PURCHASE</h3>
+                                    <div className="text-[28px] font-black text-white leading-none">₹{fmt(dashboardData.todayPurchases)}</div>
                                 </div>
                             </div>
                             <div className="flex justify-between items-end mt-2">
-                                <span className="text-[10px] font-semibold text-amber-500">Procured Value</span>
-                                <span className="text-[10px] font-semibold text-amber-500">Today</span>
+                                <span className="text-[11px] font-semibold text-orange-50">Procured Value</span>
+                                <span className="text-[11px] font-bold text-white">Today</span>
                             </div>
                         </div>
 
                         {/* Card 4: EXPENSES */}
-                        <div className="bg-fuchsia-50 rounded-2xl border border-fuchsia-200 p-4 flex flex-col justify-between h-[95px] shadow-sm">
+                        <div className="bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-2xl border-transparent p-5 flex flex-col justify-between h-[105px] shadow-lg shadow-fuchsia-500/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">EXPENSES</h3>
-                                    <div className="text-[26px] font-bold text-slate-700 leading-none">₹{fmt(dashboardData.todayExpenses || 0)}</div>
+                                    <h3 className="text-[11px] font-bold text-fuchsia-100 uppercase tracking-widest mb-1">EXPENSES</h3>
+                                    <div className="text-[28px] font-black text-white leading-none">₹{fmt(dashboardData.todayExpenses || 0)}</div>
                                 </div>
                             </div>
                             <div className="flex justify-between items-end mt-2">
-                                <span className="text-[10px] font-semibold text-fuchsia-400">Paid Balance</span>
-                                <span className="text-[10px] font-semibold text-fuchsia-400">Vouchers</span>
+                                <span className="text-[11px] font-semibold text-fuchsia-100">Paid Balance</span>
+                                <span className="text-[11px] font-bold text-white">Vouchers</span>
                             </div>
                         </div>
                     </div>
@@ -400,37 +400,27 @@ const SelfServiceDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Right Panel - Quick Actions + Total Sales */}
-                        <div className="w-full xl:w-[280px] flex flex-col gap-4 flex-shrink-0">
-                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                                <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-4">QUICK ACTIONS</h3>
-                                <div className="flex flex-col gap-2">
-                                    <button onClick={() => window.location.href = '/dashboard/self-service/kitchen-management'} className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 rounded-xl transition-colors text-left border border-slate-100">
-                                        <Monitor size={16} className="text-slate-500" />
-                                        <span className="text-[12px] font-semibold text-slate-700">KOT</span>
+                        {/* Right Panel - Quick Actions */}
+                        <div className="w-full xl:w-[320px] flex flex-col gap-4 flex-shrink-0">
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col h-[400px]">
+                                <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest mb-2">QUICK ACTIONS</h3>
+                                <div className="flex flex-col gap-4 flex-1 justify-center">
+                                    <button onClick={() => window.location.href = '/dashboard/self-service/kitchen-management'} className="w-full flex items-center gap-4 px-5 py-4 bg-white hover:bg-slate-50 rounded-xl transition-all text-left border border-slate-200 shadow-sm hover:shadow-md">
+                                        <Monitor size={18} className="text-slate-600" />
+                                        <span className="text-[13px] font-bold text-slate-700">KOT</span>
                                     </button>
-                                    <button onClick={() => window.location.href = '/dashboard/self-service/billing'} className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors text-left border border-blue-100">
-                                        <FileText size={16} className="text-blue-500" />
-                                        <span className="text-[12px] font-semibold text-blue-600">Sales Bill</span>
+                                    <button onClick={() => window.location.href = '/dashboard/self-service/billing'} className="w-full flex items-center gap-4 px-5 py-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all text-left border border-blue-200 shadow-sm hover:shadow-md">
+                                        <FileText size={18} className="text-blue-600" />
+                                        <span className="text-[13px] font-bold text-blue-700">Sales Bill</span>
                                     </button>
-                                    <button onClick={() => window.location.href = '/dashboard/self-service/purchase'} className="w-full flex items-center gap-3 px-4 py-3 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors text-left border border-rose-100">
-                                        <ShoppingBag size={16} className="text-rose-500" />
-                                        <span className="text-[12px] font-semibold text-rose-600">Purchase</span>
+                                    <button onClick={() => window.location.href = '/dashboard/self-service/purchase'} className="w-full flex items-center gap-4 px-5 py-4 bg-rose-50 hover:bg-rose-100 rounded-xl transition-all text-left border border-rose-200 shadow-sm hover:shadow-md">
+                                        <ShoppingBag size={18} className="text-rose-600" />
+                                        <span className="text-[13px] font-bold text-rose-700">Purchase</span>
                                     </button>
-                                    <button onClick={() => window.location.href = '/dashboard/self-service/products'} className="w-full flex items-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors text-left border border-purple-100">
-                                        <Edit size={16} className="text-purple-500" />
-                                        <span className="text-[12px] font-semibold text-purple-600">Item Creation</span>
+                                    <button onClick={() => window.location.href = '/dashboard/self-service/products'} className="w-full flex items-center gap-4 px-5 py-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all text-left border border-purple-200 shadow-sm hover:shadow-md">
+                                        <Edit size={18} className="text-purple-600" />
+                                        <span className="text-[13px] font-bold text-purple-700">Item Creation</span>
                                     </button>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between min-h-[140px]">
-                                <div className="flex justify-between items-start relative z-10">
-                                    <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">TOTAL SALES</h3>
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center"><BarChart2 size={14} /></div>
-                                </div>
-                                <div className="relative z-10 mt-auto">
-                                    <div className="text-[26px] font-bold text-slate-700">₹{fmt(dashboardData.todaySales)}</div>
-                                    <p className="text-[11px] text-slate-400 mt-1 font-medium">Based on {chartRange.charAt(0) + chartRange.slice(1).toLowerCase()} report</p>
                                 </div>
                             </div>
                         </div>

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { Ticket, Plus, Trash2, Edit, Save, Loader2, AlertCircle, CheckCircle, Search, CalendarDays } from 'lucide-react';
+import { Ticket, Plus, Trash2, Edit, Save, Loader2, AlertCircle, CheckCircle, Search, CalendarDays , Download, Printer} from 'lucide-react';
 import '../../pages/SettingsPage.css';
 
 const MaintainCoupon = () => {
@@ -74,6 +74,13 @@ const MaintainCoupon = () => {
             console.error("Failed to delete coupon", err);
         }
     };
+
+
+    const exportCols = ['#', 'Coupon Code', 'Discount', 'Type', 'Status'];
+    const getExportRows = () => filteredCoupons.map((c, i) => [i + 1, c.code || c.name, c.discount || '-', c.type || '-', c.is_active ? 'Active' : 'Inactive']);
+    const handleExcelExport = () => exportToCSV('Coupon Master', exportCols, getExportRows(), 'Coupon_Master');
+    const handlePDFExport   = () => exportToPDF('Coupon Master', exportCols, getExportRows(), 'Coupon_Master');
+    const handlePrint       = () => printTable('Coupon Master', `Total: ${filteredCoupons.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -169,7 +176,47 @@ const MaintainCoupon = () => {
                                             <button onClick={() => { setEditingCouponId(null); setCouponForm({ coupon_name: '', num_from: '', num_to: '', start_date: '', end_date: '', type: 'DISCOUNT', discount_type: 'PERCENT', discount_value: 0 }); }} 
                                                 className="btn-premium-outline flex-1">CANCEL</button>
                                         )}
-                                        <button onClick={handleSave} disabled={saving} className="btn-premium-primary flex-[2]">
+                                        
+                            
+                            
+                            
+
+                            
+                            
+                            
+
+                            
+                            
+                            
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button onClick={handleSave} disabled={saving} className="btn-action-add">
                                             {saving ? <><Loader2 className="animate-spin" /> Saving...</> : <><Save size={18} /> {editingCouponId ? 'Update Coupon' : 'Create Coupon'}</>}
                                         </button>
                                     </div>

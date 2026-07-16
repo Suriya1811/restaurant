@@ -344,7 +344,7 @@ const BillsAndSalesPage = () => {
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="bg-orange-600 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-orange-200"
+                                className="btn-action-add"
                             >
                                 <ClipboardList size={14} />
                                 Create Party
@@ -782,7 +782,7 @@ const BillsAndSalesPage = () => {
                                 <div className="mt-8 flex gap-4">
                                     <button
                                         onClick={() => setPrintingBillId(selectedBill._id)}
-                                        className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                                        className="btn-export print"
                                     >
                                         <CheckCircle2 size={20} /> PRINT INVOICE
                                     </button>
@@ -874,7 +874,7 @@ const BillsAndSalesPage = () => {
                                 <textarea required value={newPartyData.delivery_address} onChange={e => setNewPartyData({...newPartyData, delivery_address: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500 resize-none h-20" placeholder="Enter delivery address"></textarea>
                             </div>
 
-                            <button type="submit" className="w-full bg-orange-600 text-white rounded-xl py-4 font-black text-sm uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-orange-200 mt-4">
+                            <button type="submit" className="btn-action-save">
                                 Save Party Details
                             </button>
                         </form>

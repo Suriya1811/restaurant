@@ -3,22 +3,13 @@ import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
 import {
-    PlusCircle,
-    Search,
-    Edit,
-    CheckCircle2,
-    XCircle,
-    Trash2,
-    Loader2,
-    Grid,
-    AlertCircle,
-    Filter,
-    Activity,
-    ChevronRight,
-    X
+    PlusCircle, Search, Edit, CheckCircle2, XCircle, Trash2, Loader2,
+    Grid, AlertCircle, Filter, Activity, ChevronRight, X, Download, Printer
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const CategoryMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -28,20 +19,12 @@ const CategoryMaster = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        type: 'FOOD',
-        hsn_code: '',
-        hsn_description: ''
-    });
+    const [formData, setFormData] = useState({ name: '', type: 'FOOD', hsn_code: '', hsn_description: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
-    const handleFormSubmitRequest = () => {
-        setShowSaveConfirm(true);
-    };
-
+    const handleFormSubmitRequest = () => { setShowSaveConfirm(true); };
     const { formRef, handleKeyDown } = useFormNavigation([showDrawer], handleFormSubmitRequest);
 
     const toggleSidebar = () => {
@@ -59,14 +42,11 @@ const CategoryMaster = () => {
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
-
             const response = await fetch(`${import.meta.env.VITE_API_URL}/categories`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-            if (data.success) {
-                setCategories(data.data);
-            }
+            if (data.success) setCategories(data.data);
         } catch (err) {
             console.error("Failed to fetch categories", err);
         } finally {
@@ -74,40 +54,26 @@ const CategoryMaster = () => {
         }
     };
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
+    useEffect(() => { fetchCategories(); }, []);
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         setSubmitting(true);
         setError('');
-
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             const url = isEditing
                 ? `${import.meta.env.VITE_API_URL}/categories/${formData._id}`
                 : `${import.meta.env.VITE_API_URL}/categories`;
-
             const method = isEditing ? 'PUT' : 'POST';
-
             const response = await fetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(formData)
             });
-
             const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error);
-            }
-
+            if (!result.success) throw new Error(result.error);
             fetchCategories();
             setShowDrawer(false);
             resetForm();
@@ -122,68 +88,42 @@ const CategoryMaster = () => {
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             await fetch(`${import.meta.env.VITE_API_URL}/categories/${category._id}/toggle-status`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` }
             });
             fetchCategories();
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const handleDelete = async (category) => {
-        if (!window.confirm(`Are you sure you want to delete the category "${category.name}"? This action cannot be undone.`)) {
-            return;
-        }
-
+        if (!window.confirm(`Are you sure you want to delete the category "${category.name}"?`)) return;
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-
             const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/${category._id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
-
             const result = await response.json();
-
-            if (result.success) {
-                fetchCategories();
-            } else {
-                alert(`Error: ${result.error}`);
-            }
+            if (result.success) fetchCategories();
+            else alert(`Error: ${result.error}`);
         } catch (err) {
             console.error('Error deleting category:', err);
             alert('An error occurred while deleting the category.');
         }
     };
 
-    const handleEdit = (category) => {
-        setFormData(category);
-        setIsEditing(true);
-        setShowDrawer(true);
-    };
+    const handleEdit = (cat) => { setFormData(cat); setIsEditing(true); setShowDrawer(true); };
+    const resetForm = () => { setFormData({ name: '', type: 'FOOD', hsn_code: '', hsn_description: '' }); setIsEditing(false); setError(''); };
+    const confirmSave = () => { setShowSaveConfirm(false); handleSubmit(); };
+    const cancelSave = () => { setShowSaveConfirm(false); };
 
-    const resetForm = () => {
-        setFormData({ name: '', type: 'FOOD', hsn_code: '', hsn_description: '' });
-        setIsEditing(false);
-        setError('');
-    };
+    const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const confirmSave = () => {
-        setShowSaveConfirm(false);
-        handleSubmit();
-    };
-
-    const cancelSave = () => {
-        setShowSaveConfirm(false);
-    };
-
-    const filteredCategories = categories.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const COLS = ['#', 'Category Name', 'Type', 'HSN Code', 'Status'];
+    const getRows = () => filteredCategories.map((c, i) => [i + 1, c.name, c.type || '-', c.hsn_code || '-', c.is_active ? 'Active' : 'Inactive']);
+    const handleExcelExport = () => exportToCSV('Category Master', COLS, getRows(), 'Category_Master');
+    const handlePDFExport   = () => exportToPDF('Category Master', COLS, getRows(), 'Category_Master');
+    const handlePrint       = () => printTable('Category Master', `Total: ${filteredCategories.length}`, COLS, getRows());
 
     return (
         <div className="dashboard-layout">
@@ -198,16 +138,27 @@ const CategoryMaster = () => {
                     toggleSidebar={toggleSidebar}
                     title="Category Creation"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} />
-                            <span className="text-[10px] uppercase font-black">Add New Category</span>
-                        </button>
+                        <>
+                            <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+                            <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Add New Category</span>
+                            </button>
+                        </>
                     }
                 />
                 <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
                     <div className="toolbar-premium">
                         <div className="search-premium">
                             <Search size={20} />
@@ -259,21 +210,14 @@ const CategoryMaster = () => {
                                                 <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{cat.name}</span>
                                             </div>
                                         </td>
-
                                         <td>
                                             <span className={`badge-premium ${cat.is_active ? 'active' : 'disabled'}`}>
                                                 {cat.is_active ? 'Synchronized' : 'Offline'}
                                             </span>
                                         </td>
                                         <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(cat)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleToggleStatus(cat)} className="action-icon-btn" style={{ background: cat.is_active ? '#fff7ed' : '#f0fdf4', color: cat.is_active ? '#9a3412' : '#15803d' }}>
-                                                    {cat.is_active ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                </button>
-                                                <button onClick={() => handleDelete(cat)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
+                                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -312,7 +256,6 @@ const CategoryMaster = () => {
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         />
                                     </div>
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="form-group-premium">
                                             <label>HSN Code</label>
@@ -338,16 +281,16 @@ const CategoryMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium">
-                                <button type="submit" form="category-form" disabled={submitting} className="btn-premium-primary flex-1 justify-center py-4">
+                                <button type="submit" form="category-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Finalize Modification' : 'Deploy Category')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

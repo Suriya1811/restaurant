@@ -156,6 +156,7 @@
     justify-content: center;
     align-items: center;
     flex-shrink: 0;
+    color: #f97316;
 }
 
 .nav-label {
@@ -275,6 +276,7 @@
     background-color: #F1F5F9;
     min-width: 0;
     min-height: 0;
+    height: 100vh;
 }
 
 .dashboard-content {
@@ -283,6 +285,17 @@
     padding: 1.5rem 1.5rem 4rem 1.5rem;
     overflow-x: hidden;
     min-height: 0;
+}
+
+.master-content-layout {
+    flex: 1;
+    height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.5rem 1.5rem 4rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
 /* ============================================================
@@ -1847,4 +1860,21 @@
         font-weight: bold !important;
         text-transform: uppercase !important;
     }
+}
+
+/* Spreadsheet dense table styles for ProductMaster */
+.spreadsheet-table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+}
+.spreadsheet-table th {
+    border: 1px solid #e2e8f0 !important;
+    padding: 1.25rem 1.5rem !important;
+}
+.spreadsheet-table td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 0.5rem 0.75rem !important;
+}
+.spreadsheet-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
 }

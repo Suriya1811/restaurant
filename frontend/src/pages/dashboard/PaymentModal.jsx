@@ -217,7 +217,7 @@ const PaymentModal = ({
                     )}
                   </div>
 
-                  <button className="pay-btn" disabled={isPayDisabled || loading} onClick={handleSubmit}>
+                  <button className="btn-export print" disabled={isPayDisabled || loading} onClick={handleSubmit}>
                     {loading ? 'Processing...' : 'CONFIRM PAYMENT & PRINT'}
                   </button>
                 </div>

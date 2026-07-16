@@ -3115,14 +3115,14 @@ const BillingPage = () => {
                                     <button type="button" className="action-btn save-bill" onClick={() => handleOrderAction('SAVE')} title="Save draft bill">
                                         SAVE
                                     </button>
-                                    <button type="button" className="action-btn print-bill" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
-                                        SAVE & PRINT
+                                    <button type="button" className="action-btn" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
+                                        SAVE &<br/>PRINT
                                     </button>
                                     <button type="button" className="action-btn kot-print" onClick={() => handleOrderAction('KOT_SAVE')} title="Save KOT">
                                         KOT
                                     </button>
-                                    <button type="button" className="action-btn kot-print" onClick={() => handleOrderAction('KOT')} title="Send KOT to kitchen">
-                                        KOT PRINT
+                                    <button type="button" className="action-btn" onClick={() => handleOrderAction('KOT')} title="Send KOT to kitchen">
+                                        KOT<br/>PRINT
                                     </button>
                                     <button type="button" className="action-btn hold-bill" onClick={holdCurrentBill} title="Hold this bill for later">
                                         HOLD
@@ -3172,7 +3172,7 @@ const BillingPage = () => {
                             ))}
                         </div>
                         <div className="p-6 bg-slate-50 flex justify-center border-t border-slate-100">
-                            <button onClick={() => setVariationModalProduct(null)} className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-rose-500 transition-colors">
+                            <button onClick={() => setVariationModalProduct(null)} className="btn-action-close">
                                 <X size={14} /> Close & Cancel
                             </button>
                         </div>

@@ -22,9 +22,11 @@ import {
     ChevronRight,
     Star,
     X
-} from 'lucide-react';
+, Download, Printer} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+
 
 const CustomerMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -203,6 +205,12 @@ const CustomerMaster = () => {
         c.phone.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const exportCols = ['#', 'Name', 'Phone', 'Email', 'GST', 'Balance', 'Points'];
+    const getExportRows = () => filteredCustomers.map((c, i) => [i + 1, c.name, c.phone || '-', c.email || '-', c.gst_number || '-', c.opening_balance || 0, c.loyalty_points || 0]);
+    const handleExcelExport = () => exportToCSV('Customer Master', exportCols, getExportRows(), 'Customer_Master');
+    const handlePDFExport   = () => exportToPDF('Customer Master', exportCols, getExportRows(), 'Customer_Master');
+    const handlePrint       = () => printTable('Customer Master', `Total: ${filteredCustomers.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -216,11 +224,41 @@ const CustomerMaster = () => {
                     toggleSidebar={toggleSidebar} 
                     title="Customer Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                             <PlusCircle size={18} /> 
                             <span className="text-[10px] uppercase font-black">Onboard Customer</span>
                         </button>
-                    }
+                    </>
+}
                 />
                 <div className="master-content-layout fade-in">
                     {/* Header relocated */}
@@ -404,7 +442,7 @@ const CustomerMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium !bg-slate-900 !border-white/5 !p-4 flex gap-4">
-                                <button type="submit" form="customer-form" disabled={submitting} className="btn-premium-primary !bg-white !text-slate-900 flex-1 justify-center py-3 text-sm rounded-xl font-bold hover:!bg-indigo-500 hover:!text-white transition-all">
+                                <button type="submit" form="customer-form" disabled={submitting} className="btn-action-add !bg-white !text-slate-900 flex-1 justify-center py-3 text-sm rounded-xl font-bold hover:!bg-indigo-500 hover:!text-white transition-all">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT MODIFICATIONS' : 'INITIALIZE PROFILE')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-bold uppercase text-xs rounded-xl border border-white/10 transition-all">TERMINATE</button>

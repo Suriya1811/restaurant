@@ -289,7 +289,7 @@ const PurchaseEntry = () => {
                                     <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">Finalise Procurement</h4>
                                     <p className="text-slate-600 font-bold text-sm leading-relaxed max-w-xs mx-auto">Clicking commit will broadcast these entries to the distributed ledger and update stock levels in real-time.</p>
                                 </div>
-                                <button type="submit" disabled={submitting} className="btn-glow w-full py-4 rounded-2xl font-black text-base uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-lg duration-300" style={{background: submitting ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: 'white', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1}}>
+                                <button type="submit" disabled={submitting} className="btn-action-save" style={{background: submitting ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: 'white', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1}}>
                                     {submitting ? <><Loader2 className="animate-spin" size={20} /> COMMIT IN PROGRESS...</> : <><Save size={20} /> COMMIT TO LEDGER</>}
                                 </button>
                             </div>

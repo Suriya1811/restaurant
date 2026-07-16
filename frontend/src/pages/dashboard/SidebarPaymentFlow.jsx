@@ -196,7 +196,7 @@ const SidebarPaymentFlow = ({
                     {/* ADVANCE PAYMENT BUTTON (ONLY FOR PARTY ORDERS) */}
                     {partialAllowed && (
                         <button 
-                            className="w-full mt-2 mb-2 bg-orange-50 border-2 border-dashed border-orange-200 text-orange-600 rounded-xl py-4 flex items-center justify-center gap-2 hover:bg-orange-100 hover:border-orange-300 transition-all font-black text-sm tracking-widest uppercase"
+                            className="btn-action-add"
                             onClick={() => setShowAdvanceModal(true)}
                         >
                             <Banknote size={18} />
@@ -252,7 +252,7 @@ const SidebarPaymentFlow = ({
                             <span>SAVE</span>
                         </button>
                         <button 
-                            className="btn-pay-action btn-print" 
+                            className="btn-export print" 
                             onClick={() => handleSubmit(true)} 
                             disabled={loading || (pending > 0 && !partialAllowed)}
                         >

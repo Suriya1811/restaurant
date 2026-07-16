@@ -7,7 +7,7 @@ import {
     Ticket, Gift, Save, Loader2, AlertCircle, CheckCircle, 
     Plus, Trash2, Edit, CalendarDays, Sliders, ChevronRight,
     Monitor, Printer, Clock, LayoutDashboard, BarChart3, Users, Table, Settings
-} from 'lucide-react';
+, Download} from 'lucide-react';
 import '../../pages/SettingsPage.css';
 
 const ExtraModules = () => {
@@ -350,7 +350,47 @@ const ExtraModules = () => {
                                                             <button onClick={() => { setEditingCouponId(null); setCouponForm({ coupon_name: '', num_from: '', num_to: '', start_date: '', end_date: '', type: 'DISCOUNT', discount_type: 'PERCENT', discount_value: 0 }); }} 
                                                                 className="btn-premium-outline flex-1">CANCEL</button>
                                                         )}
-                                                        <button onClick={handleSaveCoupon} disabled={savingCoupon} className="btn-premium-primary flex-[2]">
+                                                        
+                            
+                            
+                            
+
+                            
+                            
+                            
+
+                            
+                            
+                            
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={() => {}}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={() => {}}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={() => window.print()}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button onClick={handleSaveCoupon} disabled={savingCoupon} className="btn-action-add">
                                                             {savingCoupon ? <><Loader2 className="animate-spin" /> ...</> : <><Save size={18} /> {editingCouponId ? 'Update' : 'Create'}</>}
                                                         </button>
                                                     </div>
@@ -438,7 +478,7 @@ const ExtraModules = () => {
                                             </div>
 
                                             <div className="flex justify-end pt-4">
-                                                <button onClick={handleSaveLoyalty} disabled={savingLoyalty} className="btn-premium-primary !py-4 !px-12">
+                                                <button onClick={handleSaveLoyalty} disabled={savingLoyalty} className="btn-action-save">
                                                     {savingLoyalty ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Save Loyalty Config</>}
                                                 </button>
                                             </div>

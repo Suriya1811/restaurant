@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -23,9 +23,11 @@ import {
     Camera,
     CreditCard,
     X
-} from 'lucide-react';
+, Download, Printer} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const CaptainMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -238,6 +240,13 @@ const resetForm = () => {
         c.phone?.includes(searchTerm)
     );
 
+
+    const exportCols = ['#', 'Name', 'Phone', 'Address'];
+    const getExportRows = () => filteredCaptains.map((c, i) => [i + 1, c.name, c.phone || '-', c.address || '-']);
+    const handleExcelExport = () => exportToCSV('Captain Master', exportCols, getExportRows(), 'Captain_Master');
+    const handlePDFExport   = () => exportToPDF('Captain Master', exportCols, getExportRows(), 'Captain_Master');
+    const handlePrint       = () => printTable('Captain Master', `Total: ${filteredCaptains.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -251,11 +260,41 @@ const resetForm = () => {
                     toggleSidebar={toggleSidebar} 
                     title="Captain Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                             <PlusCircle size={18} /> 
                             <span className="text-[10px] uppercase font-black">Register New Captain</span>
                         </button>
-                    }
+                    </>
+}
                 />
                 <div className="master-content-layout fade-in">
                     {/* Header relocated */}
@@ -336,14 +375,8 @@ const resetForm = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(cap)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleToggleStatus(cap)} className="action-icon-btn" style={{ background: cap.is_active ? '#fff7ed' : '#f0fdf4', color: cap.is_active ? '#9a3412' : '#15803d' }}>
-                                                    {cap.is_active ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                </button>
-                                                <button onClick={() => handleDelete(cap)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
+                                                            <ActionDropdown item={cap} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -488,7 +521,7 @@ const resetForm = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium">
-                                <button type="submit" form="captain-form" disabled={submitting} className="btn-premium-primary flex-1 justify-center py-4">
+                                <button type="submit" form="captain-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT PERSONNEL' : 'DEPLOY PERSONNEL')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>

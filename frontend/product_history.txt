@@ -1,0 +1,305 @@
+--- Step 31 --- run_command
+cat << 'EOF' > update_layout.py
+import re
+
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# 1. Update expandedSections to include 'image'
+old_state = """    const [expandedSections, setExpandedSections] = useState({
+        inventory: false,
+        otherInfo: false,
+        variations: false,
+        addons: false
+    });
+
+    const toggleSection = (section) => { setExpandedSections(prev => { const isCur
+--- Step 40 --- run_command
+grep "import.*from 'lucide-react'" c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 53 --- replace_file_content
+--- Step 62 --- replace_file_content
+--- Step 74 --- run_command
+cat << 'EOF' > fix_layout.py
+import re
+
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Locate main tag
+main_start = content.find('<main className="flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-300">')
+if main_start == -1:
+    print("Could not find main tag")
+    exit(1)
+
+# Find where showDrawer starts
+show_drawer_start = content.find('{showDrawer && (')
+if show_drawer_st
+--- Step 98 --- replace_file_content
+--- Step 101 --- run_command
+node -c c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 120 --- run_command
+git diff c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 123 --- run_command
+grep_search -i "useEffect" c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 154 --- run_command
+findstr "FileText" c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 163 --- run_command
+cat << 'EOF' > make_compact.py
+import re
+
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# 1. Reduce padding in Header
+content = content.replace('px-6 py-4 border-b border-slate-200', 'px-4 py-2 border-b border-slate-200')
+content = content.replace('text-xl font-black', 'text-lg font-black')
+content = content.replace('px-4 py-1.5 border border-red-200', 'px-3 py-1 border border-red-200 text-xs')
+
+# 2. Red
+--- Step 180 --- run_command
+cat << 'EOF' > fix_layout_exact.py
+import re
+
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# I will replace the inner section wrappers
+# Currently they look like:
+# <h3 className="text-sm font-black text-[#f97316] uppercase tracking-wider mb-1">ITEM DETAILS</h3>
+# <div className="bg-white p-3 rounded border border-slate-200 shadow-sm grid grid-cols-2 gap-x-8 gap-y-2 relative overflow-hidden">
+# <div cla
+--- Step 205 --- replace_file_content
+--- Step 247 --- run_command
+cat << 'EOF' > standardize_labels.py
+import re
+
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Remove uppercase from all labels that have it
+content = content.replace('text-xs font-bold text-black uppercase', 'text-[13px] font-bold text-black')
+content = content.replace('text-xs font-bold text-black', 'text-[13px] font-bold text-black')
+
+with open(filepath, 'w', encoding='utf-8') as 
+--- Step 287 --- run_command
+findstr /N /C:"toggleSection" c:\Works\Mahix\restaurant\frontend\src\pages\dashboard\ProductMaster.jsx
+--- Step 299 --- run_command
+cat << 'EOF' > make_modals.py
+import re
+
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# I will replace the wrapper of each popup.
+# Variations wrapper: <div className="absolute bottom-[calc(100%+12px)] left-0 w-[400px] bg-white rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.15)] border border-slate-200 z-[110] animate-in slide-in-from-bottom-2">
+# Other Info wrapper: <div className="absolu
+--- Step 484 --- run_command
+cat << 'EOF' > inspect_action_btn.py
+import re
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Find the Action button code
+matches = re.finditer(r'(<button[^>]*>[\s\S]*?Actions[\s\S]*?</button>)', content)
+for m in matches:
+    print(m.group(1))
+    print("---")
+EOF
+python inspect_action_btn.py
+--- Step 490 --- run_command
+python -c "
+import re
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+matches = re.finditer(r'<td[^>]*>([\s\S]{0,300})</td>', content)
+for m in matches:
+    if 'button' in m.group(1).lower() and 'onClick' in m.group(1):
+        print('FOUND MATCH:')
+        print(m.group(1))
+        print('---')
+"
+--- Step 496 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    print(f.read()[:1000])
+"
+--- Step 499 --- run_command
+python -c "
+import re
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+for i, line in enumerate(lines):
+    if 'Actions' in line or 'Action' in line:
+        print(f'{i}: {line.strip()[:100]}...')
+"
+--- Step 484 --- run_command
+cat << 'EOF' > inspect_action_btn.py
+import re
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Find the Action button code
+matches = re.finditer(r'(<button[^>]*>[\s\S]*?Actions[\s\S]*?</button>)', content)
+for m in matches:
+    print(m.group(1))
+    print("---")
+EOF
+python inspect_action_btn.py
+--- Step 490 --- run_command
+python -c "
+import re
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+matches = re.finditer(r'<td[^>]*>([\s\S]{0,300})</td>', content)
+for m in matches:
+    if 'button' in m.group(1).lower() and 'onClick' in m.group(1):
+        print('FOUND MATCH:')
+        print(m.group(1))
+        print('---')
+"
+--- Step 496 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    print(f.read()[:1000])
+"
+--- Step 499 --- run_command
+python -c "
+import re
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+for i, line in enumerate(lines):
+    if 'Actions' in line or 'Action' in line:
+        print(f'{i}: {line.strip()[:100]}...')
+"
+--- Step 593 --- run_command
+cat << 'EOF' > fix_product_master.py
+import re
+
+filepath = 'c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Replace the Actions button
+button_pattern = r'<button\s+onClick=\{\(e\) => \{\s*e\.stopPropagation\(\);\s*setActiveActionProduct\(p\);\s*\}\}\s+className="px-3 py-1\.5 border border-slate-300 rounded bg-white text-\[12px\] font-bold text-slate-800 flex items-center justify-center gap-1 hove
+--- Step 605 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+    for i in range(840, 850):
+        print(f'{i+1}: {lines[i].rstrip()}')
+"
+--- Step 608 --- run_command
+git checkout src/pages/dashboard/ProductMaster.jsx
+--- Step 614 --- multi_replace_file_content
+--- Step 643 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    for line in f:
+        if 'const handle' in line:
+            print(line.strip())
+"
+--- Step 653 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    for i, line in enumerate(f):
+        if 'const handleDelete' in line:
+            print(f'{i}: {line.strip()}')
+"
+--- Step 656 --- multi_replace_file_content
+--- Step 669 --- run_command
+python -c "
+import json
+filepath = r'C:\Users\suriy\.gemini\antigravity-ide\brain\3f95d43a-e520-493a-a9c7-1b5d455c58de\.system_generated\logs\transcript.jsonl'
+with open(filepath, 'r', encoding='utf-8') as f:
+    for line in f:
+        data = json.loads(line)
+        if 'tool_calls' in data:
+            for call in data['tool_calls']:
+                if call['name'] in ['multi_replace_file_content', 'write_to_file', 'replace_file_content']:
+                    args = call.get('args', {})
+       
+--- Step 681 --- run_command
+python -c "
+import os, stat, time
+history_dir = r'C:\Users\suriy\AppData\Roaming\Code\User\History'
+if not os.path.exists(history_dir):
+    print('VSCode history not found')
+    exit(0)
+
+# We want to find the latest version of ProductMaster.jsx in history BEFORE 15:30 (when I messed it up).
+import glob
+files = []
+for root, dirs, filenames in os.walk(history_dir):
+    for f in filenames:
+        if f == 'entries.json':
+            continue
+        path = os.path.join(root, f)
+        # Check if t
+--- Step 691 --- run_command
+python -c "
+import os, json
+
+history_dir = r'C:\Users\suriy\AppData\Roaming\Code\User\History'
+for root, dirs, filenames in os.walk(history_dir):
+    if 'entries.json' in filenames:
+        with open(os.path.join(root, 'entries.json'), 'r', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+                if 'ProductMaster.jsx' in data.get('version', '') or 'ProductMaster.jsx' in str(data):
+                    print('Found ProductMaster entries at', root)
+            e
+--- Step 694 --- run_command
+python -c "
+import json
+filepath = r'C:\Users\suriy\.gemini\antigravity-ide\brain\3f95d43a-e520-493a-a9c7-1b5d455c58de\.system_generated\logs\transcript_full.jsonl'
+with open(filepath, 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if 'tool_calls' in data:
+                for call in data['tool_calls']:
+                    if call['name'] in ['multi_replace_file_content', 'replace_file_content']:
+                        args = call.ge
+--- Step 706 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    content = f.read()
+    if 'COLUMN SETTINGS' in content.upper() or 'COLUMN' in content.upper():
+        print('COLUMN SETTINGS exists')
+    else:
+        print('COLUMN SETTINGS does not exist')
+"
+--- Step 709 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    for line in f:
+        if 'ITEM DISPLAY' in line or 'SURIYA SN' in line:
+            print(line.strip())
+"
+--- Step 712 --- run_command
+python -c "
+with open('c:/Works/Mahix/restaurant/frontend/src/pages/dashboard/ProductMaster.jsx', 'r', encoding='utf-8') as f:
+    for line in f:
+        if '<Header' in line or 'title=' in line:
+            print(line.strip())
+"
+--- Step 715 --- run_command
+python -c "
+import json
+filepath = r'C:\Users\suriy\.gemini\antigravity-ide\brain\3f95d43a-e520-493a-a9c7-1b5d455c58de\.system_generated\logs\transcript_full.jsonl'
+output = ''
+with open(filepath, 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if 'tool_calls' in data:
+                for call in data['tool_calls']:
+                    if call['name'] == 'write_to_file':
+                        args = call.get('args', {})
+             

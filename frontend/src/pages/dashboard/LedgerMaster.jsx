@@ -7,11 +7,12 @@ import {
     MapPin, Building, Briefcase, ChevronLeft, Layers,
     ChevronDown, Search, PlusCircle, Edit, Trash2,
     Loader2, AlertCircle, CheckCircle2, XCircle, ChevronRight,
-    ArrowRight, Globe, Info, Clock, MoreVertical, RefreshCw, FileText, Printer
+    ArrowRight, Globe, Info, Clock, MoreVertical, RefreshCw, FileText, Printer, Download, Settings
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { STANDARD_GROUPS, getNatureForGroup } from '../../utils/standardGroups';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const API = import.meta.env.VITE_API_URL;
 const getToken = () => JSON.parse(localStorage.getItem('user'))?.token;
@@ -532,22 +533,22 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                 {/* Header Section */}
                 <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-white shadow-sm no-print">
-                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">Ledger Master</h2>
+                    <h2 className="text-xl font-bold text-black tracking-tight">Ledger Master</h2>
                     <div className="flex items-center gap-2">
-                        <button onClick={exportToCSV} className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors">
-                            <RefreshCw size={14} className="text-emerald-500" /> Excel
+                        <button type="button" className="btn-export excel" onClick={exportToCSV} title="Export to Excel">
+                            <Download size={14} />
+                            <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
                         </button>
-                        <button onClick={exportToPDF} className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors">
-                            <FileText size={14} className="text-rose-500" /> PDF
+                        <button type="button" className="btn-export pdf" onClick={exportToPDF} title="Export to PDF">
+                            <Download size={14} />
+                            <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
                         </button>
-                        <button onClick={() => window.print()} className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors">
-                            <Printer size={14} className="text-blue-500" /> Print
+                        <button type="button" className="btn-export print" onClick={() => window.print()} title="Print">
+                            <Printer size={14} />
+                            <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
                         </button>
-                        <button onClick={() => { resetForm(); setShowDrawer(true); }} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm uppercase tracking-wide">
+                        <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add">
                             <PlusCircle size={16} /> Create Ledger
-                        </button>
-                        <button onClick={() => navigate('/dashboard/self-service/home')} className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors uppercase tracking-wide">
-                            <X size={16} /> Close
                         </button>
                     </div>
                 </div>
@@ -555,7 +556,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 <div className="dashboard-content print-section">
                     {/* Print Only Header */}
                     <div className="hidden print:block mb-6">
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Ledger Master Report</h2>
+                        <h2 className="text-2xl font-bold text-black mb-2">Ledger Master Report</h2>
                         <p className="text-sm text-slate-500 mb-1">Generated on: {new Date().toLocaleString('en-GB')}</p>
                         <p className="text-sm text-slate-500 font-semibold">
                             Filters - Group: {groupFilter} | Active Type: {activeTypeFilter}
@@ -618,9 +619,9 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     setTempVisibleColumns(visibleColumns);
                                     setShowColumnDropdown(true);
                                 }}
-                                className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-slate-700 bg-white"
+                                className="px-4 py-2 bg-[#0b1727] hover:bg-slate-800 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm"
                             >
-                                ⚙️ Column Selection
+                                <Settings size={14} /> COLUMN SETTINGS
                             </button>
 
                             {showColumnDropdown && (
@@ -637,7 +638,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                         type="checkbox"
                                                         checked={tempVisibleColumns.includes(col.key)}
                                                         onChange={() => toggleTempColumn(col.key)}
-                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-slate-300"
+                                                        className="w-4 h-4 text-[#f97316] accent-[#f97316] focus:ring-[#f97316]/20 rounded border-slate-300"
                                                     />
                                                     <span className="text-sm font-semibold text-slate-700">{col.label}</span>
                                                 </label>
@@ -655,7 +656,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                     setVisibleColumns(tempVisibleColumns);
                                                     setShowColumnDropdown(false);
                                                 }}
-                                                className="px-6 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 uppercase tracking-wide shadow-sm"
+                                                className="px-6 py-2 bg-[#f97316] text-white rounded text-xs font-bold hover:bg-[#ea580c] uppercase tracking-wide shadow-sm"
                                             >
                                                 Apply
                                             </button>
@@ -671,7 +672,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    <tr className="bg-[#0b1727] border-b border-slate-200 text-[10px] font-black text-[#f97316] uppercase tracking-widest">
                                         {columnVisible('name') && <th className="py-3.5 px-5">Name</th>}
                                         {columnVisible('print_name') && <th className="py-3.5 px-5">Print Name</th>}
                                         {columnVisible('under') && <th className="py-3.5 px-5">Under</th>}
@@ -706,15 +707,10 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                             <tr key={ledger._id} className="hover:bg-slate-50/50 transition-colors">
                                                 {columnVisible('name') && (
                                                     <td className="py-4 px-5">
-                                                        <button
-                                                            onClick={() => handleEdit(ledger)}
-                                                            className="font-bold text-blue-600 hover:underline text-left outline-none"
-                                                        >
-                                                            {ledger.name}
-                                                        </button>
-                                                    </td>
+                                                            <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                        </td>
                                                 )}
-                                                {columnVisible('print_name') && <td className="py-4 px-5 font-semibold text-slate-800">{ledger.print_name || ledger.name}</td>}
+                                                {columnVisible('print_name') && <td className="py-4 px-5 font-semibold text-black">{ledger.print_name || ledger.name}</td>}
                                                 {columnVisible('under') && <td className="py-4 px-5 font-semibold text-slate-500">{ledger.group}</td>}
                                                 {columnVisible('opening_balance') && (
                                                     <td className="py-4 px-5 font-mono font-bold text-slate-600">
@@ -732,8 +728,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 {columnVisible('reg_type') && (
                                                     <td className="py-4 px-5 font-bold">
                                                         <span className={`px-2 py-0.5 rounded text-xs ${ledger.registration_type === 'Regular' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                                                                ledger.registration_type === 'Composition' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
-                                                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                                            ledger.registration_type === 'Composition' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+                                                                'bg-amber-50 text-amber-600 border border-amber-100'
                                                             }`}>
                                                             {ledger.registration_type || 'Regular'}
                                                         </span>
@@ -742,36 +738,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 {columnVisible('state') && <td className="py-4 px-5 font-semibold text-slate-600">{ledger.state || '—'}</td>}
                                                 {columnVisible('action') && (
                                                     <td className="py-4 px-5 text-center relative no-print">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setActiveActionMenuId(activeActionMenuId === ledger._id ? null : ledger._id);
-                                                            }}
-                                                            className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors outline-none"
-                                                        >
-                                                            <MoreVertical size={16} />
-                                                        </button>
-
-                                                        {activeActionMenuId === ledger._id && (
-                                                            <div className="ledger-action-menu">
-                                                                <button onClick={() => handleEdit(ledger)} className="text-blue-600">
-                                                                    ✏️ Alter
-                                                                </button>
-                                                                {ledger.is_active !== false ? (
-                                                                    <button onClick={() => handleToggleStatus(ledger._id)} className="text-amber-600">
-                                                                        ⚠️ Deactivate
-                                                                    </button>
-                                                                ) : (
-                                                                    <button onClick={() => handleToggleStatus(ledger._id)} className="text-emerald-600">
-                                                                        ✅ Activate
-                                                                    </button>
-                                                                )}
-                                                                <button onClick={() => handleDelete(ledger._id)} className="text-rose-600 border-t border-slate-100">
-                                                                    🗑️ Delete
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </td>
+                                                            <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                        </td>
                                                 )}
                                             </tr>
                                         ))
@@ -804,8 +772,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 key={p}
                                                 onClick={() => setCurrentPage(p)}
                                                 className={`w-8 h-8 rounded border text-xs font-bold uppercase ${currentPage === p
-                                                        ? 'bg-blue-600 border-blue-600 text-white shadow'
-                                                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                    ? 'bg-[#f97316] border-[#f97316] text-white shadow'
+                                                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                                                     }`}
                                             >
                                                 {p}
@@ -838,264 +806,342 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                 {/* Overhauled Ledger Creation Form Overlay */}
                 {showDrawer && (
-                    <div className="fixed inset-0 bg-white z-50 overflow-y-auto animate-in fade-in duration-200">
+                    <div className="fixed inset-0 pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
                         {/* Header */}
-                        <div className="flex justify-between items-center px-8 py-5 border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
-                            <h2 className="text-xl font-bold uppercase tracking-wide text-slate-800">
-                                {isEditing ? 'Modify Account Details' : 'Ledger Creation'}
-                            </h2>
+                        <div className="flex justify-between items-center px-8 py-2 border-b border-slate-100 bg-white shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-1 h-5 bg-[#f97316] rounded"></div>
+                                <h2 className="text-lg font-black uppercase tracking-wide text-black">
+                                    {isEditing ? 'Modify Account Details' : 'Ledger Creation'}
+                                </h2>
+                            </div>
                             <button
+                                type="button"
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
+                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
                             >
-                                <X size={16} /> Close
+                                <X size={16} /> CLOSE
                             </button>
                         </div>
 
                         {/* Form Body */}
-                        <div className="p-8 max-w-4xl mx-auto flex flex-col gap-8">
+                        <div className="px-8 py-4 w-full flex flex-col overflow-y-auto">
                             {error && (
-                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm">
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
-                            <form onSubmit={handleSave} className="flex flex-col gap-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="form-group-premium">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Name <span className="text-rose-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                            placeholder="Enter Name"
-                                        />
-                                    </div>
-
-                                    <div className="form-group-premium">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Print Name <span className="text-rose-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.print_name}
-                                            onChange={e => setFormData({ ...formData, print_name: e.target.value })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                            placeholder="Enter Print Name"
-                                        />
-                                    </div>
-
-                                    <div className="form-group-premium">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Under <span className="text-rose-500">*</span></label>
-                                        <select
-                                            value={mapStandardGroupToUI(formData.group)}
-                                            onChange={e => setFormData({ ...formData, group: mapUIGroupToStandard(e.target.value) })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold bg-white"
-                                        >
-                                            <option value="" disabled>Select Ledger Group</option>
-                                            <option value="Sundry Debtors">Sundry Debtors</option>
-                                            <option value="Sundry Creditors">Sundry Creditors</option>
-                                            <option value="Purchase Account">Purchase Account</option>
-                                            <option value="Sales Account">Sales Account</option>
-                                            <option value="Cash-in-Hand">Cash-in-Hand</option>
-                                            <option value="Bank Accounts">Bank Accounts</option>
-                                            <option value="Duties & Taxes">Duties & Taxes</option>
-                                            <option value="Expenses">Expenses</option>
-                                            <option value="Income">Income</option>
-                                            <option value="Assets">Assets</option>
-                                            <option value="Liabilities">Liabilities</option>
-                                            <option value="Capital Account">Capital Account</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group-premium">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Opening Balance <span className="text-rose-500">*</span></label>
-                                        <div className="flex gap-2">
+                            <form onSubmit={handleSave} className="flex flex-col">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
+                                    {/* LEFT COLUMN */}
+                                    <div className="flex flex-col gap-5">
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>NAME <span className="text-red-500">*</span></span>
+                                                <span>:</span>
+                                            </label>
                                             <input
-                                                type="number"
+                                                type="text"
                                                 required
-                                                value={formData.opening_balance}
-                                                onChange={e => setFormData({ ...formData, opening_balance: parseFloat(e.target.value) || 0 })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Opening Balance"
+                                                value={formData.name || ''}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>PRINT NAME</span>
+                                                <span>:</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.print_name || ''}
+                                                onChange={e => setFormData({ ...formData, print_name: e.target.value })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>UNDER</span>
+                                                <span>:</span>
+                                            </label>
                                             <select
-                                                value={formData.balance_type}
-                                                onChange={e => setFormData({ ...formData, balance_type: e.target.value })}
-                                                className="w-24 border border-slate-200 rounded px-3 py-2 bg-slate-50 font-bold text-slate-700 outline-none focus:border-indigo-500 text-sm"
+                                                value={mapStandardGroupToUI(formData.group) || ''}
+                                                onChange={e => setFormData({ ...formData, group: mapUIGroupToStandard(e.target.value) })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             >
-                                                <option value="DR">DR</option>
-                                                <option value="CR">CR</option>
+                                                <option value="" disabled>Select Under</option>
+                                                <option value="Sundry Debtors">Sundry Debtors</option>
+                                                <option value="Sundry Creditors">Sundry Creditors</option>
+                                                <option value="Purchase Account">Purchase Account</option>
+                                                <option value="Sales Account">Sales Account</option>
+                                                <option value="Cash-in-Hand">Cash-in-Hand</option>
+                                                <option value="Bank Accounts">Bank Accounts</option>
+                                                <option value="Duties & Taxes">Duties & Taxes</option>
+                                                <option value="Expenses">Expenses</option>
+                                                <option value="Income">Income</option>
+                                                <option value="Assets">Assets</option>
+                                                <option value="Liabilities">Liabilities</option>
+                                                <option value="Capital Account">Capital Account</option>
                                             </select>
                                         </div>
-                                    </div>
 
-                                    {/* Address (Max 5 Lines) Left Column */}
-                                    <div className="form-group-premium col-span-1">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Address (Max 5 Lines)</label>
-                                        <div className="flex flex-col gap-2">
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>EMAIL</span>
+                                                <span>:</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={formData.email || ''}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>GSTIN NO</span>
+                                                <span>:</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                value={formData.address_line_1}
+                                                value={formData.gstin || ''}
+                                                onChange={e => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold uppercase transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>OPENING BALANCE <span className="text-red-500">*</span></span>
+                                                <span>:</span>
+                                            </label>
+                                            <div className="flex-1 flex gap-3">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={formData.opening_balance || ''}
+                                                    onChange={e => setFormData({ ...formData, opening_balance: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                                <select
+                                                    value={formData.balance_type || 'DR'}
+                                                    onChange={e => setFormData({ ...formData, balance_type: e.target.value })}
+                                                    className="w-32 rounded-md px-3 py-1.5 bg-white font-bold text-slate-700 outline-none text-sm transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                >
+                                                    <option value="DR">Select Type</option>
+                                                    <option value="DR">DR</option>
+                                                    <option value="CR">CR</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2 mt-2">
+                                            <label className="text-xs font-bold text-black uppercase">
+                                                ADDRESS (MAX 5 LINES)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.address_line_1 || ''}
                                                 onChange={e => setFormData({ ...formData, address_line_1: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Address Line 1"
+                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                             <input
                                                 type="text"
-                                                value={formData.address_line_2}
+                                                value={formData.address_line_2 || ''}
                                                 onChange={e => setFormData({ ...formData, address_line_2: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Address Line 2"
+                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                             <input
                                                 type="text"
-                                                value={formData.address_line_3}
+                                                value={formData.address_line_3 || ''}
                                                 onChange={e => setFormData({ ...formData, address_line_3: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Address Line 3"
+                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                             <input
                                                 type="text"
-                                                value={formData.address_line_4}
+                                                value={formData.address_line_4 || ''}
                                                 onChange={e => setFormData({ ...formData, address_line_4: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Address Line 4"
+                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                             <input
                                                 type="text"
-                                                value={formData.address_line_5}
+                                                value={formData.address_line_5 || ''}
                                                 onChange={e => setFormData({ ...formData, address_line_5: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Address Line 5"
+                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Cell Numbers Right Column */}
-                                    <div className="flex flex-col gap-4 col-span-1 justify-start">
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">Cell Number 1 <span className="text-rose-500">*</span></label>
+                                    {/* RIGHT COLUMN */}
+                                    <div className="flex flex-col gap-5">
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>CELL NO</span>
+                                                <span>:</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                required
-                                                value={formData.phone}
+                                                value={formData.phone || ''}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Cell Number 1"
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                         </div>
 
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">Cell Number 2</label>
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>CELL NO 1</span>
+                                                <span>:</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                value={formData.mobile2}
+                                                value={formData.mobile2 || ''}
                                                 onChange={e => setFormData({ ...formData, mobile2: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Cell Number 2"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group-premium col-span-1">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">GST Number</label>
-                                        <input
-                                            type="text"
-                                            value={formData.gstin}
-                                            onChange={e => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold uppercase"
-                                            placeholder="Enter GST Number"
-                                        />
-                                    </div>
-
-                                    <div className="form-group-premium col-span-1">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">Registered Type <span className="text-rose-500">*</span></label>
-                                        <select
-                                            value={formData.registration_type}
-                                            onChange={e => setFormData({ ...formData, registration_type: e.target.value })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold bg-white"
-                                        >
-                                            <option value="" disabled>Select Registered Type</option>
-                                            <option value="Composition">Composition</option>
-                                            <option value="Regular">Registered</option>
-                                            <option value="Unregistered">Unregistered</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group-premium col-span-1">
-                                        <label className="text-xs font-bold text-slate-700 block mb-1">State</label>
-                                        <input
-                                            type="text"
-                                            value={formData.state}
-                                            onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                            className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                            placeholder="Enter State"
-                                        />
-                                    </div>
-                                    <div className="col-span-1"></div>
-                                </div>
-
-                                {/* Bank details */}
-                                <div className="border-t border-slate-200 pt-6 mt-4">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-blue-600 mb-4">BANK DETAILS</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">Bank Name</label>
-                                            <input
-                                                type="text"
-                                                value={formData.bank_name}
-                                                onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Bank Name"
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
                                             />
                                         </div>
 
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">Account Number</label>
-                                            <input
-                                                type="text"
-                                                value={formData.bank_account_number}
-                                                onChange={e => setFormData({ ...formData, bank_account_number: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Account Number"
-                                            />
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>REGISTERED TYPE</span>
+                                                <span>:</span>
+                                            </label>
+                                            <select
+                                                value={formData.registration_type || ''}
+                                                onChange={e => setFormData({ ...formData, registration_type: e.target.value })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
+                                            >
+                                                <option value="" disabled>Select Registered Type</option>
+                                                <option value="Composition">Composition</option>
+                                                <option value="Regular">Registered</option>
+                                                <option value="Unregistered">Unregistered</option>
+                                            </select>
                                         </div>
 
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">IFSC Code</label>
-                                            <input
-                                                type="text"
-                                                value={formData.ifsc_code}
-                                                onChange={e => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold uppercase"
-                                                placeholder="Enter IFSC Code"
-                                            />
+                                        <div className="flex items-center">
+                                            <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                <span>STATE</span>
+                                                <span>:</span>
+                                            </label>
+                                            <select
+                                                value={formData.state || ''}
+                                                onChange={e => setFormData({ ...formData, state: e.target.value })}
+                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                style={{ border: '1px solid #FF7A50' }}
+                                            >
+                                                <option value="" disabled>Select State</option>
+                                                <option value="Tamil Nadu">Tamil Nadu</option>
+                                                <option value="Kerala">Kerala</option>
+                                                <option value="Karnataka">Karnataka</option>
+                                                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                                <option value="Telangana">Telangana</option>
+                                                <option value="Maharashtra">Maharashtra</option>
+                                                <option value="Gujarat">Gujarat</option>
+                                            </select>
                                         </div>
 
-                                        <div className="form-group-premium">
-                                            <label className="text-xs font-bold text-slate-700 block mb-1">Branch</label>
-                                            <input
-                                                type="text"
-                                                value={formData.branch}
-                                                onChange={e => setFormData({ ...formData, branch: e.target.value })}
-                                                className="w-full border border-slate-200 rounded px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors text-sm font-semibold"
-                                                placeholder="Enter Branch"
-                                            />
+                                        {/* Bank Details Fieldset */}
+                                        <fieldset className="rounded-md p-4 pt-3 mt-2 flex flex-col gap-5" style={{ border: '1px solid #FF7A50' }}>
+                                            <legend className="px-2 text-xs font-bold uppercase" style={{ color: '#FF5722' }}>
+                                                BANK DETAILS
+                                            </legend>
+
+                                            <div className="flex items-center">
+                                                <label className="w-36 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                    <span>BANK NAME</span>
+                                                    <span>:</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.bank_name || ''}
+                                                    onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
+                                                    className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <label className="w-36 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                    <span>ACCOUNT NUMBER</span>
+                                                    <span>:</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.bank_account_number || ''}
+                                                    onChange={e => setFormData({ ...formData, bank_account_number: e.target.value })}
+                                                    className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <label className="w-36 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                    <span>IFSC CODE</span>
+                                                    <span>:</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.ifsc_code || ''}
+                                                    onChange={e => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
+                                                    className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold uppercase transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <label className="w-36 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
+                                                    <span>BRANCH</span>
+                                                    <span>:</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.branch || ''}
+                                                    onChange={e => setFormData({ ...formData, branch: e.target.value })}
+                                                    className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                            </div>
+                                        </fieldset>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex justify-end gap-4 mt-2 pt-2 shrink-0">
+                                            <button
+                                                type="button"
+                                                className="font-bold px-6 py-2 rounded flex items-center gap-2 transition-colors uppercase text-sm shadow-sm hover:opacity-90"
+                                                style={{ backgroundColor: '#FF5722', color: 'white' }}
+                                            >
+                                                <FileText size={16} /> OTHER DETAILS
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={saving}
+                                                className="font-bold px-8 py-2 rounded flex items-center gap-2 transition-colors disabled:opacity-50 uppercase text-sm shadow-sm hover:opacity-90"
+                                                style={{ backgroundColor: '#FF5722', color: 'white' }}
+                                            >
+                                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} SAVE
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Save Button */}
-                                <div className="flex justify-center mt-8 border-t border-slate-100 pt-6">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="px-10 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md"
-                                    >
-                                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} SAVE
-                                    </button>
                                 </div>
                             </form>
                         </div>

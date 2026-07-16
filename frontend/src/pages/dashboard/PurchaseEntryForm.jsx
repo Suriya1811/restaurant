@@ -916,7 +916,7 @@ export default function PurchaseEntryForm() {
                             )}
                         </div>
                         <div className="flex gap-2">
-                             <button className="pef-action-btn pef-saveprint-btn"
+                             <button className="btn-export print"
                                 disabled={saving}
                                 onClick={() => handleSave(true)}>
                                 {saving ? <Loader2 size={14} className="pef-spinner" /> : <><Printer size={14} /> SAVE &amp; PRINT</>}

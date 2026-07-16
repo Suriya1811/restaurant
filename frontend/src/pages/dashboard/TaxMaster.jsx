@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -13,9 +13,11 @@ import {
     AlertCircle,
     X,
     Trash2
-} from 'lucide-react';
+, Download, Printer} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const TaxMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -229,6 +231,13 @@ const TaxMaster = () => {
         t.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+
+    const exportCols = ['#', 'Tax Name', 'Type', 'CGST %', 'SGST %', 'IGST %'];
+    const getExportRows = () => filteredTaxes.map((t, i) => [i + 1, t.name, t.tax_type || '-', t.cgst_rate || 0, t.sgst_rate || 0, t.igst_rate || 0]);
+    const handleExcelExport = () => exportToCSV('Tax Master', exportCols, getExportRows(), 'Tax_Master');
+    const handlePDFExport   = () => exportToPDF('Tax Master', exportCols, getExportRows(), 'Tax_Master');
+    const handlePrint       = () => printTable('Tax Master', `Total: ${filteredTaxes.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -242,11 +251,41 @@ const TaxMaster = () => {
                     toggleSidebar={toggleSidebar}
                     title="Tax Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                             <PlusCircle size={18} />
                             <span className="text-[10px] uppercase font-black">Add New Tax</span>
                         </button>
-                    }
+                    </>
+}
                 />
                 <div className="master-content-layout fade-in">
                     <div className="toolbar-premium">
@@ -350,11 +389,8 @@ const TaxMaster = () => {
                                         <td>{tax.local_central === 'LOCAL' ? `${tax.sgst_rate || 0}%` : '-'}</td>
                                         <td>{tax.local_central === 'CENTRAL' ? `${tax.igst_rate || 0}%` : '-'}</td>
                                         <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(tax)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleDelete(tax)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
+                                                            <ActionDropdown item={tax} onEdit={handleEdit} onDelete={handleDelete} />
+                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

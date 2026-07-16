@@ -172,7 +172,7 @@ export default function PurchaseInvoices() {
                         <h1 className="pi-title">PURCHASE INVOICES</h1>
                         <div className="pi-header-actions">
                             <button className="pi-btn-export" onClick={handleExport}>EXPORT</button>
-                            <button className="pi-icon-btn" title="Print" onClick={() => window.print()}>
+                            <button className="btn-export print" title="Print" onClick={() => window.print()}>
                                 <Printer size={18} />
                             </button>
                             <button className="pi-icon-btn" title="Settings"

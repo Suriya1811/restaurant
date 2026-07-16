@@ -14,7 +14,12 @@ export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
         const timer = setTimeout(() => {
             const elements = getFocusableElements();
             if (elements.length > 0) {
-                elements[0].focus();
+                const autoFocusElement = formRef.current.querySelector('[data-autofocus="true"]');
+                if (autoFocusElement) {
+                    autoFocusElement.focus();
+                } else {
+                    elements[0].focus();
+                }
             }
         }, 100);
         return () => clearTimeout(timer);
@@ -24,10 +29,10 @@ export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
         if (e.key === 'Enter') {
             const elements = getFocusableElements();
             const index = elements.indexOf(e.target);
-            
+
             if (index > -1) {
-                e.preventDefault(); 
-                
+                e.preventDefault();
+
                 // If not the last element and not a button, move to next
                 if (index < elements.length - 1 && e.target.tagName !== 'BUTTON') {
                     elements[index + 1].focus();

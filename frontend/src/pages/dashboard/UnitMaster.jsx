@@ -13,10 +13,14 @@ import {
     Tag,
     AlertCircle,
     Scale,
-    X
+    X,
+    Printer,
+    Download
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const UnitMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -169,6 +173,12 @@ const UnitMaster = () => {
         u.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const exportCols = ['#', 'Unit Name', 'Decimal Places'];
+    const getExportRows = () => filteredUnits.map((u, i) => [i + 1, u.name, u.decimal_places]);
+    const handleExcelExport = () => exportToCSV('Unit Master', exportCols, getExportRows(), 'Unit_Master');
+    const handlePDFExport   = () => exportToPDF('Unit Master', exportCols, getExportRows(), 'Unit_Master');
+    const handlePrint       = () => printTable('Unit Master', `Total: ${filteredUnits.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -182,10 +192,24 @@ const UnitMaster = () => {
                     toggleSidebar={toggleSidebar}
                     title="Unit Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} />
-                            <span className="text-[10px] uppercase font-black">Add New Unit</span>
-                        </button>
+                        <>
+                            <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+                            <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Add New Unit</span>
+                            </button>
+                        </>
                     }
                 />
                 <div className="master-content-layout fade-in">
@@ -246,11 +270,8 @@ const UnitMaster = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(unit)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleDelete(unit)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
+                                                            <ActionDropdown item={unit} onEdit={handleEdit} onDelete={handleDelete} />
+                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -313,10 +334,10 @@ const UnitMaster = () => {
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

@@ -142,7 +142,7 @@ const PayModePopup = ({
                     <button
                         onClick={handleSubmit}
                         disabled={loading || balanceDue > 0.01}
-                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200 disabled:opacity-50"
+                        className="btn-action-save"
                     >
                         {loading ? 'Processing...' : 'Confirm & Save'} <Check size={18} />
                     </button>

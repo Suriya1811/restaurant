@@ -983,7 +983,7 @@ a:hover {
   flex-direction: column;
   gap: 1rem;
   padding: 1.25rem 1.5rem 2rem 1.5rem;
-  overflow-y: auto;
+  overflow: hidden;
   flex: 1;
   height: 0;
   min-height: 0;
@@ -1227,6 +1227,7 @@ a:hover {
     opacity: 0;
     transform: translateY(24px) scale(0.985);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1327,11 +1328,15 @@ select.input-premium {
 
 /* --- Typography Premium --- */
 .premium-page-title {
-  font-size: 1.15rem; /* text-lg */
-  font-weight: 900;   /* font-black */
-  color: #0f172a;    /* text-slate-900 */
+  font-size: 1.15rem;
+  /* text-lg */
+  font-weight: 900;
+  /* font-black */
+  color: #0f172a;
+  /* text-slate-900 */
   text-transform: uppercase;
-  letter-spacing: -0.025em; /* tracking-tight */
+  letter-spacing: -0.025em;
+  /* tracking-tight */
   line-height: 1.25;
   font-family: inherit;
 }
@@ -2201,12 +2206,10 @@ select.input-premium {
    LOADING STATE
    ============================================================ */
 .skeleton-loader {
-  background: linear-gradient(
-    90deg,
-    var(--slate-200) 0%,
-    var(--slate-100) 50%,
-    var(--slate-200) 100%
-  );
+  background: linear-gradient(90deg,
+      var(--slate-200) 0%,
+      var(--slate-100) 50%,
+      var(--slate-200) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-md);
@@ -2216,6 +2219,7 @@ select.input-premium {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -2290,6 +2294,7 @@ select.input-premium {
 }
 
 @media (max-width: 768px) {
+
   .grid-2,
   .grid-3,
   .grid-4,
@@ -2401,6 +2406,7 @@ select.input-premium {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -2411,6 +2417,7 @@ select.input-premium {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2422,6 +2429,7 @@ select.input-premium {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2433,6 +2441,7 @@ select.input-premium {
     opacity: 0;
     transform: translateX(100%);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -2440,11 +2449,172 @@ select.input-premium {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
+}
+
+/* Forced Dark Blue Background and Orange Text for Table Headers */
+.table-premium th,
+.table-ent th {
+  background-color: #0F172A !important;
+  color: #F97316 !important;
+  padding: 1.25rem 1.5rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  text-align: left !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* ---- Standardized Master Header Buttons ---- */
+.btn-export {
+  padding: 0.5rem 1rem !important;
+  /* py-2 px-4 */
+  border: 1px solid var(--slate-200) !important;
+  background-color: white !important;
+  border-radius: var(--radius-md) !important;
+  /* rounded-md */
+  font-weight: 700 !important;
+  /* font-bold */
+  font-size: 0.75rem !important;
+  /* text-xs */
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  /* gap-1.5 */
+  transition: all 0.2s ease-in-out !important;
+  color: var(--slate-700) !important;
+}
+
+.btn-export:hover:not(:disabled) {
+  background-color: var(--slate-50) !important;
+}
+
+/* Base icon colors inside export buttons */
+.btn-export.excel svg,
+.btn-export-excel svg {
+  color: #10b981 !important;
+  /* emerald-500 */
+}
+
+.btn-export.pdf svg,
+.btn-export-pdf svg {
+  color: #f43f5e !important;
+  /* rose-500 */
+}
+
+.btn-export.print svg,
+.btn-export-print svg {
+  color: #3b82f6 !important;
+  /* blue-500 */
+}
+
+.btn-action-add {
+  padding: 0.5rem 1rem !important;
+  background-color: #f97316 !important;
+  /* orange-500 */
+  color: white !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  transition: all 0.2s ease-in-out !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: none !important;
+}
+
+.btn-action-add:hover:not(:disabled) {
+  background-color: #ea580c !important;
+  /* orange-600 */
+}
+
+.btn-action-close {
+  padding: 0.5rem 1rem !important;
+  border: 1px solid #fecdd3 !important;
+  /* rose-200 */
+  background-color: white !important;
+  color: #e11d48 !important;
+  /* rose-600 */
+  border-radius: var(--radius-md) !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  transition: all 0.2s ease-in-out !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+}
+
+.btn-action-close:hover:not(:disabled) {
+  background-color: #fff1f2 !important;
+  /* rose-50 */
+}
+
+.btn-action-save {
+  padding: 0.5rem 1rem !important;
+  background-color: #22c55e !important;
+  /* green-500 */
+  color: white !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  transition: all 0.2s ease-in-out !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: none !important;
+}
+
+.btn-action-save:hover:not(:disabled) {
+  background-color: #16a34a !important;
+  /* green-600 */
+}
+
+/* --- Global Master Screen Layout & Scrolling Fixes --- */
+.dashboard-main {
+  height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.master-content-layout {
+  flex: 1 !important;
+  overflow: hidden !important;
+  /* Prevent page-level vertical scroll */
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.table-container-premium {
+  flex: 1 !important;
+  overflow: auto !important;
+  /* Allow scroll ONLY within the table */
+  min-height: 0 !important;
+  /* Allow flex item to shrink properly */
+}
+
+/* Force standard search box width */
+.search-premium {
+  width: 100% !important;
+  max-width: 320px !important;
+  flex-shrink: 0 !important;
 }

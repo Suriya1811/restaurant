@@ -577,20 +577,17 @@ const Gstr1Report = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        <button onClick={exportToCSV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 text-xs font-bold transition-colors">
+                        <button onClick={exportToCSV} className="btn-export excel">
                             <FileSpreadsheet size={14} /> Excel
                         </button>
-                        <button onClick={exportToPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-bold transition-colors">
+                        <button onClick={exportToPDF} className="btn-export pdf">
                             <FileText size={14} /> PDF
                         </button>
-                        <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors">
+                        <button onClick={handlePrint} className="btn-export print">
                             <Printer size={14} /> Print
                         </button>
                         <button onClick={exportToJSON} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold transition-colors">
                             <Code size={14} /> JSON
-                        </button>
-                        <button onClick={() => navigate('/dashboard/self-service/home')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 text-xs font-bold transition-colors ml-2">
-                            <X size={14} /> Close
                         </button>
                     </div>
                 </header>

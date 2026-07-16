@@ -239,10 +239,10 @@ const DisplayPage = () => {
             <button className="flex items-center justify-center gap-2 bg-white text-green-600 border border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl font-black text-sm transition-all shadow-sm">
                 <FileSpreadsheet size={18} /> Excel
             </button>
-            <button className="flex items-center justify-center gap-2 bg-white text-red-600 border border-red-500 hover:bg-red-50 px-4 py-2 rounded-xl font-black text-sm transition-all shadow-sm">
+            <button className="btn-export pdf">
                 <FileIcon size={18} /> PDF
             </button>
-            <button className="flex items-center justify-center gap-2 bg-white text-blue-600 border border-blue-500 hover:bg-blue-50 px-4 py-2 rounded-xl font-black text-sm transition-all shadow-sm">
+            <button className="btn-export print">
                 <Printer size={18} /> Print
             </button>
         </div>

@@ -318,7 +318,7 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
 
                             {/* Actions */}
                             <div className="bpm-actions no-print">
-                                <button className="bpm-print-btn" onClick={handlePrint}>
+                                <button className="btn-export print" onClick={handlePrint}>
                                     <Printer size={18} /> Print POS Receipt
                                 </button>
                                 <button className="bpm-done-btn" onClick={onClose}>

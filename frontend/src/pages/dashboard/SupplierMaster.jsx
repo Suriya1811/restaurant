@@ -21,9 +21,11 @@ import {
     ChevronRight,
     Activity,
     X
-} from 'lucide-react';
+, Download, Printer} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+
 
 const SupplierMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -157,6 +159,12 @@ const SupplierMaster = () => {
         (s.contact_person || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const exportCols = ['#', 'Vendor Entity', 'Contact Person', 'Phone', 'GST', 'Balance'];
+    const getExportRows = () => filteredSuppliers.map((s, i) => [i + 1, s.name, s.contact_person || '-', s.contact_number || '-', s.gst_number || '-', s.opening_balance || 0]);
+    const handleExcelExport = () => exportToCSV('Supplier Master', exportCols, getExportRows(), 'Supplier_Master');
+    const handlePDFExport   = () => exportToPDF('Supplier Master', exportCols, getExportRows(), 'Supplier_Master');
+    const handlePrint       = () => printTable('Supplier Master', `Total: ${filteredSuppliers.length}`, exportCols, getExportRows());
+
     return (
         <div className="dashboard-layout">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
@@ -168,11 +176,41 @@ const SupplierMaster = () => {
                     toggleSidebar={toggleSidebar} 
                     title="Supplier Master"
                     actions={
-                        <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                        <>
+
+                            <button
+                                type="button"
+                                className="btn-export excel"
+                                onClick={handleExcelExport}
+                                title="Export to Excel"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export pdf"
+                                onClick={handlePDFExport}
+                                title="Export to PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-export print"
+                                onClick={handlePrint}
+                                title="Print"
+                            >
+                                <Printer size={14} />
+                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                            </button>
+<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                             <PlusCircle size={18} /> 
                             <span className="text-[10px] uppercase font-black">Register Vendor</span>
                         </button>
-                    }
+                    </>
+}
                 />
                 <div className="master-content-layout fade-in">
                     {/* Header relocated */}
@@ -360,7 +398,7 @@ const SupplierMaster = () => {
                                 </form>
                             </div>
                             <div className="drawer-footer-premium !bg-amber-950 !border-white/5 !pb-10">
-                                <button type="submit" form="supplier-form" disabled={submitting} className="btn-premium-primary !bg-amber-400 !text-amber-950 !flex-1 !justify-center !py-5 !text-base !rounded-[2rem] hover:!bg-white transition-all transform hover:scale-[0.98]">
+                                <button type="submit" form="supplier-form" disabled={submitting} className="btn-action-add !bg-amber-400 !text-amber-950 !flex-1 !justify-center !py-5 !text-base !rounded-[2rem] hover:!bg-white transition-all transform hover:scale-[0.98]">
                                     {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT VENDOR DATA' : 'REGISTER VENDOR')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-10 py-5 bg-white/10 hover:bg-white/20 text-white font-black uppercase text-xs tracking-widest rounded-[2rem] border border-white/10 transition-all">CANCEL</button>

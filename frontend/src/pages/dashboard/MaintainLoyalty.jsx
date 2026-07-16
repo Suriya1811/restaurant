@@ -134,7 +134,7 @@ const MaintainLoyalty = () => {
                             </div>
 
                             <div className="flex justify-end pt-8 border-t border-slate-50 mt-8">
-                                <button onClick={handleSave} disabled={saving} className="btn-premium-primary !py-5 !px-16 shadow-xl shadow-indigo-100/50">
+                                <button onClick={handleSave} disabled={saving} className="btn-action-save">
                                     {saving ? <><Loader2 className="animate-spin" /> Saving...</> : <><Save size={18} /> Update Rewards Configuration</>}
                                 </button>
                             </div>
