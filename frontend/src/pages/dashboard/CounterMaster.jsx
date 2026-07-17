@@ -25,6 +25,7 @@ const CounterMaster = () => {
     const [counters, setCounters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -155,10 +156,12 @@ const CounterMaster = () => {
         setError('');
     };
 
-    const filteredCounters = counters.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCounters = counters.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.code.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? c.is_active !== false : c.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
     return (
         <div className="dashboard-layout">
@@ -223,6 +226,16 @@ const CounterMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
                             <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
                                 Active Nodes: {filteredCounters.length}
                             </span>
@@ -285,7 +298,7 @@ const CounterMaster = () => {
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2 h-2 rounded-full ${counter.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
                                                 <span className={`text-[10px] font-black uppercase tracking-widest ${counter.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                    {counter.is_active ? 'Online' : 'Offline'}
+                                                    {counter.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                                 </span>
                                             </div>
                                         </td>

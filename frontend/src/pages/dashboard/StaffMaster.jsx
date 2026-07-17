@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -21,7 +21,8 @@ import {
     Users,
     Camera,
     X
-, Download, Printer} from 'lucide-react';
+    , Download, Printer
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
@@ -33,6 +34,7 @@ const StaffMaster = () => {
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [staffType, setStaffType] = useState('CAPTAIN'); // 'CAPTAIN' or 'WAITER'
@@ -241,17 +243,19 @@ const StaffMaster = () => {
         setError('');
     };
 
-    const filteredStaff = staff.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.phone?.includes(searchTerm)
-    );
+    const filteredStaff = staff.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.phone?.includes(searchTerm);
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? s.is_active !== false : s.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
 
     const exportCols = ['#', 'Name', 'Role', 'Phone'];
     const getExportRows = () => filteredStaff.map((s, i) => [i + 1, s.name, s.role || '-', s.phone || '-']);
     const handleExcelExport = () => exportToCSV('Staff Master', exportCols, getExportRows(), 'Staff_Master');
-    const handlePDFExport   = () => exportToPDF('Staff Master', exportCols, getExportRows(), 'Staff_Master');
-    const handlePrint       = () => printTable('Staff Master', `Total: ${filteredStaff.length}`, exportCols, getExportRows());
+    const handlePDFExport = () => exportToPDF('Staff Master', exportCols, getExportRows(), 'Staff_Master');
+    const handlePrint = () => printTable('Staff Master', `Total: ${filteredStaff.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -262,8 +266,8 @@ const StaffMaster = () => {
             )}
 
             <main className="dashboard-main">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
+                <Header
+                    toggleSidebar={toggleSidebar}
                     title={staffType === 'CAPTAIN' ? 'Captain Creation' : 'Waiter Creation'}
                     actions={
                         <div className="flex items-center gap-4">
@@ -281,18 +285,18 @@ const StaffMaster = () => {
                                     WAITERS
                                 </button>
                             </div>
-                            
-                            
-                            
-                            
 
-                            
-                            
-                            
 
-                            
-                            
-                            
+
+
+
+
+
+
+
+
+
+
 
                             <button
                                 type="button"
@@ -321,8 +325,8 @@ const StaffMaster = () => {
                                 <Printer size={14} />
                                 <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                             </button>
-<button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} /> 
+                            <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
                                 <span className="text-[10px] uppercase font-black">Register New {staffType === 'CAPTAIN' ? 'Captain' : 'Waiter'}</span>
                             </button>
                         </div>
@@ -343,9 +347,17 @@ const StaffMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredStaff.length}
-                            </span>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            
                         </div>
                     </div>
 
@@ -405,12 +417,12 @@ const StaffMaster = () => {
                                         </td>
                                         <td>
                                             <span className={`badge-premium ${member.is_active ? 'active' : 'disabled'}`}>
-                                                {member.is_active ? 'VERIFIED' : 'DEACTIVATED'}
+                                                {member.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
                                         <td>
-                                                            <ActionDropdown item={member} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
+                                            <ActionDropdown item={member} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -561,10 +573,10 @@ const StaffMaster = () => {
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

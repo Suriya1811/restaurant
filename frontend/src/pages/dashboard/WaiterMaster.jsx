@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -21,7 +21,8 @@ import {
     UserCircle,
     Users,
     X
-, Download, Printer} from 'lucide-react';
+    , Download, Printer
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
@@ -33,6 +34,7 @@ const WaiterMaster = () => {
     const [waiters, setWaiters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -168,82 +170,84 @@ const WaiterMaster = () => {
 
             const result = await response.json();
 
-        if (result.success) {
-            fetchWaiters();
-        } else {
-            alert(`Error: ${result.error || result.message}`);
+            if (result.success) {
+                fetchWaiters();
+            } else {
+                alert(`Error: ${result.error || result.message}`);
+            }
+        } catch (err) {
+            console.error('Error deleting waiter:', err);
+            alert('An error occurred while deleting the waiter.');
         }
-    } catch (err) {
-        console.error('Error deleting waiter:', err);
-        alert('An error occurred while deleting the waiter.');
-    }
-};
+    };
 
-const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    const uploadData = new FormData();
-    uploadData.append('image', file);
+        const uploadData = new FormData();
+        uploadData.append('image', file);
 
-    try {
-        const savedUser = localStorage.getItem('user');
-        const { token } = JSON.parse(savedUser);
+        try {
+            const savedUser = localStorage.getItem('user');
+            const { token } = JSON.parse(savedUser);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/waiters/upload`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: uploadData
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/waiters/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: uploadData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                setFormData({ ...formData, image: result.data });
+            } else {
+                alert(result.message || 'Upload failed');
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Error uploading image');
+        }
+    };
+
+    const handleEdit = (waiter) => {
+        setFormData({
+            ...waiter,
+            joining_date: waiter.joining_date ? new Date(waiter.joining_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         });
+        setIsEditing(true);
+        setShowDrawer(true);
+    };
 
-        const result = await response.json();
-        if (result.success) {
-            setFormData({ ...formData, image: result.data });
-        } else {
-            alert(result.message || 'Upload failed');
-        }
-    } catch (err) {
-        console.error('Upload error:', err);
-        alert('Error uploading image');
-    }
-};
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            phone: '',
+            cell_no_2: '',
+            address: '',
+            joining_date: new Date().toISOString().split('T')[0],
+            id_proof_type: 'NONE',
+            image: ''
+        });
+        setIsEditing(false);
+        setError('');
+    };
 
-const handleEdit = (waiter) => {
-    setFormData({
-        ...waiter,
-        joining_date: waiter.joining_date ? new Date(waiter.joining_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    const filteredWaiters = waiters.filter(w => {
+        const matchesSearch = w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        w.phone?.includes(searchTerm);
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? w.is_active !== false : w.is_active === false);
+        return matchesSearch && matchesStatus;
     });
-    setIsEditing(true);
-    setShowDrawer(true);
-};
-
-const resetForm = () => {
-    setFormData({
-        name: '',
-        phone: '',
-        cell_no_2: '',
-        address: '',
-        joining_date: new Date().toISOString().split('T')[0],
-        id_proof_type: 'NONE',
-        image: ''
-    });
-    setIsEditing(false);
-    setError('');
-};
-
-    const filteredWaiters = waiters.filter(w =>
-        w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        w.phone?.includes(searchTerm)
-    );
 
 
     const exportCols = ['#', 'Name', 'Phone', 'Address'];
     const getExportRows = () => filteredWaiters.map((w, i) => [i + 1, w.name, w.phone || '-', w.address || '-']);
     const handleExcelExport = () => exportToCSV('Waiter Master', exportCols, getExportRows(), 'Waiter_Master');
-    const handlePDFExport   = () => exportToPDF('Waiter Master', exportCols, getExportRows(), 'Waiter_Master');
-    const handlePrint       = () => printTable('Waiter Master', `Total: ${filteredWaiters.length}`, exportCols, getExportRows());
+    const handlePDFExport = () => exportToPDF('Waiter Master', exportCols, getExportRows(), 'Waiter_Master');
+    const handlePrint = () => printTable('Waiter Master', `Total: ${filteredWaiters.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -254,8 +258,8 @@ const resetForm = () => {
             )}
 
             <main className="dashboard-main">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
+                <Header
+                    toggleSidebar={toggleSidebar}
                     title="Waiter Master"
                     actions={
                         <>
@@ -287,12 +291,12 @@ const resetForm = () => {
                                 <Printer size={14} />
                                 <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                             </button>
-<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} /> 
-                            <span className="text-[10px] uppercase font-black">Register New Waiter</span>
-                        </button>
-                    </>
-}
+                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Register New Waiter</span>
+                            </button>
+                        </>
+                    }
                 />
                 <div className="master-content-layout fade-in">
                     {/* Header relocated */}
@@ -309,9 +313,17 @@ const resetForm = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredWaiters.length}
-                            </span>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            
                         </div>
                     </div>
 
@@ -369,12 +381,12 @@ const resetForm = () => {
                                         </td>
                                         <td>
                                             <span className={`badge-premium ${waiter.is_active ? 'active' : 'disabled'}`}>
-                                                {waiter.is_active ? 'VERIFIED' : 'DEACTIVATED'}
+                                                {waiter.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
                                         <td>
-                                                            <ActionDropdown item={waiter} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
+                                            <ActionDropdown item={waiter} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -525,10 +537,10 @@ const resetForm = () => {
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </>
                 )}

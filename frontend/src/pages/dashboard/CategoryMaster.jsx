@@ -4,7 +4,7 @@ import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
 import {
     PlusCircle, Search, Edit, CheckCircle2, XCircle, Trash2, Loader2,
-    Grid, AlertCircle, Filter, Activity, ChevronRight, X, Download, Printer
+    Grid, AlertCircle, Filter, Activity, ChevronRight, X, Download, Printer, Save
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
@@ -226,74 +226,102 @@ const CategoryMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium">
-                            <div className="drawer-header-premium">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'Modify Category' : 'Architect Category'}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Master Entity Definition</p>
-                                </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-slate-500 hover:text-slate-800" />
-                                </button>
-                            </div>
-                            <div className="drawer-body-premium">
+                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-100 shadow-sm">
+                            <h2 className="text-[22px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'Modify Category' : 'CATEGORY CREATION'}</h2>
+                            <button 
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
+                            >
+                                <XCircle size={20} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30">
+                            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-8 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100">
                                 {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
+                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
                                         <AlertCircle size={20} /> {error}
                                     </div>
                                 )}
-                                <form id="category-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
-                                    <div className="form-group-premium">
-                                        <label>Identity Label *</label>
+                                <form id="category-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-0">
+                                    
+                                    {/* Row 1: Group Name */}
+                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
+                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">GROUP NAME *</label>
                                         <input
                                             type="text"
                                             required
-                                            className="input-premium"
-                                            placeholder="e.g. PREMIUM STARTERS"
+                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
+                                            placeholder="Enter Group Name"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="form-group-premium">
-                                            <label>HSN Code</label>
-                                            <input
-                                                type="text"
-                                                className="input-premium"
-                                                placeholder="Enter HSN Code"
-                                                value={formData.hsn_code}
-                                                onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group-premium">
-                                            <label>HSN Description</label>
-                                            <input
-                                                type="text"
-                                                className="input-premium"
-                                                placeholder="Enter HSN Description"
-                                                value={formData.hsn_description}
-                                                onChange={(e) => setFormData({ ...formData, hsn_description: e.target.value })}
-                                            />
-                                        </div>
+
+                                    {/* Row 2: Sub Group */}
+                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
+                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">SUB GROUP *</label>
+                                        <select
+                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
+                                            value={formData.type}
+                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                        >
+                                            <option value="FOOD">Select Sub Group</option>
+                                            <option value="BEVERAGE">BEVERAGE</option>
+                                            <option value="LIQUOR">LIQUOR</option>
+                                            <option value="OTHER">OTHER</option>
+                                        </select>
                                     </div>
+
+                                    {/* Row 3: HSN Code */}
+                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
+                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">HSN CODE *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
+                                            placeholder="Enter HSN Code"
+                                            value={formData.hsn_code}
+                                            onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {/* Row 4: HSN Description */}
+                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
+                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">HSN DESCRIPTION *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
+                                            placeholder="Enter HSN Description"
+                                            value={formData.hsn_description}
+                                            onChange={(e) => setFormData({ ...formData, hsn_description: e.target.value })}
+                                        />
+                                    </div>
+
                                 </form>
-                            </div>
-                            <div className="drawer-footer-premium">
-                                <button type="submit" form="category-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Finalize Modification' : 'Deploy Category')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
+
+                                <div className="mt-10 flex justify-end">
+                                    <button type="submit" form="category-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all">
+                                        {submitting ? <Loader2 className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <SaveConfirmationModal
+                    </div>
+                )}
+                <SaveConfirmationModal
                             isOpen={showSaveConfirm}
                             onConfirm={confirmSave}
                             onCancel={cancelSave}
                         />
-                    </>
-                )}
             </main>
         </div>
     );

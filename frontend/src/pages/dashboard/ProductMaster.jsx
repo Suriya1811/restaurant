@@ -73,7 +73,7 @@ const ProductMaster = () => {
     // Filters
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [selectedBrand, setSelectedBrand] = useState('ALL');
-    const [selectedActiveStatus, setSelectedActiveStatus] = useState('ACTIVE');
+    const [selectedActiveStatus, setSelectedActiveStatus] = useState('ALL');
 
     // Column Settings Panel
     const [showColumnSettings, setShowColumnSettings] = useState(false);
@@ -465,6 +465,13 @@ const ProductMaster = () => {
             sanitizedData.variations = formData.variations.map(v => ({ name: v.name, amount: parseFloat(v.amount) || 0 }));
             sanitizedData.addons = formData.addons.map(a => ({ name: a.name, rate: parseFloat(a.rate) || 0 }));
 
+            // Clean up empty ObjectIds to prevent BSONError
+            ['category', 'brand', 'tax_id', 'unit'].forEach(f => {
+                if (sanitizedData[f] === '') {
+                    sanitizedData[f] = null;
+                }
+            });
+
             const url = isEditing
                 ? `${import.meta.env.VITE_API_URL}/products/${formData._id}`
                 : `${import.meta.env.VITE_API_URL}/products`;
@@ -546,7 +553,8 @@ const ProductMaster = () => {
         setShowDrawer(true);
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (product) => {
+        const id = product._id || product.id;
         if (!window.confirm("Delete this master item?")) return;
         try {
             await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
@@ -856,7 +864,8 @@ const ProductMaster = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md"
+                                    className="px-3 py-1.5 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md"
+                                    style={{ backgroundColor: '#0f172a' }}
                                     onClick={() => {
                                         setTempVisibleColumns(visibleColumns);
                                         setShowColumnSettings(true);

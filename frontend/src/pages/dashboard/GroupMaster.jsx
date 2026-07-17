@@ -25,7 +25,9 @@ const GroupMaster = () => {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [filterNature, setFilterNature] = useState('ALL');
+    const [filterActive, setFilterActive] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -103,6 +105,22 @@ const GroupMaster = () => {
         setShowSaveConfirm(false);
     };
 
+    const handleStatusChange = async (group, newStatus) => {
+        try {
+            const res = await fetch(`${API}/ledger-groups/${group._id}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${getToken()}` 
+                },
+                body: JSON.stringify({ is_active: newStatus })
+            });
+            const data = await res.json();
+            if (data.success) fetchGroups();
+            else alert(data.error || 'Error updating status.');
+        } catch (err) { alert('Error updating status.'); }
+    };
+
     const handleDelete = async (group) => {
         if (group.is_system) return alert('System groups cannot be deleted.');
         if (!window.confirm(`Delete group "${group.name}"?`)) return;
@@ -139,21 +157,26 @@ const GroupMaster = () => {
         return roots;
     };
 
-    const filterTree = (nodes, term, nature) => {
+    const filterTree = (nodes, term, nature, active) => {
         if (!nodes) return [];
         return nodes.map(node => {
             const matchesTerm = node.name.toLowerCase().includes(term.toLowerCase());
             const matchesNature = nature === 'ALL' || node.nature === nature;
-            const filteredChildren = filterTree(node.children, term, nature);
             
-            if ((matchesTerm && matchesNature) || filteredChildren.length > 0) {
+            let matchesActive = true;
+            if (active === 'ACTIVE') matchesActive = node.is_active !== false;
+            if (active === 'DEACTIVE') matchesActive = node.is_active === false;
+
+            const filteredChildren = filterTree(node.children, term, nature, active);
+            
+            if ((matchesTerm && matchesNature && matchesActive) || filteredChildren.length > 0) {
                 return { ...node, children: filteredChildren };
             }
             return null;
         }).filter(Boolean);
     };
 
-    const treeData = filterTree(buildTree(groups), searchTerm, filterNature);
+    const treeData = filterTree(buildTree(groups), searchTerm, filterNature, filterActive);
 
     const renderTreeRow = (node, depth = 0) => {
         const isExpanded = expandedGroups[node.name];
@@ -179,13 +202,13 @@ const GroupMaster = () => {
                             </div>
                         </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                         <span className="px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-orange-50 text-[#f97316]">
                             {cfg.label}
                         </span>
                     </td>
-                    <td className="py-3 px-4 w-32 text-center">
-                                                            <ActionDropdown item={node} onEdit={handleEdit} onDelete={handleDelete} />
+                    <td>
+                                                            <ActionDropdown item={node} onEdit={handleEdit} onStatusChange={handleStatusChange} onDelete={handleDelete} />
                                                         </td>
                 </tr>
                 {isExpanded && hasChildren && node.children.map(child => renderTreeRow(child, depth + 1))}
@@ -207,12 +230,25 @@ const GroupMaster = () => {
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">GROUP MASTER</h1>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-5 py-2.5 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-lg font-black text-[12px] uppercase tracking-wide transition-colors shadow-sm" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={16} strokeWidth={2.5} /> ADD NEW GROUP
+                    <div className="flex items-center gap-2">
+                        <button type="button" className="btn-export excel" onClick={exportToCSV} title="Export to Excel">
+                            <Download size={14} />
+                            <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 rounded-lg font-black text-[12px] uppercase tracking-wide transition-colors shadow-sm" onClick={() => window.history.back()}>
-                            <XCircle size={16} strokeWidth={2.5} /> CLOSE
+                        <button type="button" className="btn-export pdf" onClick={exportToPDF} title="Export to PDF">
+                            <Download size={14} />
+                            <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                        </button>
+                        <button type="button" className="btn-export print" onClick={() => window.print()} title="Print">
+                            <Printer size={14} />
+                            <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
+                        </button>
+                        <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                            <PlusCircle size={18} />
+                            <span className="text-[10px] uppercase font-black">Add New Group</span>
+                        </button>
+                        <button className="btn-action-close ml-2" onClick={() => window.history.back()} title="Close and Return to Home">
+                            <X size={16} /> <span className="text-[10px] uppercase font-black">CLOSE</span>
                         </button>
                     </div>
                 </div>
@@ -232,7 +268,7 @@ const GroupMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-slate-700">Filter:</span>
+                            <span className="text-sm font-bold text-slate-700">Nature:</span>
                             <select 
                                 value={filterNature}
                                 onChange={e => setFilterNature(e.target.value)}
@@ -244,18 +280,29 @@ const GroupMaster = () => {
                                 <option value="INCOME">Income</option>
                                 <option value="EXPENSES">Expenses</option>
                             </select>
+
+                            <span className="text-sm font-bold text-slate-700">Status:</span>
+                            <select 
+                                value={filterActive}
+                                onChange={e => setFilterActive(e.target.value)}
+                                className="border border-slate-200 rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 outline-none bg-slate-50 cursor-pointer min-w-[120px]"
+                            >
+                                <option value="ALL">All</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
                         </div>
                     </div>
 
                     {/* Tree Table */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
                         <div className="overflow-x-auto flex-1 custom-scrollbar">
-                            <table className="w-full text-left whitespace-nowrap">
+                            <table className="table-premium">
                                 <thead>
-                                    <tr className="bg-[#0b1727]">
-                                        <th className="py-4 px-4 font-black text-[12px] text-[#f97316] uppercase tracking-widest w-1/2 rounded-tl-xl">GROUP NAME</th>
-                                        <th className="py-4 px-4 font-black text-[12px] text-[#f97316] uppercase tracking-widest">NATURE</th>
-                                        <th className="py-4 px-4 font-black text-[12px] text-[#f97316] uppercase tracking-widest text-center rounded-tr-xl w-32">ACTION</th>
+                                    <tr>
+                                        <th>GROUP NAME</th>
+                                        <th>NATURE</th>
+                                        <th>ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -311,7 +358,7 @@ const GroupMaster = () => {
                                         <input
                                             required
                                             type="text"
-                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white"
+                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-[#f97316] transition-colors bg-white"
                                             placeholder="e.g. Sundry Debtors"
                                             value={formData.name}
                                             disabled={isEditing && formData.is_system}
@@ -326,7 +373,7 @@ const GroupMaster = () => {
                                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Parent Group *</label>
                                         <select
                                             required
-                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white cursor-pointer"
+                                            className="w-full h-11 px-3 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-[#f97316] transition-colors bg-white cursor-pointer"
                                             value={formData.parent || ''}
                                             onChange={e => setFormData({ ...formData, parent: e.target.value })}
                                         >
@@ -357,7 +404,7 @@ const GroupMaster = () => {
 
                             {/* Modal Footer */}
                             <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
-                                <button type="submit" form="group-form" disabled={submitting} className="flex-1 h-11 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                <button type="submit" form="group-form" disabled={submitting} className="flex-1 h-11 rounded-lg bg-[#f97316] hover:bg-[#ea580c] text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-md shadow-orange-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                     {submitting ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? 'Confirm Changes' : 'Execute Registration')}
                                 </button>
                                 <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-5 h-11 rounded-lg bg-white border border-slate-200 text-slate-700 text-[13px] font-bold hover:bg-slate-50 hover:border-slate-300 transition-all">Discard</button>

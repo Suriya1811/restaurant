@@ -30,6 +30,7 @@ const TableMaster = () => {
     const [waiters, setWaiters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -206,9 +207,11 @@ const TableMaster = () => {
         setError('');
     };
 
-    const filteredTables = tables.filter(t =>
-        t.table_number.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTables = tables.filter(t => {
+        const matchesSearch = t.table_number.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? t.is_active !== false : t.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
     const getStatusStyle = (status) => {
         switch (status) {
@@ -311,7 +314,7 @@ const TableMaster = () => {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                         {loading ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
                                 {Array(10).fill(0).map((_, i) => (

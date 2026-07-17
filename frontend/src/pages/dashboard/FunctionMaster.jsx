@@ -25,6 +25,7 @@ const FunctionMaster = () => {
     const [functions, setFunctions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -178,9 +179,11 @@ const FunctionMaster = () => {
         setError('');
     };
 
-    const filteredFunctions = functions.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredFunctions = functions.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? c.is_active !== false : c.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
 
     const exportCols = ['#', 'Function Name', 'Description'];
@@ -250,9 +253,17 @@ const FunctionMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredFunctions.length}
-                            </span>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            
                         </div>
                     </div>
 
@@ -297,7 +308,7 @@ const FunctionMaster = () => {
 
                                         <td>
                                             <span className={`badge-premium ${cat.is_active ? 'active' : 'disabled'}`}>
-                                                {cat.is_active ? 'Synchronized' : 'Offline'}
+                                                {cat.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
                                         <td>

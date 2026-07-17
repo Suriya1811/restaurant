@@ -1108,31 +1108,35 @@ a:hover {
 .table-premium th {
   background: var(--slate-50);
   padding: 0.5rem 0.75rem;
-  font-size: 0.65rem;
+  background: #0f172a !important;
+  color: #ff7a00 !important;
   font-weight: 800;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--slate-500);
-  border-bottom: 1px solid var(--border-light);
+  border: 1px solid #e2e8f0 !important;
+  padding: 18px 12px !important;
   text-align: left;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .table-premium td {
-  padding: 0.5rem 0.75rem;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--slate-700);
-  border-bottom: 1px solid var(--slate-100);
-  transition: background 0.15s;
+  border: 1px solid #e2e8f0 !important;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #334155;
+  background: white;
+  white-space: nowrap;
 }
 
 .table-premium tr:last-child td {
-  border-bottom: none;
+  /* border-bottom: none; */
 }
 
 .table-premium tbody tr:hover td {
-  background: var(--slate-50);
+  background: #f8fafc;
 }
 
 /* --- Premium Drawer --- */
@@ -1346,7 +1350,7 @@ select.input-premium {
   background: var(--dark);
   color: #fff;
   padding: 0.7rem 1.4rem;
-  border-radius: var(--radius-md);
+  border-radius: 4px;
   font-weight: 700;
   font-size: 0.875rem;
   display: inline-flex;
@@ -2478,22 +2482,17 @@ select.input-premium {
 
 /* ---- Standardized Master Header Buttons ---- */
 .btn-export {
-  padding: 0.5rem 1rem !important;
-  /* py-2 px-4 */
-  border: 1px solid var(--slate-200) !important;
+  padding: 0.375rem 0.75rem !important;
   background-color: white !important;
-  border-radius: var(--radius-md) !important;
-  /* rounded-md */
-  font-weight: 700 !important;
-  /* font-bold */
-  font-size: 0.75rem !important;
-  /* text-xs */
+  border-radius: 4px !important;
+  font-weight: 900 !important;
+  font-size: 11px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 0.375rem !important;
-  /* gap-1.5 */
   transition: all 0.2s ease-in-out !important;
-  color: var(--slate-700) !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 .btn-export:hover:not(:disabled) {
@@ -2520,49 +2519,43 @@ select.input-premium {
 }
 
 .btn-action-add {
-  padding: 0.5rem 1rem !important;
+  padding: 0.375rem 0.75rem !important;
   background-color: #f97316 !important;
-  /* orange-500 */
   color: white !important;
-  border-radius: var(--radius-md) !important;
-  font-weight: 700 !important;
-  font-size: 0.75rem !important;
+  border-radius: 4px !important;
+  font-weight: 900 !important;
+  font-size: 11px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 0.375rem !important;
   transition: all 0.2s ease-in-out !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.025em !important;
-  box-shadow: var(--shadow-sm) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
   border: none !important;
 }
 
 .btn-action-add:hover:not(:disabled) {
   background-color: #ea580c !important;
-  /* orange-600 */
 }
 
 .btn-action-close {
-  padding: 0.5rem 1rem !important;
+  padding: 0.375rem 0.75rem !important;
   border: 1px solid #fecdd3 !important;
-  /* rose-200 */
   background-color: white !important;
   color: #e11d48 !important;
-  /* rose-600 */
-  border-radius: var(--radius-md) !important;
-  font-weight: 700 !important;
-  font-size: 0.75rem !important;
+  border-radius: 4px !important;
+  font-weight: 900 !important;
+  font-size: 11px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 0.375rem !important;
   transition: all 0.2s ease-in-out !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.025em !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 .btn-action-close:hover:not(:disabled) {
   background-color: #fff1f2 !important;
-  /* rose-50 */
 }
 
 .btn-action-save {
@@ -2617,4 +2610,54 @@ select.input-premium {
   width: 100% !important;
   max-width: 320px !important;
   flex-shrink: 0 !important;
+}
+.btn-export.excel {
+  border: 1px solid #10b981 !important;
+  color: #059669 !important;
+}
+.btn-export.excel:hover {
+  background-color: #ecfdf5 !important;
+}
+.btn-export.excel svg {
+  color: #10b981 !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+.btn-export.excel span {
+  color: #059669 !important;
+  font-size: 11px !important;
+}
+
+.btn-export.pdf {
+  border: 1px solid #f43f5e !important;
+  color: #e11d48 !important;
+}
+.btn-export.pdf:hover {
+  background-color: #fff1f2 !important;
+}
+.btn-export.pdf svg {
+  color: #f43f5e !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+.btn-export.pdf span {
+  color: #e11d48 !important;
+  font-size: 11px !important;
+}
+
+.btn-export.print {
+  border: 1px solid #6366f1 !important;
+  color: #4f46e5 !important;
+}
+.btn-export.print:hover {
+  background-color: #eef2ff !important;
+}
+.btn-export.print svg {
+  color: #6366f1 !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+.btn-export.print span {
+  color: #4f46e5 !important;
+  font-size: 11px !important;
 }

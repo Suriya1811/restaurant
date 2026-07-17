@@ -28,6 +28,7 @@ const UnitMaster = () => {
     const [units, setUnits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -169,9 +170,11 @@ const UnitMaster = () => {
         setShowSaveConfirm(false);
     };
 
-    const filteredUnits = units.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUnits = units.filter(u => {
+        const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? u.is_active !== false : u.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
     const exportCols = ['#', 'Unit Name', 'Decimal Places'];
     const getExportRows = () => filteredUnits.map((u, i) => [i + 1, u.name, u.decimal_places]);
@@ -205,7 +208,7 @@ const UnitMaster = () => {
                                 <Printer size={14} />
                                 <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                             </button>
-                            <button className="btn-premium-primary !py-1.5 !px-4" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
                                 <PlusCircle size={18} />
                                 <span className="text-[10px] uppercase font-black">Add New Unit</span>
                             </button>
@@ -224,9 +227,17 @@ const UnitMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredUnits.length}
-                            </span>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            
                         </div>
                     </div>
 

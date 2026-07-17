@@ -15,7 +15,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                     e.stopPropagation();
                     setIsOpen(true);
                 }}
-                className="px-3 py-1.5 border border-slate-300 rounded bg-white text-[12px] font-bold text-slate-800 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors mx-auto shadow-sm"
+                className="px-3 py-1.5 border border-slate-300 !rounded-md bg-white text-[12px] font-bold text-slate-800 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors mx-auto shadow-sm"
             >
                 Actions <ChevronDown size={14} />
             </button>
@@ -101,7 +101,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setIsOpen(false);
-                                        onDelete(item.id || item._id);
+                                        onDelete(item);
                                     }}
                                     className="w-full px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >

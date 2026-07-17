@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -29,7 +29,9 @@ const TableTypeMaster = () => {
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        name: ''
+        name: '',
+        captain: '',
+        waiter: ''
     });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -158,7 +160,7 @@ const TableTypeMaster = () => {
     };
 
     const resetForm = () => {
-        setFormData({ name: '' });
+        setFormData({ name: '', captain: '', waiter: '' });
         setIsEditing(false);
         setError('');
     };
@@ -322,6 +324,26 @@ const TableTypeMaster = () => {
                                             placeholder="e.g. GARDEN / AC HALL"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
+                                        />
+                                    </div>
+                                    <div className="form-group-premium">
+                                        <label>Assigned Captain</label>
+                                        <input
+                                            type="text"
+                                            className="input-premium"
+                                            placeholder="e.g. RAJESH"
+                                            value={formData.captain || ''}
+                                            onChange={(e) => setFormData({ ...formData, captain: e.target.value.toUpperCase() })}
+                                        />
+                                    </div>
+                                    <div className="form-group-premium">
+                                        <label>Assigned Waiter</label>
+                                        <input
+                                            type="text"
+                                            className="input-premium"
+                                            placeholder="e.g. CHANDRU"
+                                            value={formData.waiter || ''}
+                                            onChange={(e) => setFormData({ ...formData, waiter: e.target.value.toUpperCase() })}
                                         />
                                     </div>
                                 </form>

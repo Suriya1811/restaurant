@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -12,8 +12,11 @@ import {
     Percent,
     AlertCircle,
     X,
-    Trash2
-, Download, Printer} from 'lucide-react';
+    Trash2,
+    Download,
+    Printer,
+    Save
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
@@ -235,8 +238,8 @@ const TaxMaster = () => {
     const exportCols = ['#', 'Tax Name', 'Type', 'CGST %', 'SGST %', 'IGST %'];
     const getExportRows = () => filteredTaxes.map((t, i) => [i + 1, t.name, t.tax_type || '-', t.cgst_rate || 0, t.sgst_rate || 0, t.igst_rate || 0]);
     const handleExcelExport = () => exportToCSV('Tax Master', exportCols, getExportRows(), 'Tax_Master');
-    const handlePDFExport   = () => exportToPDF('Tax Master', exportCols, getExportRows(), 'Tax_Master');
-    const handlePrint       = () => printTable('Tax Master', `Total: ${filteredTaxes.length}`, exportCols, getExportRows());
+    const handlePDFExport = () => exportToPDF('Tax Master', exportCols, getExportRows(), 'Tax_Master');
+    const handlePrint = () => printTable('Tax Master', `Total: ${filteredTaxes.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -280,12 +283,12 @@ const TaxMaster = () => {
                                 <Printer size={14} />
                                 <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                             </button>
-<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} />
-                            <span className="text-[10px] uppercase font-black">Add New Tax</span>
-                        </button>
-                    </>
-}
+                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                <PlusCircle size={18} />
+                                <span className="text-[10px] uppercase font-black">Add New Tax</span>
+                            </button>
+                        </>
+                    }
                 />
                 <div className="master-content-layout fade-in">
                     <div className="toolbar-premium">
@@ -363,20 +366,18 @@ const TaxMaster = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${
-                                                tax.tax_type === 'TAXABLE' 
-                                                ? 'bg-green-50 text-green-700 border border-green-100' 
+                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.tax_type === 'TAXABLE'
+                                                ? 'bg-green-50 text-green-700 border border-green-100'
                                                 : 'bg-slate-50 text-slate-700 border border-slate-100'
-                                            }`}>
+                                                }`}>
                                                 {tax.tax_type === 'TAXABLE' ? 'Taxable' : 'Exempted'}
                                             </span>
                                         </td>
                                         <td>
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${
-                                                tax.local_central === 'LOCAL' 
-                                                ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.local_central === 'LOCAL'
+                                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
                                                 : 'bg-purple-50 text-purple-700 border border-purple-100'
-                                            }`}>
+                                                }`}>
                                                 {tax.local_central === 'LOCAL' ? 'Local Tax' : 'Central Tax'}
                                             </span>
                                         </td>
@@ -389,8 +390,8 @@ const TaxMaster = () => {
                                         <td>{tax.local_central === 'LOCAL' ? `${tax.sgst_rate || 0}%` : '-'}</td>
                                         <td>{tax.local_central === 'CENTRAL' ? `${tax.igst_rate || 0}%` : '-'}</td>
                                         <td>
-                                                            <ActionDropdown item={tax} onEdit={handleEdit} onDelete={handleDelete} />
-                                                        </td>
+                                            <ActionDropdown item={tax} onEdit={handleEdit} onDelete={handleDelete} />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -399,223 +400,284 @@ const TaxMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="fixed inset-0 flex items-center justify-center z-[1000] p-4">
-                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                <div className="border-b border-slate-100 px-6 py-4 flex justify-between items-center bg-white">
+                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
+                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'GST ALTERATION' : 'GST CREATION'}</h2>
+                            <button
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
+                            >
+                                <XCircle size={20} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
+
+                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
+                                    <AlertCircle size={16} />
+                                    {error}
+                                </div>
+                            )}
+
+                            <form id="tax-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+
                                     <div>
-                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'GST ALTERATION' : 'GST CREATION'}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Master Entity Registry</p>
+                                        <div className="w-full mb-1">
+                                            <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider">Tax Details</h3>
+                                        </div>
+                                        <hr className="border-t border-orange-500 mt-1 mb-2" />
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5 relative">
+                                            {/* Left Column */}
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">GST Name <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <input
+                                                            type="text"
+                                                            name="name"
+                                                            required
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            placeholder="Enter GST name"
+                                                            value={formData.name}
+                                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Purchase Account <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            required
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.purchase_account_id}
+                                                            onChange={(e) => setFormData({ ...formData, purchase_account_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select purchase account</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Local / Central Tax <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            required
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.local_central}
+                                                            onChange={(e) => setFormData({ ...formData, local_central: e.target.value })}
+                                                        >
+                                                            <option value="">Select local / central</option>
+                                                            <option value="LOCAL">Local</option>
+                                                            <option value="CENTRAL">Central</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">CGST Percentage (%) <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            disabled={formData.local_central !== 'LOCAL'}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold disabled:opacity-50 disabled:bg-slate-50"
+                                                            placeholder="0.00"
+                                                            value={formData.cgst_rate}
+                                                            onChange={(e) => setFormData({ ...formData, cgst_rate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">IGST Percentage (%) <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            disabled={formData.local_central !== 'CENTRAL'}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold disabled:opacity-50 disabled:bg-slate-50"
+                                                            placeholder="0.00"
+                                                            value={formData.igst_rate}
+                                                            onChange={(e) => setFormData({ ...formData, igst_rate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right Column */}
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Sales Account <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            required
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.sales_account_id}
+                                                            onChange={(e) => setFormData({ ...formData, sales_account_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select sales account</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Taxable / Exempted <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            required
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.tax_type}
+                                                            onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
+                                                        >
+                                                            <option value="">Select taxable / exempted</option>
+                                                            <option value="TAXABLE">Taxable</option>
+                                                            <option value="EXEMPTED">Exempted</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Registration Type <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                        >
+                                                            <option value="REGULAR">Select registration type</option>
+                                                            <option value="REGULAR">Regular</option>
+                                                            <option value="COMPOSITION">Composition</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">SGST Percentage (%) <span className="text-red-500">*</span></label>
+                                                    <div className="col-span-8">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            disabled={formData.local_central !== 'LOCAL'}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold disabled:opacity-50 disabled:bg-slate-50"
+                                                            placeholder="0.00"
+                                                            value={formData.sgst_rate}
+                                                            onChange={(e) => setFormData({ ...formData, sgst_rate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button onClick={() => { resetForm(); setShowDrawer(false); }} className="px-3 py-1.5 border border-red-200 rounded-lg text-red-600 hover:bg-red-50 text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-1.5">
-                                        <X size={14} /> CLOSE
+
+                                    <div>
+                                        <div className="w-full mb-1 mt-2">
+                                            <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider">Additional Ledger Mapping</h3>
+                                        </div>
+                                        <hr className="border-t border-orange-500 mt-1 mb-2" />
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 relative">
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">GST Sales</label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.gst_sales_ledger_id}
+                                                            onChange={(e) => setFormData({ ...formData, gst_sales_ledger_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select Ledger</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">IGST Sales</label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.igst_sales_ledger_id}
+                                                            onChange={(e) => setFormData({ ...formData, igst_sales_ledger_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select Ledger</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">GST Purchase</label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.gst_purchase_ledger_id}
+                                                            onChange={(e) => setFormData({ ...formData, gst_purchase_ledger_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select Ledger</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">IGST Purchase</label>
+                                                    <div className="col-span-8">
+                                                        <select
+                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
+                                                            value={formData.igst_purchase_ledger_id}
+                                                            onChange={(e) => setFormData({ ...formData, igst_purchase_ledger_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select Ledger</option>
+                                                            {ledgers.map(l => (
+                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex justify-end">
+                                    <button type="submit" form="tax-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded font-bold transition-all text-sm">
+                                        {submitting ? <Loader2 className="animate-spin" size={16} /> : (
+                                            <>
+                                                <Save size={16} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
-                                <div className="px-6 py-4 overflow-y-auto flex-1">
-                                    {error && (
-                                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-4">
-                                            <AlertCircle size={20} /> {error}
-                                        </div>
-                                    )}
-                                    <form id="tax-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="form-group-premium col-span-2">
-                                            <label>Tax Name *</label>
-                                            <input
-                                                type="text"
-                                                name="name"
-                                                required
-                                                className="input-premium"
-                                                placeholder="e.g. 5% GST"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            />
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Sales Account *</label>
-                                            <select
-                                                required
-                                                className="input-premium bg-white"
-                                                value={formData.sales_account_id}
-                                                onChange={(e) => setFormData({ ...formData, sales_account_id: e.target.value })}
-                                            >
-                                                <option value="">Select Sales Account</option>
-                                                {ledgers.map(l => (
-                                                    <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Purchase Account *</label>
-                                            <select
-                                                required
-                                                className="input-premium bg-white"
-                                                value={formData.purchase_account_id}
-                                                onChange={(e) => setFormData({ ...formData, purchase_account_id: e.target.value })}
-                                            >
-                                                <option value="">Select Purchase Account</option>
-                                                {ledgers.map(l => (
-                                                    <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Taxable / Exempted *</label>
-                                            <select
-                                                required
-                                                className="input-premium bg-white"
-                                                value={formData.tax_type}
-                                                onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
-                                            >
-                                                <option value="TAXABLE">Taxable</option>
-                                                <option value="EXEMPTED">Exempted</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Local / Central *</label>
-                                            <select
-                                                required
-                                                className="input-premium bg-white"
-                                                value={formData.local_central}
-                                                onChange={(e) => setFormData({ ...formData, local_central: e.target.value })}
-                                            >
-                                                <option value="LOCAL">Local</option>
-                                                <option value="CENTRAL">Central</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-slate-100 pt-4">
-                                        <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">
-                                            {formData.local_central === 'LOCAL' ? 'LOCAL GST' : 'CENTRAL GST'}
-                                        </h4>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="form-group-premium">
-                                                <label>CGST Percentage (%)</label>
-                                                <input
-                                                    type="number"
-                                                    disabled={formData.local_central !== 'LOCAL'}
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.01"
-                                                    className="input-premium disabled:bg-slate-50 disabled:text-slate-400"
-                                                    placeholder="Enter CGST %"
-                                                    value={formData.cgst_rate}
-                                                    onChange={(e) => setFormData({ ...formData, cgst_rate: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>SGST Percentage (%)</label>
-                                                <input
-                                                    type="number"
-                                                    disabled={formData.local_central !== 'LOCAL'}
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.01"
-                                                    className="input-premium disabled:bg-slate-50 disabled:text-slate-400"
-                                                    placeholder="Enter SGST %"
-                                                    value={formData.sgst_rate}
-                                                    onChange={(e) => setFormData({ ...formData, sgst_rate: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>IGST Percentage (%)</label>
-                                                <input
-                                                    type="number"
-                                                    disabled={formData.local_central !== 'CENTRAL'}
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.01"
-                                                    className="input-premium disabled:bg-slate-50 disabled:text-slate-400"
-                                                    placeholder="Enter IGST %"
-                                                    value={formData.igst_rate}
-                                                    onChange={(e) => setFormData({ ...formData, igst_rate: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-slate-100 pt-4">
-                                        <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">
-                                            ADDITIONAL LEDGER MAPPING
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="form-group-premium">
-                                                <label>GST Sales</label>
-                                                <select
-                                                    className="input-premium bg-white"
-                                                    value={formData.gst_sales_ledger_id}
-                                                    onChange={(e) => setFormData({ ...formData, gst_sales_ledger_id: e.target.value })}
-                                                >
-                                                    <option value="">Select Ledger</option>
-                                                    {ledgers.map(l => (
-                                                        <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>GST Purchase</label>
-                                                <select
-                                                    className="input-premium bg-white"
-                                                    value={formData.gst_purchase_ledger_id}
-                                                    onChange={(e) => setFormData({ ...formData, gst_purchase_ledger_id: e.target.value })}
-                                                >
-                                                    <option value="">Select Ledger</option>
-                                                    {ledgers.map(l => (
-                                                        <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>IGST Sales</label>
-                                                <select
-                                                    className="input-premium bg-white"
-                                                    value={formData.igst_sales_ledger_id}
-                                                    onChange={(e) => setFormData({ ...formData, igst_sales_ledger_id: e.target.value })}
-                                                >
-                                                    <option value="">Select Ledger</option>
-                                                    {ledgers.map(l => (
-                                                        <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>IGST Purchase</label>
-                                                <select
-                                                    className="input-premium bg-white"
-                                                    value={formData.igst_purchase_ledger_id}
-                                                    onChange={(e) => setFormData({ ...formData, igst_purchase_ledger_id: e.target.value })}
-                                                >
-                                                    <option value="">Select Ledger</option>
-                                                    {ledgers.map(l => (
-                                                        <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-center gap-4 pt-6 pb-2">
-                                        <button type="submit" form="tax-form" disabled={submitting} className="px-12 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2">
-                                            {submitting ? <Loader2 className="animate-spin" size={14} /> : 'SAVE'}
-                                        </button>
-                                        <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-12 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-bold transition-colors">Discard</button>
-                                    </div>
-                                </form>
-                                </div>
-                            </div>
+                            </form>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
-                        />
-                    </>
+                    </div>
                 )}
+                <SaveConfirmationModal
+                    isOpen={showSaveConfirm}
+                    onConfirm={confirmSave}
+                    onCancel={cancelSave}
+                />
             </main>
         </div>
     );

@@ -28,6 +28,7 @@ const BrandMaster = () => {
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({ name: '' });
@@ -130,7 +131,11 @@ const BrandMaster = () => {
     const confirmSave = () => { setShowSaveConfirm(false); handleSubmit(); };
     const cancelSave = () => { setShowSaveConfirm(false); };
 
-    const filteredBrands = brands.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredBrands = brands.filter(b => {
+        const matchesSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? b.is_active !== false : b.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
     const COLS = ['#', 'Brand Name', 'Status'];
     const getRows = () => filteredBrands.map((b, i) => [i + 1, b.name, b.is_active ? 'Active' : 'Inactive']);
@@ -183,9 +188,17 @@ const BrandMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredBrands.length}
-                            </span>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium w-40 !py-1.5 !px-3"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            
                         </div>
                     </div>
 
@@ -225,7 +238,7 @@ const BrandMaster = () => {
                                         </td>
                                         <td>
                                             <span className={`badge-premium ${brand.is_active ? 'active' : 'disabled'}`}>
-                                                {brand.is_active ? 'Verified' : 'Deactivated'}
+                                                {brand.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
                                         <td>

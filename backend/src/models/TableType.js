@@ -11,6 +11,16 @@ const tableTypeSchema = new mongoose.Schema({
         required: [true, 'Table type name is required'],
         trim: true
     },
+    captain: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    waiter: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     is_active: {
         type: Boolean,
         default: true

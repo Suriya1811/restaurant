@@ -7,7 +7,7 @@ import {
     Loader2, Truck, Package, Users2, RefreshCw,
     Clock, Users, IndianRupee, Plus, X, Search,
     Phone, StickyNote, CalendarClock, XCircle, CheckCircle2, Printer,
-    ArrowRight, Save, Settings, LogOut, User as UserIcon, Eye
+    ArrowRight, Save, Settings, LogOut, User as UserIcon, Eye, LayoutGrid
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -54,10 +54,10 @@ const useLiveTimer = (since) => {
     return display;
 };
 
-const LiveTimer = memo(({ since }) => {
+const LiveTimer = memo(({ since, color = '#64748b' }) => {
     const display = useLiveTimer(since);
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 800, color: '#64748b' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 800, color }}>
             <Clock size={10} strokeWidth={3} /> {display || '00:00'}
         </div>
     );
@@ -72,125 +72,131 @@ if (typeof document !== 'undefined' && !document.getElementById('readyPulseStyle
 }
 
 /* ─── Single compact table card ─── */
-const TableCard = memo(({ table, onSelect, onReserve, onCancelReserve, onReset }) => {
+const TableCard = memo(({ table, onSelect, onReserve, onCancelReserve, onReset, showAmount, showTime }) => {
     const isAvail = table.status === 'AVAILABLE';
     const isOccupied = table.status === 'OCCUPIED';
     const isPrinted = table.status === 'PRINTED';
     const isReserved = table.status === 'RESERVED';
     const isActive = isOccupied || isPrinted;
 
-    // Minimal elegant colors
-    const colorScheme = isOccupied
-        ? { border: '#fdba74', bg: '#fffaf5', text: '#ea580c', glow: '#fb923c22' }
-        : isPrinted
-            ? { border: '#86efac', bg: '#f0fdf4', text: '#16a34a', glow: '#22c55e22' }
+    // Solid colors matching the screenshot, with dark text
+    const isReady = table.kot_status === 'READY';
+    const colorScheme = (isPrinted || isReady)
+        ? { bg: '#bbf7d0', text: '#000000', btnBg: '#ffffff', iconColor: '#22c55e' }
+        : isOccupied
+            ? { bg: '#fda45c', text: '#000000', btnBg: '#ffffff', iconColor: '#f97316' }
             : isReserved
-                ? { border: '#c4b5fd', bg: '#fbfaff', text: '#7c3aed', glow: '#a78bfa22' }
-                : { border: '#e2e8f0', bg: '#ffffff', text: '#334155', glow: 'transparent' };
+                ? { bg: '#e9d5ff', text: '#000000', btnBg: '#ffffff', iconColor: '#a855f7' }
+                : { bg: '#f1f5f9', text: '#000000', btnBg: '#ffffff', iconColor: '#94a3b8' };
 
-    const { border, bg, text, glow } = colorScheme;
+    const { bg, text, btnBg, iconColor } = colorScheme;
     const handleClick = () => onSelect(table);
 
     return (
-        <div style={{ position: 'relative', flexShrink: 0, width: '92px', height: '80px', marginBottom: '14px' }}>
-            {/* Main Interactive Card */}
-            <div
-                onClick={handleClick}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    border: `1px solid ${border}`,
-                    borderRadius: '8px',
-                    background: bg,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '4px',
-                    boxShadow: isActive || isReserved ? `0 4px 10px ${glow}` : '0 2px 4px rgba(0,0,0,0.02)',
-                    transition: 'all 0.2s ease',
-                    userSelect: 'none'
-                }}
-                onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = `0 6px 12px ${glow === 'transparent' ? 'rgba(0,0,0,0.04)' : glow}`;
-                }}
-                onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.boxShadow = isActive || isReserved ? `0 4px 10px ${glow}` : '0 2px 4px rgba(0,0,0,0.02)';
-                }}
-            >
-                {/* Header: Table No */}
-                <span style={{ fontSize: '13px', fontWeight: 900, color: text, lineHeight: 1 }}>{table.table_number}</span>
+        <div 
+            onClick={handleClick}
+            style={{ 
+                position: 'relative', 
+                flexShrink: 0, 
+                width: '100%', 
+                height: '90px', 
+                marginBottom: '4px',
+                background: bg,
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: '6px',
+                cursor: 'pointer',
+                border: '1px solid rgba(0,0,0,0.05)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+        >
+            {/* Top: Table No */}
+            <div style={{ textAlign: 'center', fontSize: '14px', fontWeight: 900, color: text, lineHeight: 1 }}>
+                {table.table_number}
+            </div>
 
-                {/* Center Content: Amount or State Text */}
+            {/* Middle: Amount & Time */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                 {isAvail ? (
-                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginTop: '4px' }}>FREE</span>
+                    <>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: text, lineHeight: 1 }}>₹0</span>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: text }}>-</span>
+                    </>
                 ) : isReserved ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 800, color: '#a78bfa' }}>RSV</span>
-                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#7c3aed', textAlign: 'center', maxWidth: '75px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <>
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: text }}>RSV</span>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: text, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {table.reservation_name || 'Guest'}
                         </span>
-                    </div>
+                    </>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginTop: '4px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 900, color: text, lineHeight: 1 }}>
-                            ₹{Math.round(table.running_amount || 0)}
-                        </span>
-                        <LiveTimer since={isActive ? table.occupied_since : null} />
-                        {table.kot_status === 'KOT_SENT' && (
-                            <span style={{ fontSize: '9px', fontWeight: 900, color: '#eab308', textTransform: 'uppercase', marginTop: '2px', marginBottom: '8px' }}>SENT</span>
+                    <>
+                        {showAmount && (
+                            <span style={{ fontSize: '13px', fontWeight: 900, color: text, lineHeight: 1 }}>
+                                ₹{Math.round(table.running_amount || 0)}
+                            </span>
                         )}
-                        {table.kot_status === 'READY' && (
-                            <span style={{ fontSize: '9px', fontWeight: 900, color: '#22c55e', textTransform: 'uppercase', marginTop: '2px', marginBottom: '8px' }}>READY</span>
+                        {showTime && (
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: text, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={10} strokeWidth={3} />
+                                <LiveTimer since={table.occupied_since} color={text} />
+                            </span>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
 
-            {/* Actions Row - Absolute positioned at the bottom edge */}
-            <div style={{ position: 'absolute', bottom: '-10px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '4px' }}>
-                {isAvail && (
-                    <button onClick={(e) => { e.stopPropagation(); onReserve(table); }} title="Reserve" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', padding: 0 }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#334155'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
-                    >
-                        <Plus size={12} strokeWidth={3} />
-                    </button>
-                )}
-                {isReserved && (
+            {/* Bottom Actions Row: 3 inline buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', width: '100%' }}>
+                {isAvail ? (
                     <>
-                        <button onClick={(e) => { e.stopPropagation(); onCancelReserve(table); }} title="Cancel Reserve" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', padding: 0 }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}><X size={12} strokeWidth={3} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="Bill" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', padding: 0 }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}><StickyNote size={12} strokeWidth={3} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onReserve(table); }} title="Reserve" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: '#ef4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <CalendarClock size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="View" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: '#3b82f6', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onReset(table); }} title="Reset" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: '#22c55e', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <RefreshCw size={12} strokeWidth={2.5} />
+                        </button>
                     </>
-                )}
-                {isActive && !isPrinted && !isReserved && (
+                ) : isReserved ? (
                     <>
-                        <button onClick={(e) => { e.stopPropagation(); onSelect(table, true); }} title="Print Bill" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', padding: 0 }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#059669'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#10b981'}><Printer size={12} strokeWidth={3} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="View Table" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', padding: 0 }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#4f46e5'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#6366f1'}><Eye size={12} strokeWidth={3} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Are you sure you want to clear this table?')) onReset(table); }} title="Clear Table" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', color: '#ef4444', border: '1px solid #fca5a5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', padding: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}><RefreshCw size={12} strokeWidth={3} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onCancelReserve(table); }} title="Cancel Reserve" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <X size={12} strokeWidth={3} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="Bill" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <StickyNote size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onReset(table); }} title="Reset" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <RefreshCw size={12} strokeWidth={2.5} />
+                        </button>
                     </>
-                )}
-                {isPrinted && !isReserved && (
+                ) : isActive && !isPrinted ? (
                     <>
-                        <button onClick={(e) => { e.stopPropagation(); onSelect(table, true); }} title="Pay" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', padding: 0 }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}><CheckCircle2 size={12} strokeWidth={3} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onReset(table); }} title="Reset Table" style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', padding: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#334155'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}><RefreshCw size={12} strokeWidth={3} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="View Table" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table, true); }} title="Print Bill" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <Printer size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Clear table?')) onReset(table); }} title="Clear Table" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <RefreshCw size={12} strokeWidth={2.5} />
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table); }} title="View Table" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onSelect(table, true); }} title="Pay" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <CheckCircle2 size={12} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onReset(table); }} title="Reset" style={{ width: '100%', height: '22px', borderRadius: '4px', background: btnBg, color: iconColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <RefreshCw size={12} strokeWidth={2.5} />
+                        </button>
                     </>
                 )}
             </div>
@@ -210,6 +216,8 @@ const ReservationModal = ({ table, onClose, onConfirm, loading }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.reservation_name.trim()) return alert('Customer name is required');
+        if (!form.reservation_phone.trim()) return alert('Phone number is required');
+        if (!form.reservation_time.trim()) return alert('Reservation time is required');
         onConfirm(table._id, form);
     };
 
@@ -250,11 +258,12 @@ const ReservationModal = ({ table, onClose, onConfirm, loading }) => {
 
                     <div>
                         <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
-                            Phone Number
+                            Phone Number *
                         </label>
                         <div style={{ position: 'relative' }}>
                             <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
+                                required
                                 type="tel"
                                 value={form.reservation_phone}
                                 onChange={e => setForm(f => ({ ...f, reservation_phone: e.target.value }))}
@@ -268,11 +277,12 @@ const ReservationModal = ({ table, onClose, onConfirm, loading }) => {
 
                     <div>
                         <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
-                            Reservation Time
+                            Reservation Time *
                         </label>
                         <div style={{ position: 'relative' }}>
                             <CalendarClock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
+                                required
                                 type="time"
                                 value={form.reservation_time}
                                 onChange={e => setForm(f => ({ ...f, reservation_time: e.target.value }))}
@@ -339,6 +349,34 @@ const TableSelectionPage = () => {
     const [reserveTarget, setReserveTarget] = useState(null);   // table to reserve
     const [reserveLoading, setReserveLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    
+    // Settings State
+    const [showAmount, setShowAmount] = useState(() => localStorage.getItem('kot_showAmount') !== 'false');
+    const [showTime, setShowTime] = useState(() => localStorage.getItem('kot_showTime') !== 'false');
+    const [showSettings, setShowSettings] = useState(false);
+    const settingsRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+                setShowSettings(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleSetting = (setting) => {
+        if (setting === 'amount') {
+            const val = !showAmount;
+            setShowAmount(val);
+            localStorage.setItem('kot_showAmount', val);
+        } else if (setting === 'time') {
+            const val = !showTime;
+            setShowTime(val);
+            localStorage.setItem('kot_showTime', val);
+        }
+    };
 
     const toggleSidebar = () => {
         if (window.innerWidth <= 768) setIsMobileSidebarOpen(p => !p);
@@ -549,7 +587,17 @@ const TableSelectionPage = () => {
                 )
             );
         });
-        return Object.entries(map).filter(([, rows]) => rows.length > 0);
+
+        // Add corresponding TableType object for captain/waiter data
+        return Object.entries(map).filter(([, rows]) => rows.length > 0).map(([zoneName, rows]) => {
+            const typeInfo = tableTypes.find(tt => tt.name === zoneName) || {};
+            return {
+                zoneName,
+                zoneTables: rows,
+                captain: typeInfo.captain || '',
+                waiter: typeInfo.waiter || ''
+            };
+        });
     };
 
     const groups = buildGroups();
@@ -573,119 +621,142 @@ const TableSelectionPage = () => {
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)} />}
 
-            <main className="dashboard-main" style={{ background: '#f8fafc' }}>
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                />
+            <main className="dashboard-main" style={{ background: '#f8fafc', padding: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
-                <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 70px)', overflow: 'hidden' }}>
+                    {/* ── Top action bar (Row 1) ── */}
+                    <div style={{ background: '#fff', borderBottom: '1px solid #edf2f7', display: 'flex', alignItems: 'center', padding: '12px 24px', gap: '12px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                        <button
+                            onClick={fetchData}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px', 
+                                padding: '10px 20px', borderRadius: '6px', 
+                                border: '1.5px solid #bfdbfe', background: '#eff6ff', 
+                                color: '#2563eb', fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#dbeafe'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#eff6ff'; }}
+                        >
+                            <LayoutGrid size={16} strokeWidth={2.5} />
+                            TABLE DISPLAY
+                        </button>
+                        
+                        <button
+                            onClick={() => navigate('/dashboard/self-service/tables')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px', 
+                                padding: '10px 20px', borderRadius: '6px', 
+                                background: '#ff5a1f', border: 'none', 
+                                color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#ea4c0b'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#ff5a1f'; }}
+                        >
+                            <Plus size={16} strokeWidth={3} />
+                            AR TABLE
+                        </button>
 
-                    {/* ── Top action bar ── */}
-                    <div style={{ background: '#fff', borderBottom: '1.5px solid #edf2f7', display: 'flex', alignItems: 'stretch', height: '56px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                         {[
-                            { label: 'REFRESH', icon: <RefreshCw size={16} />, action: fetchData, color: '#6366f1', bg: '#eef2ff' },
-                            { label: 'ADD TABLE', icon: <Plus size={16} />, action: () => navigate('/dashboard/self-service/tables'), color: '#4b5563', bg: '#f3f4f6' },
+                            { label: 'PARCEL', icon: <Package size={16} strokeWidth={2.5} />, mode: 'PARCEL' },
+                            { label: 'DELIVERY', icon: <Truck size={16} strokeWidth={2.5} />, mode: 'DELIVERY' },
+                            { label: 'PARTY ORDER', icon: <Users2 size={16} strokeWidth={2.5} />, mode: 'PARTY_ORDER' },
                         ].map((btn, i) => (
                             <button
                                 key={i}
-                                onClick={btn.action}
+                                onClick={() => handleSpecialOrder(btn.mode)}
                                 style={{
-                                    padding: '0 24px', background: 'none', border: 'none',
-                                    borderRight: '1px solid #f1f5f9', cursor: 'pointer',
-                                    fontSize: '13px', fontWeight: 800, color: btn.color,
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    whiteSpace: 'nowrap', transition: 'all 0.2s ease'
+                                    display: 'flex', alignItems: 'center', gap: '8px', 
+                                    padding: '10px 20px', borderRadius: '6px', 
+                                    border: '1.5px solid #e2e8f0', background: '#fff', 
+                                    color: '#1e293b', fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.background = btn.bg; e.currentTarget.style.color = '#000'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = btn.color; }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
                             >
-                                <span style={{ background: '#fff', padding: '6px', borderRadius: '8px', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>{btn.icon}</span>
+                                {btn.icon}
                                 {btn.label}
                             </button>
                         ))}
+                        
+                        <div style={{ flex: 1 }} />
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '0 30px', borderRight: '1.5px solid #f1f5f9' }}>
+                        {/* Settings Button hidden from UI but keeping ref if needed */}
+                        <div ref={settingsRef} style={{ display: 'none' }}></div>
+
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px', 
+                                padding: '10px 20px', borderRadius: '6px', 
+                                border: '1.5px solid #fecaca', background: '#fef2f2', 
+                                color: '#ef4444', fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; }}
+                        >
+                            <XCircle size={16} strokeWidth={2.5} />
+                            CLOSE
+                        </button>
+                    </div>
+
+                    {/* ── Search, Stats & Legends (Row 2) ── */}
+                    <div style={{ background: '#fff', borderBottom: '2px solid #edf2f7', padding: '12px 24px', display: 'flex', gap: '24px', alignItems: 'center', flexShrink: 0 }}>
+                        {/* Search */}
+                        <div style={{ position: 'relative', width: '280px' }}>
+                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input
+                                type="text"
+                                placeholder="Search Table No / Type / Location..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px 10px 36px',
+                                    border: '1.5px solid #e2e8f0', borderRadius: '6px',
+                                    fontSize: '13px', fontWeight: 600, color: '#1e293b',
+                                    outline: 'none', transition: 'all 0.2s',
+                                    background: '#fff', boxSizing: 'border-box'
+                                }}
+                                onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; }}
+                                onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Stats */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {[
-                                { color: '#e2e8f0', label: 'BLANK' },
-                                { color: '#fb923c', label: 'RUNNING' },
-                                { color: '#22c55e', label: 'PRINTED' },
-                                { color: '#a78bfa', label: 'RESERVED' },
-                            ].map(l => (
-                                <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: l.color, boxShadow: `0 2px 4px ${l.color}44` }} />
-                                    <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l.label}</span>
+                                { label: 'TOTAL', value: stats.total, color: '#3b82f6', bg: '#eff6ff' },
+                                { label: 'AVAILABLE', value: stats.available, color: '#16a34a', bg: '#f0fdf4' },
+                                { label: 'RUNNING', value: stats.occupied, color: '#ea580c', bg: '#fff7ed' },
+                                { label: 'PRINTED', value: stats.printed, color: '#16a34a', bg: '#f0fdf4' },
+                                { label: 'RECEIVED', value: stats.reserved, color: '#8b5cf6', bg: '#f5f3ff' }
+                            ].map(s => (
+                                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: s.bg, padding: '6px 12px', borderRadius: '6px' }}>
+                                    <span style={{ fontSize: '15px', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: 800, color: s.color }}>{s.label}</span>
                                 </div>
                             ))}
                         </div>
 
                         <div style={{ flex: 1 }} />
 
-                        {[
-                            { label: 'PARCEL', icon: <Package size={16} />, mode: 'PARCEL' },
-                            { label: 'DELIVERY', icon: <Truck size={16} />, mode: 'DELIVERY' },
-                            { label: 'PARTY', icon: <Users2 size={16} />, mode: 'PARTY_ORDER' },
-                        ].map((btn, i) => (
-                            <button
-                                key={i}
-                                onClick={() => handleSpecialOrder(btn.mode)}
-                                style={{
-                                    padding: '0 24px', background: 'none', border: 'none',
-                                    borderLeft: '1px solid #f1f5f9', cursor: 'pointer',
-                                    fontSize: '13px', fontWeight: 800, color: '#64748b',
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#6366f1'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#64748b'; }}
-                            >
-                                <span style={{ background: '#fff', padding: '6px', borderRadius: '8px', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>{btn.icon}</span>
-                                {btn.label}
-                            </button>
-                        ))}
-                    </div>
-
-
-
-                    {/* ── Stats strip ── */}
-                    <div style={{ background: '#fff', borderBottom: '2px solid #edf2f7', padding: '8px 24px', display: 'flex', gap: '16px', alignItems: 'center', flexShrink: 0 }}>
-                        {[
-                            { label: 'Total', value: stats.total, color: '#4f46e5', bg: '#eef2ff' },
-                            { label: 'Available', value: stats.available, color: '#10b981', bg: '#ecfdf5' },
-                            { label: 'Running', value: stats.occupied, color: '#f59e0b', bg: '#fffbeb' },
-                            { label: 'Printed', value: stats.printed, color: '#16a34a', bg: '#f0fdf4' },
-                            { label: 'Reserved', value: stats.reserved, color: '#8b5cf6', bg: '#f5f3ff' },
-                        ].map(s => (
-                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: s.bg, padding: '4px 12px', borderRadius: '10px', border: `1px solid ${s.color}22` }}>
-                                <span style={{ fontSize: '18px', fontWeight: 950, color: s.color, lineHeight: 1 }}>{s.value}</span>
-                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
-                            </div>
-                        ))}
-
-                        {/* Search & Refresh Section */}
-                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ position: 'relative', width: '250px' }}>
-                                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Search Table No / Type..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    style={{
-                                        width: '100%', padding: '6px 14px 6px 36px',
-                                        border: '1.5px solid #e2e8f0', borderRadius: '14px',
-                                        fontSize: '13px', fontWeight: 600, color: '#334155',
-                                        outline: 'none', transition: 'all 0.2s',
-                                        background: '#f8fafc'
-                                    }}
-                                    onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#fff'; }}
-                                    onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-                                />
-                                {searchQuery && (
-                                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </div>
+                        {/* Legends */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            {[
+                                { color: '#fff', border: '1.5px solid #e2e8f0', label: 'BLANK' },
+                                { color: '#ff5a1f', label: 'RUNNING' },
+                                { color: '#16a34a', label: 'PRINTED' },
+                                { color: '#8b5cf6', label: 'RECEIVED' },
+                            ].map(l => (
+                                <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '3px', background: l.color, border: l.border || 'none' }} />
+                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#1e293b' }}>{l.label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -702,19 +773,24 @@ const TableSelectionPage = () => {
                                 <p style={{ fontSize: '12px', marginTop: '6px' }}>Go to <strong>Master → Table</strong> to add tables.</p>
                             </div>
                         ) : (
-                            groups.map(([zoneName, zoneTables]) => (
-                                <div key={zoneName}>
+                            groups.map(({ zoneName, zoneTables, captain, waiter }) => (
+                                <div key={zoneName} style={{ marginBottom: '24px' }}>
                                     {/* Zone header */}
                                     <div style={{
-                                        padding: '8px 20px',
-                                        fontSize: '13px', fontWeight: 900, color: '#334155',
-                                        textTransform: 'uppercase', letterSpacing: '0.18em',
+                                        padding: '12px 20px',
                                         background: 'linear-gradient(to right, #f8fafc, #ffffff)',
                                         borderBottom: '1px solid #f1f5f9',
                                         display: 'flex', alignItems: 'center', gap: '16px'
                                     }}>
-                                        <div style={{ width: '4px', height: '14px', background: '#6366f1', borderRadius: '4px' }} />
-                                        {zoneName}
+                                        <div style={{ width: '4px', height: '24px', background: '#6366f1', borderRadius: '4px' }} />
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '15px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{zoneName}</span>
+                                            {(captain || waiter) && (
+                                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginTop: '2px' }}>
+                                                    {captain && `C - ${captain}`} {captain && waiter && '|'} {waiter && `W - ${waiter}`}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
                                             <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>
                                                 {zoneTables.length} TABLES
@@ -723,7 +799,7 @@ const TableSelectionPage = () => {
                                                 {zoneTables.filter(t => t.status === 'AVAILABLE').length} FREE
                                             </span>
                                             {zoneTables.filter(t => t.status === 'OCCUPIED').length > 0 && (
-                                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#d97706', background: '#fffbeb', padding: '4px 10px', borderRadius: '20px' }}>
+                                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#ea580c', background: '#fff7ed', padding: '4px 10px', borderRadius: '20px' }}>
                                                     {zoneTables.filter(t => t.status === 'OCCUPIED').length} RUNNING
                                                 </span>
                                             )}
@@ -733,20 +809,20 @@ const TableSelectionPage = () => {
                                                 </span>
                                             )}
                                             {zoneTables.filter(t => t.status === 'RESERVED').length > 0 && (
-                                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#7c3aed', background: '#f5f3ff', padding: '4px 10px', borderRadius: '20px' }}>
+                                                <span style={{ fontSize: '10px', fontWeight: 800, color: '#9333ea', background: '#faf5ff', padding: '4px 10px', borderRadius: '20px' }}>
                                                     {zoneTables.filter(t => t.status === 'RESERVED').length} RESERVED
                                                 </span>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Horizontal scrollable table row */}
+                                    {/* Zone tables container: 10 columns grid layout */}
                                     <div style={{
-                                        display: 'flex', gap: '16px', padding: '12px 20px 8px 20px',
-                                        overflowX: 'auto', background: '#fff',
-                                        borderBottom: '1px solid #f8fafc',
-                                        scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent',
-                                        alignItems: 'flex-start',
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(10, minmax(0, 1fr))',
+                                        gap: '12px',
+                                        padding: '16px 20px',
+                                        background: '#fff',
                                         minHeight: '100px'
                                     }}>
                                         {zoneTables.map(table => (
@@ -757,6 +833,8 @@ const TableSelectionPage = () => {
                                                 onReserve={t => setReserveTarget(t)}
                                                 onCancelReserve={handleCancelReserve}
                                                 onReset={handleResetTable}
+                                                showAmount={showAmount}
+                                                showTime={showTime}
                                             />
                                         ))}
                                     </div>

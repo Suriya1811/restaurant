@@ -8,7 +8,7 @@ const SaveConfirmationModal = ({ isOpen, onConfirm, onCancel }) => {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform scale-100 transition-all m-4">
                 <div className="p-6 text-center">
-                    <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <HelpCircle size={32} />
                     </div>
                     <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Save Data</h3>
@@ -23,7 +23,7 @@ const SaveConfirmationModal = ({ isOpen, onConfirm, onCancel }) => {
                         <button 
                             type="button"
                             onClick={onConfirm} 
-                            className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20">
+                            className="flex-1 py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md shadow-orange-500/20">
                             <Check size={18} /> Yes
                         </button>
                     </div>

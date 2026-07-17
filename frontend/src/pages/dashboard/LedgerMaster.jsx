@@ -76,6 +76,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [groupFilter, setGroupFilter] = useState('All Groups');
     const [activeTypeFilter, setActiveTypeFilter] = useState('Active');
 
@@ -217,7 +218,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         setActiveActionMenuId(null);
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (ledger) => {
+        const id = ledger._id || ledger.id;
         if (!window.confirm("Are you sure you want to delete this ledger?")) return;
         try {
             const token = getToken();
@@ -547,8 +549,21 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             <Printer size={14} />
                             <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTempVisibleColumns(visibleColumns);
+                                setShowColumnDropdown(true);
+                            }}
+                            className="px-4 py-2 bg-[#0b1727] hover:bg-slate-800 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm"
+                        >
+                            <Settings size={14} /> COLUMN SETTINGS
+                        </button>
                         <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add">
                             <PlusCircle size={16} /> Create Ledger
+                        </button>
+                        <button onClick={() => navigate('/dashboard/self-service/home')} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm">
+                            <X size={14} /> CLOSE
                         </button>
                     </div>
                 </div>
@@ -573,7 +588,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <input
                                     type="text"
                                     placeholder="Search by Name, Print Name, Mobile No, GST No..."
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md text-sm outline-none focus:border-indigo-500 transition-colors"
+                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 !rounded-md text-sm outline-none focus:border-indigo-500 transition-colors"
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
@@ -585,7 +600,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <select
                                     value={groupFilter}
                                     onChange={e => { setGroupFilter(e.target.value); setCurrentPage(1); }}
-                                    className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
+                                    className="px-3 py-2 border border-slate-200 !rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
                                 >
                                     {availableGroupsForFilter.map(g => (
                                         <option key={g} value={g}>{g}</option>
@@ -599,7 +614,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <select
                                     value={activeTypeFilter}
                                     onChange={e => { setActiveTypeFilter(e.target.value); setCurrentPage(1); }}
-                                    className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
+                                    className="px-3 py-2 border border-slate-200 !rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
                                 >
                                     <option value="Active">Active</option>
                                     <option value="Deactive">Deactive</option>
@@ -607,62 +622,62 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             </div>
 
                             {/* Refresh */}
-                            <button onClick={fetchLedgers} className="p-2 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600 transition-colors self-end" title="Refresh List">
+                            <button onClick={fetchLedgers} className="p-2 border border-slate-200 hover:bg-slate-50 !rounded-md text-slate-600 transition-colors self-end" title="Refresh List">
                                 <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                             </button>
                         </div>
 
                         {/* Columns Selection Dropdown */}
                         <div>
-                            <button
-                                onClick={() => {
-                                    setTempVisibleColumns(visibleColumns);
-                                    setShowColumnDropdown(true);
-                                }}
-                                className="px-4 py-2 bg-[#0b1727] hover:bg-slate-800 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm"
-                            >
-                                <Settings size={14} /> COLUMN SETTINGS
-                            </button>
 
                             {showColumnDropdown && (
-                                <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center animate-in fade-in duration-200" onClick={() => setShowColumnDropdown(false)}>
-                                    <div className="bg-white rounded-xl shadow-xl w-80 max-w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-                                        <div className="flex justify-between items-center p-4 border-b border-slate-100">
-                                            <h4 className="font-bold text-sm text-slate-700 uppercase tracking-widest">Visible Columns</h4>
-                                            <button onClick={() => setShowColumnDropdown(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                                <>
+                                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColumnDropdown(false)} />
+                                    <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl border-l border-slate-200 z-[10000] flex flex-col animate-in slide-in-from-right duration-300">
+                                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div>
+                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Column Settings</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Select columns to display</p>
+                                            </div>
+                                            <button onClick={() => setShowColumnDropdown(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800">
+                                                <X size={18} />
+                                            </button>
                                         </div>
-                                        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
                                             {ALL_COLUMNS.map(col => (
-                                                <label key={col.key} className="flex items-center gap-3 cursor-pointer py-1 hover:bg-slate-50 rounded px-2 transition-colors">
+                                                <label key={col.key} className="flex items-center gap-3 cursor-pointer group py-1">
                                                     <input
                                                         type="checkbox"
                                                         checked={tempVisibleColumns.includes(col.key)}
                                                         onChange={() => toggleTempColumn(col.key)}
-                                                        className="w-4 h-4 text-[#f97316] accent-[#f97316] focus:ring-[#f97316]/20 rounded border-slate-300"
+                                                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                                                        style={{ accentColor: '#f97316' }}
                                                     />
-                                                    <span className="text-sm font-semibold text-slate-700">{col.label}</span>
+                                                    <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">{col.label}</span>
                                                 </label>
                                             ))}
                                         </div>
-                                        <div className="flex justify-between items-center p-4 border-t border-slate-100 bg-slate-50">
+                                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
                                             <button
+                                                type="button"
                                                 onClick={() => setTempVisibleColumns(DEFAULT_COLUMNS)}
-                                                className="px-4 py-2 border border-slate-200 bg-white rounded text-xs font-bold text-slate-600 hover:bg-slate-50 uppercase tracking-wide"
+                                                className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors"
                                             >
-                                                Reset
+                                                RESET
                                             </button>
                                             <button
+                                                type="button"
                                                 onClick={() => {
                                                     setVisibleColumns(tempVisibleColumns);
                                                     setShowColumnDropdown(false);
                                                 }}
-                                                className="px-6 py-2 bg-[#f97316] text-white rounded text-xs font-bold hover:bg-[#ea580c] uppercase tracking-wide shadow-sm"
+                                                className="flex-1 py-2 text-xs font-bold text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors"
                                             >
-                                                Apply
+                                                APPLY
                                             </button>
                                         </div>
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
                     </div>
@@ -670,27 +685,27 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     {/* Table View */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="table-premium">
                                 <thead>
                                     <tr className="bg-[#0b1727] border-b border-slate-200 text-[10px] font-black text-[#f97316] uppercase tracking-widest">
-                                        {columnVisible('name') && <th className="py-3.5 px-5">Name</th>}
-                                        {columnVisible('print_name') && <th className="py-3.5 px-5">Print Name</th>}
-                                        {columnVisible('under') && <th className="py-3.5 px-5">Under</th>}
-                                        {columnVisible('opening_balance') && <th className="py-3.5 px-5">Opening Balance</th>}
-                                        {columnVisible('mobile1') && <th className="py-3.5 px-5">Mobile No 1</th>}
-                                        {columnVisible('mobile2') && <th className="py-3.5 px-5">Mobile No 2</th>}
-                                        {columnVisible('address1') && <th className="py-3.5 px-5">Address Line 1</th>}
-                                        {columnVisible('address2') && <th className="py-3.5 px-5">Address Line 2</th>}
-                                        {columnVisible('address3') && <th className="py-3.5 px-5">Address Line 3</th>}
-                                        {columnVisible('address4') && <th className="py-3.5 px-5">Address Line 4</th>}
-                                        {columnVisible('address5') && <th className="py-3.5 px-5">Address Line 5</th>}
-                                        {columnVisible('gst') && <th className="py-3.5 px-5">GST Number</th>}
-                                        {columnVisible('reg_type') && <th className="py-3.5 px-5">Registration Type</th>}
-                                        {columnVisible('state') && <th className="py-3.5 px-5">State</th>}
-                                        {columnVisible('action') && <th className="py-3.5 px-5 text-center w-24 no-print">Action</th>}
+                                        {columnVisible('name') && <th>Name</th>}
+                                        {columnVisible('print_name') && <th>Print Name</th>}
+                                        {columnVisible('under') && <th>Under</th>}
+                                        {columnVisible('opening_balance') && <th>Opening Balance</th>}
+                                        {columnVisible('mobile1') && <th>Mobile No 1</th>}
+                                        {columnVisible('mobile2') && <th>Mobile No 2</th>}
+                                        {columnVisible('address1') && <th>Address Line 1</th>}
+                                        {columnVisible('address2') && <th>Address Line 2</th>}
+                                        {columnVisible('address3') && <th>Address Line 3</th>}
+                                        {columnVisible('address4') && <th>Address Line 4</th>}
+                                        {columnVisible('address5') && <th>Address Line 5</th>}
+                                        {columnVisible('gst') && <th>GST Number</th>}
+                                        {columnVisible('reg_type') && <th>Registration Type</th>}
+                                        {columnVisible('state') && <th>State</th>}
+                                        {columnVisible('action') && <th>Action</th>}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                                <tbody>
                                     {loading ? (
                                         <tr>
                                             <td colSpan="15" className="py-12 text-center text-slate-400 font-semibold">
@@ -704,29 +719,25 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                         </tr>
                                     ) : (
                                         paginatedLedgers.map((ledger) => (
-                                            <tr key={ledger._id} className="hover:bg-slate-50/50 transition-colors">
-                                                {columnVisible('name') && (
-                                                    <td className="py-4 px-5">
-                                                            <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
-                                                )}
-                                                {columnVisible('print_name') && <td className="py-4 px-5 font-semibold text-black">{ledger.print_name || ledger.name}</td>}
-                                                {columnVisible('under') && <td className="py-4 px-5 font-semibold text-slate-500">{ledger.group}</td>}
+                                            <tr key={ledger._id}>
+                                                {columnVisible('name') && <td>{ledger.name}</td>}
+                                                {columnVisible('print_name') && <td>{ledger.print_name || ledger.name}</td>}
+                                                {columnVisible('under') && <td>{ledger.group}</td>}
                                                 {columnVisible('opening_balance') && (
-                                                    <td className="py-4 px-5 font-mono font-bold text-slate-600">
+                                                    <td>
                                                         ₹{(ledger.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {ledger.balance_type || 'DR'}
                                                     </td>
                                                 )}
-                                                {columnVisible('mobile1') && <td className="py-4 px-5 font-medium">{ledger.phone || '—'}</td>}
-                                                {columnVisible('mobile2') && <td className="py-4 px-5 font-medium">{ledger.mobile2 || '—'}</td>}
-                                                {columnVisible('address1') && <td className="py-4 px-5 font-medium text-slate-500">{ledger.address_line_1 || '—'}</td>}
-                                                {columnVisible('address2') && <td className="py-4 px-5 font-medium text-slate-500">{ledger.address_line_2 || '—'}</td>}
-                                                {columnVisible('address3') && <td className="py-4 px-5 font-medium text-slate-500">{ledger.address_line_3 || '—'}</td>}
-                                                {columnVisible('address4') && <td className="py-4 px-5 font-medium text-slate-500">{ledger.address_line_4 || '—'}</td>}
-                                                {columnVisible('address5') && <td className="py-4 px-5 font-medium text-slate-500">{ledger.address_line_5 || '—'}</td>}
-                                                {columnVisible('gst') && <td className="py-4 px-5 font-mono font-semibold uppercase text-slate-600">{ledger.gstin || '—'}</td>}
+                                                {columnVisible('mobile1') && <td>{ledger.phone || '—'}</td>}
+                                                {columnVisible('mobile2') && <td>{ledger.mobile2 || '—'}</td>}
+                                                {columnVisible('address1') && <td>{ledger.address_line_1 || '—'}</td>}
+                                                {columnVisible('address2') && <td>{ledger.address_line_2 || '—'}</td>}
+                                                {columnVisible('address3') && <td>{ledger.address_line_3 || '—'}</td>}
+                                                {columnVisible('address4') && <td>{ledger.address_line_4 || '—'}</td>}
+                                                {columnVisible('address5') && <td>{ledger.address_line_5 || '—'}</td>}
+                                                {columnVisible('gst') && <td>{ledger.gstin || '—'}</td>}
                                                 {columnVisible('reg_type') && (
-                                                    <td className="py-4 px-5 font-bold">
+                                                    <td>
                                                         <span className={`px-2 py-0.5 rounded text-xs ${ledger.registration_type === 'Regular' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                                                             ledger.registration_type === 'Composition' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
                                                                 'bg-amber-50 text-amber-600 border border-amber-100'
@@ -735,9 +746,9 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                         </span>
                                                     </td>
                                                 )}
-                                                {columnVisible('state') && <td className="py-4 px-5 font-semibold text-slate-600">{ledger.state || '—'}</td>}
+                                                {columnVisible('state') && <td>{ledger.state || '—'}</td>}
                                                 {columnVisible('action') && (
-                                                    <td className="py-4 px-5 text-center relative no-print">
+                                                    <td>
                                                             <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
                                                         </td>
                                                 )}
