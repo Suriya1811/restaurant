@@ -3211,7 +3211,7 @@ const BillingPage = () => {
                                         }}
                                         className={`w-full flex items-center justify-between p-4 border-2 rounded-2xl transition-all group ${isSelected ? 'border-emerald-600 bg-emerald-50' : 'border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
                                     >
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-4 ml-auto">
                                             <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-600 border-emerald-600' : 'border-slate-200'}`}>
                                                 {isSelected && <Check size={14} className="text-white" />}
                                             </div>

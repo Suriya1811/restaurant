@@ -15,7 +15,7 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                     e.stopPropagation();
                     setIsOpen(true);
                 }}
-                className="px-3 py-1.5 border border-slate-300 !rounded-md bg-white text-[12px] font-bold text-slate-800 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors mx-auto shadow-sm"
+                className="min-w-[100px] px-3 py-1.5 border border-slate-300 !rounded-md bg-white text-[12px] font-bold text-slate-800 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors mx-auto shadow-sm"
             >
                 Actions <ChevronDown size={14} />
             </button>

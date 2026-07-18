@@ -227,7 +227,7 @@ const GroupMaster = () => {
             <main className="dashboard-main flex flex-col h-screen relative bg-slate-50 font-sans">
                 {/* Custom Header matching the screenshot */}
                 <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 ml-auto">
                         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">GROUP MASTER</h1>
                     </div>
                     <div className="flex items-center gap-2">
@@ -256,41 +256,43 @@ const GroupMaster = () => {
                 <div className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto">
                     
                     {/* Search and Filter Bar */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div className="relative w-80">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <div className="toolbar-premium">
+                        <div className="search-premium">
+                            <Search size={20} />
                             <input
                                 type="text"
                                 placeholder="Search groups..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-white border-2 border-[#f97316]/30 focus:border-[#f97316] rounded-lg text-sm text-slate-700 outline-none transition-colors"
                             />
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-slate-700">Nature:</span>
+                        <div className="flex items-center gap-4 ml-auto">
                             <select 
                                 value={filterNature}
                                 onChange={e => setFilterNature(e.target.value)}
-                                className="border border-slate-200 rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 outline-none bg-slate-50 cursor-pointer min-w-[120px]"
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
                             >
-                                <option value="ALL">All</option>
+                                <option value="ALL">All Natures</option>
                                 <option value="ASSETS">Assets</option>
                                 <option value="LIABILITIES">Liabilities</option>
                                 <option value="INCOME">Income</option>
                                 <option value="EXPENSES">Expenses</option>
                             </select>
 
-                            <span className="text-sm font-bold text-slate-700">Status:</span>
                             <select 
                                 value={filterActive}
                                 onChange={e => setFilterActive(e.target.value)}
-                                className="border border-slate-200 rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 outline-none bg-slate-50 cursor-pointer min-w-[120px]"
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
                             >
-                                <option value="ALL">All</option>
+                                <option value="ALL">All Status</option>
                                 <option value="ACTIVE">Active</option>
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {treeData.length}
+                            </span>
                         </div>
                     </div>
 

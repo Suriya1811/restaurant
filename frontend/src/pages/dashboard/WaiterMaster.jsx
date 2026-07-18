@@ -312,7 +312,7 @@ const WaiterMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <select 
                                 value={statusFilter} 
                                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -355,7 +355,7 @@ const WaiterMaster = () => {
                                 ) : filteredWaiters.map((waiter) => (
                                     <tr key={waiter._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all overflow-hidden">
                                                     {waiter.image ? (
                                                         <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${waiter.image}`} alt={waiter.name} className="w-full h-full object-cover" />
@@ -432,7 +432,7 @@ const WaiterMaster = () => {
 
                                         <div className="form-group-premium">
                                             <label>Personnel Photo</label>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="relative group/img w-14 h-14 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-300">
                                                     {formData.image ? (
                                                         <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.image}`} alt="Preview" className="w-full h-full object-cover" />

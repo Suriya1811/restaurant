@@ -187,18 +187,20 @@ const BrandMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <select 
                                 value={statusFilter} 
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium w-40 !py-1.5 !px-3"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
                             >
                                 <option value="ALL">All Status</option>
                                 <option value="ACTIVE">Active</option>
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
-                            
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredBrands.length}
+                            </span>
                         </div>
                     </div>
 
@@ -229,7 +231,7 @@ const BrandMaster = () => {
                                 ) : filteredBrands.map((brand) => (
                                     <tr key={brand._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
                                                     <Tag size={18} />
                                                 </div>

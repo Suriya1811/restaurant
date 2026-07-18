@@ -225,7 +225,7 @@ const CounterMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <select 
                                 value={statusFilter} 
                                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -236,7 +236,7 @@ const CounterMaster = () => {
                                 <option value="ACTIVE">Active</option>
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
                                 Active Nodes: {filteredCounters.length}
                             </span>
                         </div>
@@ -271,7 +271,7 @@ const CounterMaster = () => {
                                 ) : filteredCounters.map((counter) => (
                                     <tr key={counter._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-md shadow-slate-900/10 group-hover:bg-indigo-600 transition-all">
                                                     <Cpu size={16} />
                                                 </div>

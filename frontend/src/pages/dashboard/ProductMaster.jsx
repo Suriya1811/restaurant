@@ -884,7 +884,7 @@ const ProductMaster = () => {
                                 </button>
                             </>
                         ) : (
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 ml-auto">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[13px] font-bold text-slate-800">Type</span>
                                     <select

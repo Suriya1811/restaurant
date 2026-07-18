@@ -173,7 +173,7 @@ const PurchaseEntry = () => {
                         {/* Items Card */}
                         <div className="bento-card p-0 overflow-hidden mb-10">
                             <div className="flex justify-between items-center p-10 border-b border-slate-50 bg-slate-50/10">
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4 ml-auto">
                                     <div className="w-8 h-8 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
                                         <Package size={24} />
                                     </div>

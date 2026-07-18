@@ -17,6 +17,7 @@ const CategoryMaster = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({ name: '', type: 'FOOD', hsn_code: '', hsn_description: '' });
@@ -117,7 +118,11 @@ const CategoryMaster = () => {
     const confirmSave = () => { setShowSaveConfirm(false); handleSubmit(); };
     const cancelSave = () => { setShowSaveConfirm(false); };
 
-    const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredCategories = categories.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? c.is_active !== false : c.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
     const COLS = ['#', 'Category Name', 'Type', 'HSN Code', 'Status'];
     const getRows = () => filteredCategories.map((c, i) => [i + 1, c.name, c.type || '-', c.hsn_code || '-', c.is_active ? 'Active' : 'Inactive']);
@@ -169,9 +174,19 @@ const CategoryMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Scoped Result: {filteredCategories.length}
+                        <div className="flex items-center gap-4 ml-auto">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredCategories.length}
                             </span>
                         </div>
                     </div>
@@ -203,7 +218,7 @@ const CategoryMaster = () => {
                                 ) : filteredCategories.map((cat) => (
                                     <tr key={cat._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
                                                     <Grid size={18} />
                                                 </div>

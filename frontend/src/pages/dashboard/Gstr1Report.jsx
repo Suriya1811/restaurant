@@ -569,7 +569,7 @@ const Gstr1Report = () => {
             <main className="dashboard-main flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
                 {/* Custom Header */}
                 <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 ml-auto">
                         <button onClick={toggleSidebar} className="text-slate-500 hover:text-slate-800 transition-colors">
                             <Menu size={20} />
                         </button>

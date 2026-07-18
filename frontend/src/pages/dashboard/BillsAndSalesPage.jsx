@@ -341,7 +341,7 @@ const BillsAndSalesPage = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <button
                                 onClick={() => setShowCreateModal(true)}
                                 className="btn-action-add"

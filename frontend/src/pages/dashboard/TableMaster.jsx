@@ -8,18 +8,20 @@ import {
     Edit,
     CheckCircle2,
     XCircle,
-    Trash2,
     Loader2,
-    Grid,
-    Users,
-    Activity,
-    Layers,
-    X
-    , Download, Printer
+    Percent,
+    AlertCircle,
+    X,
+    Trash2,
+    Download,
+    Printer,
+    Save,
+    Grid
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const TableMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
@@ -31,6 +33,9 @@ const TableMaster = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [tableTypeFilter, setTableTypeFilter] = useState('ALL');
+    const [captainFilter, setCaptainFilter] = useState('ALL');
+    const [waiterFilter, setWaiterFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -118,13 +123,19 @@ const TableMaster = () => {
 
             const method = isEditing ? 'PUT' : 'POST';
 
+            // Ensure status defaults to AVAILABLE on creation if empty
+            const submissionData = {
+                ...formData,
+                status: formData.status || 'AVAILABLE'
+            };
+
             const response = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(submissionData)
             });
 
             const result = await response.json();
@@ -208,37 +219,17 @@ const TableMaster = () => {
     };
 
     const filteredTables = tables.filter(t => {
-        const matchesSearch = t.table_number.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (t.table_number || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? t.is_active !== false : t.is_active === false);
-        return matchesSearch && matchesStatus;
+        const matchesType = tableTypeFilter === 'ALL' ? true : t.table_type === tableTypeFilter;
+        const matchesCaptain = captainFilter === 'ALL' ? true : t.captain === captainFilter;
+        const matchesWaiter = waiterFilter === 'ALL' ? true : t.waiter === waiterFilter;
+        return matchesSearch && matchesStatus && matchesType && matchesCaptain && matchesWaiter;
     });
 
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case 'AVAILABLE': return { bg: '#dcfce7', text: '#166534', label: 'OPTIMAL' };
-            case 'OCCUPIED': return { bg: '#fee2e2', text: '#991b1b', label: 'ENGAGED' };
-            case 'RESERVED': return { bg: '#fef9c3', text: '#854d0e', label: 'COMMITTED' };
-            case 'MAINTENANCE': return { bg: '#f1f5f9', text: '#475569', label: 'OFFLINE' };
-            default: return { bg: '#f1f5f9', text: '#475569', label: 'UNKNOWN' };
-        }
-    };
 
-    const buildGroups = () => {
-        const map = {};
-        tableTypes.forEach(tt => { map[tt.name] = []; });
-        filteredTables.forEach(t => {
-            const key = (t.table_type || '').trim() || 'Other';
-            if (!map[key]) map[key] = [];
-            map[key].push(t);
-        });
-        return Object.entries(map).filter(([, rows]) => rows.length > 0);
-    };
-
-    const groups = buildGroups();
-
-
-    const exportCols = ['#', 'Table Name', 'Capacity', 'Status'];
-    const getExportRows = () => filteredTables.map((t, i) => [i + 1, t.name, t.capacity || '-', t.status || '-']);
+    const exportCols = ['#', 'Table Name', 'Table Type', 'Persons', 'Captain', 'Waiter'];
+    const getExportRows = () => filteredTables.map((t, i) => [i + 1, t.table_number, t.table_type || '-', t.seating_capacity || '-', t.captain || '-', t.waiter || '-']);
     const handleExcelExport = () => exportToCSV('Table Master', exportCols, getExportRows(), 'Table_Master');
     const handlePDFExport = () => exportToPDF('Table Master', exportCols, getExportRows(), 'Table_Master');
     const handlePrint = () => printTable('Table Master', `Total: ${filteredTables.length}`, exportCols, getExportRows());
@@ -254,10 +245,9 @@ const TableMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title="Table Creation"
+                    title="Table Display"
                     actions={
                         <>
-
                             <button
                                 type="button"
                                 className="btn-export excel"
@@ -293,218 +283,179 @@ const TableMaster = () => {
                     }
                 />
                 <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
                     <div className="toolbar-premium">
                         <div className="search-premium">
                             <Search size={20} />
                             <input
                                 type="text"
-                                placeholder="Search spatial identifiers..."
+                                placeholder="Search table..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Floor Capacity</span>
-                                <span className="text-xl font-black text-slate-800">{filteredTables.reduce((acc, t) => acc + t.seating_capacity, 0)} <span className="text-xs text-slate-300">Guests</span></span>
-                            </div>
+                        <div className="flex items-center gap-4 ml-auto">
+                            <select 
+                                value={tableTypeFilter} 
+                                onChange={(e) => setTableTypeFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
+                            >
+                                <option value="ALL">All Table Types</option>
+                                {tableTypes.map(type => (
+                                    <option key={type._id} value={type.name}>{type.name}</option>
+                                ))}
+                            </select>
+                            <select 
+                                value={captainFilter} 
+                                onChange={(e) => setCaptainFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
+                            >
+                                <option value="ALL">All Captains</option>
+                                {captains.map(c => (
+                                    <option key={c._id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
+                            <select 
+                                value={waiterFilter} 
+                                onChange={(e) => setWaiterFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
+                            >
+                                <option value="ALL">All Waiters</option>
+                                {waiters.map(w => (
+                                    <option key={w._id} value={w.name}>{w.name}</option>
+                                ))}
+                            </select>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredTables.length}
+                            </span>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        {loading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-                                {Array(10).fill(0).map((_, i) => (
-                                    <div key={i} className="h-48 bg-slate-50 animate-pulse rounded-[2rem]"></div>
+                    <div className="table-container-premium">
+                        <table className="table-premium">
+                            <thead>
+                                <tr>
+                                    <th>Table Name</th>
+                                    <th>Table Type</th>
+                                    <th>Persons</th>
+                                    <th>Captain</th>
+                                    <th>Waiter</th>
+                                    <th style={{ textAlign: 'right' }}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Archives...</p>
+                                        </td>
+                                    </tr>
+                                ) : filteredTables.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <Grid size={64} className="text-slate-100 mx-auto mb-4" />
+                                            <p className="font-bold text-slate-400">No tables found.</p>
+                                        </td>
+                                    </tr>
+                                ) : filteredTables.map((table) => (
+                                    <tr key={table._id} className="group">
+                                        <td>
+                                            <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{table.table_number}</span>
+                                        </td>
+                                        <td>
+                                            <span className="font-semibold text-slate-600">
+                                                {table.table_type || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="font-semibold text-slate-700">
+                                                {table.seating_capacity || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="text-xs font-semibold text-slate-700">
+                                                {table.captain || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="text-xs font-semibold text-slate-700">
+                                                {table.waiter || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <ActionDropdown 
+                                                item={table} 
+                                                onEdit={handleEdit} 
+                                                onDelete={handleDelete}
+                                                onStatusChange={handleToggleStatus}
+                                            />
+                                        </td>
+                                    </tr>
                                 ))}
-                            </div>
-                        ) : groups.length === 0 ? (
-                            <div className="py-20 text-center">
-                                <Grid size={80} className="text-slate-100 mx-auto mb-6" />
-                                <p className="text-xl font-black text-slate-300 uppercase tracking-[0.2em]">Floor Void Detected</p>
-                            </div>
-                        ) : groups.map(([groupName, groupTables]) => (
-                            <div key={groupName} className="mb-12">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">{groupName}</h3>
-                                    <div className="h-px flex-1 bg-slate-200"></div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{groupTables.length} Tables</span>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-                                    {groupTables.map(table => {
-                                        const isAvail = table.status === 'AVAILABLE';
-                                        const isOccupied = table.status === 'OCCUPIED';
-                                        const isPrinted = table.status === 'PRINTED';
-                                        const isReserved = table.status === 'RESERVED';
-                                        const isActive = isOccupied || isPrinted;
-
-                                        const colorScheme = isOccupied
-                                            ? { border: '#fdba74', bg: '#fffaf5', text: '#ea580c', glow: '#fb923c22' }
-                                            : isPrinted
-                                                ? { border: '#86efac', bg: '#f0fdf4', text: '#16a34a', glow: '#22c55e22' }
-                                                : isReserved
-                                                    ? { border: '#c4b5fd', bg: '#fbfaff', text: '#7c3aed', glow: '#a78bfa22' }
-                                                    : { border: '#e2e8f0', bg: '#ffffff', text: '#334155', glow: 'transparent' };
-
-                                        const { border, bg, text, glow } = colorScheme;
-
-                                        return (
-                                            <div key={table._id} style={{ display: 'flex', flexDirection: 'row', gap: '6px', flexShrink: 0, width: '164px', height: '108px', opacity: table.is_active ? 1 : 0.6, filter: table.is_active ? 'none' : 'grayscale(100%)', transition: 'all 0.2s ease' }}
-                                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-                                                onMouseLeave={e => { e.currentTarget.style.transform = 'none' }}
-                                            >
-                                                {/* Main Table Square */}
-                                                <div
-                                                    style={{
-                                                        flex: 1, height: '100%', border: `1px solid ${border}`,
-                                                        borderRadius: '12px', background: bg,
-                                                        display: 'flex', flexDirection: 'column',
-                                                        padding: '10px', position: 'relative',
-                                                        boxShadow: isActive || isReserved ? `0 4px 16px ${glow}` : '0 2px 4px rgba(0,0,0,0.02)',
-                                                        justifyContent: 'space-between'
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                        <span style={{ fontSize: '18px', fontWeight: 900, color: text, lineHeight: 1 }}>{table.table_number}</span>
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>
-                                                            <Users size={12} strokeWidth={3} /> {table.seating_capacity || '-'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-                                                        {table.captain && (
-                                                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                <span style={{ color: '#cbd5e1', marginRight: '3px' }}>C:</span>{table.captain}
-                                                            </div>
-                                                        )}
-                                                        {table.waiter && (
-                                                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                <span style={{ color: '#cbd5e1', marginRight: '3px' }}>W:</span>{table.waiter}
-                                                            </div>
-                                                        )}
-                                                        {!table.captain && !table.waiter && (
-                                                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#cbd5e1' }}>Unassigned</div>
-                                                        )}
-                                                    </div>
-
-                                                    <div style={{ height: '14px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', width: '100%' }}>
-                                                        <span style={{ fontSize: '9px', fontWeight: 900, color: text, letterSpacing: '0.05em' }}>{table.status}</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Actions Column */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '42px', height: '100%' }}>
-                                                    <button onClick={() => handleEdit(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        title="Edit Table"
-                                                        onMouseEnter={e => { e.currentTarget.style.background = '#eef2ff'; e.currentTarget.style.borderColor = '#c7d2fe'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
-                                                        <Edit size={16} strokeWidth={2.5} />
-                                                    </button>
-                                                    <button onClick={() => handleToggleStatus(table)} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', color: table.is_active ? '#15803d' : '#9a3412', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        title={table.is_active ? "Deactivate" : "Activate"}
-                                                        onMouseEnter={e => { e.currentTarget.style.background = table.is_active ? '#f0fdf4' : '#fff7ed'; e.currentTarget.style.borderColor = table.is_active ? '#bbf7d0' : '#ffedd5'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
-                                                        {table.is_active ? <CheckCircle2 size={16} strokeWidth={2.5} /> : <XCircle size={16} strokeWidth={2.5} />}
-                                                    </button>
-                                                    <button onClick={() => handleDelete(table)} style={{ flex: 1.2, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                        title="Delete Table"
-                                                        onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}>
-                                                        <Trash2 size={16} strokeWidth={2.5} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium">
-                            <div className="drawer-header-premium">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'Modify Spatial Unit' : 'Configure Spatial Unit'}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Floor Master Definition</p>
+                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
+                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'TABLE ALTERATION' : 'TABLE CREATION'}</h2>
+                            <button
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
+                            >
+                                <XCircle size={20} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
+
+                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
+                                    <AlertCircle size={16} />
+                                    {error}
                                 </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-slate-500 hover:text-slate-800" />
-                                </button>
-                            </div>
-                            <div className="drawer-body-premium">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
-                                        <AlertCircle size={20} /> {error}
-                                    </div>
-                                )}
-                                <form id="table-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="form-group-premium">
-                                            <label>Table Name *</label>
+                            )}
+
+                            <form id="table-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/30">
+                                    <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100">
+                                        
+                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
+                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Table Name <span className="text-red-500">*</span></label>
                                             <input
                                                 type="text"
                                                 required
-                                                className="input-premium"
-                                                placeholder="e.g. G1"
+                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
+                                                placeholder="Enter table name"
                                                 value={formData.table_number}
                                                 onChange={(e) => setFormData({ ...formData, table_number: e.target.value.toUpperCase() })}
                                             />
                                         </div>
-                                        <div className="form-group-premium">
-                                            <label>Persons</label>
-                                            <input
-                                                type="number"
-                                                className="input-premium"
-                                                value={formData.seating_capacity}
-                                                onChange={(e) => setFormData({ ...formData, seating_capacity: e.target.value === '' ? '' : parseInt(e.target.value) || 0 })}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="form-group-premium">
-                                            <label>Captain</label>
+
+                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
+                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Table Type <span className="text-red-500">*</span></label>
                                             <select
-                                                className="input-premium"
-                                                value={formData.captain}
-                                                onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
-                                            >
-                                                <option value="">-- Select Captain --</option>
-                                                {captains.map(c => (
-                                                    <option key={c._id} value={c.name}>{c.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="form-group-premium">
-                                            <label>Waiter</label>
-                                            <select
-                                                className="input-premium"
-                                                value={formData.waiter}
-                                                onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
-                                            >
-                                                <option value="">-- Select Waiter --</option>
-                                                {waiters.map(w => (
-                                                    <option key={w._id} value={w.name}>{w.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="form-group-premium">
-                                        <label>Table Type</label>
-                                        <div className="relative">
-                                            <Layers size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                            <select
-                                                className="input-premium !pl-12 !appearance-none"
+                                                required
+                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
                                                 value={formData.table_type}
                                                 onChange={(e) => setFormData({ ...formData, table_type: e.target.value })}
                                             >
-                                                <option value="">-- Select Table Type --</option>
+                                                <option value="">Select table type</option>
                                                 {tableTypes.map(type => (
                                                     <option key={type._id} value={type.name}>{type.name}</option>
                                                 ))}
@@ -513,34 +464,70 @@ const TableMaster = () => {
                                                 )}
                                             </select>
                                         </div>
-                                    </div>
 
-                                    <div className="form-group-premium hidden">
-                                        <label>Operational Status</label>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {['AVAILABLE', 'OCCUPIED', 'RESERVED', 'MAINTENANCE'].map(st => (
-                                                <button key={st} type="button" onClick={() => setFormData({ ...formData, status: st })} className={`p-4 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${formData.status === st ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 text-slate-400'}`}>
-                                                    {st}
-                                                </button>
-                                            ))}
+                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
+                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Persons <span className="text-red-500">*</span></label>
+                                            <input
+                                                type="number"
+                                                required
+                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
+                                                placeholder="Enter number of persons"
+                                                value={formData.seating_capacity}
+                                                onChange={(e) => setFormData({ ...formData, seating_capacity: e.target.value === '' ? '' : parseInt(e.target.value) || 0 })}
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
+                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Captain <span className="text-red-500">*</span></label>
+                                            <select
+                                                required
+                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
+                                                value={formData.captain}
+                                                onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
+                                            >
+                                                <option value="">Select captain</option>
+                                                {captains.map(c => (
+                                                    <option key={c._id} value={c.name}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
+                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Waiter <span className="text-red-500">*</span></label>
+                                            <select
+                                                required
+                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
+                                                value={formData.waiter}
+                                                onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
+                                            >
+                                                <option value="">Select waiter</option>
+                                                {waiters.map(w => (
+                                                    <option key={w._id} value={w.name}>{w.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="mt-6 flex justify-end">
+                                            <button type="submit" form="table-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all">
+                                                {submitting ? <Loader2 className="animate-spin" /> : (
+                                                    <>
+                                                        <Save size={20} />
+                                                        <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
-                                </form>
-                            </div>
-                            <div className="drawer-footer-premium">
-                                <button type="submit" form="table-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Commit Configuration' : 'Launch Unit')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
-                            </div>
+                                </div>
+                            </form>
                         </div>
-                        <SaveConfirmationModal
-                            isOpen={showSaveConfirm}
-                            onConfirm={confirmSave}
-                            onCancel={cancelSave}
-                        />
-                    </>
+                    </div>
                 )}
+                <SaveConfirmationModal
+                    isOpen={showSaveConfirm}
+                    onConfirm={confirmSave}
+                    onCancel={cancelSave}
+                />
             </main>
         </div>
     );

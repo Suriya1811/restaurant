@@ -270,7 +270,7 @@ const StaffMaster = () => {
                     toggleSidebar={toggleSidebar}
                     title={staffType === 'CAPTAIN' ? 'Captain Creation' : 'Waiter Creation'}
                     actions={
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
                                 <button
                                     className={`px-6 py-1.5 rounded-lg text-[10px] font-black transition-all ${staffType === 'CAPTAIN' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
@@ -346,18 +346,20 @@ const StaffMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <select 
                                 value={statusFilter} 
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium w-40 !py-1.5 !px-3"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
                             >
                                 <option value="ALL">All Status</option>
                                 <option value="ACTIVE">Active</option>
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
-                            
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredStaff.length}
+                            </span>
                         </div>
                     </div>
 
@@ -389,7 +391,7 @@ const StaffMaster = () => {
                                 ) : filteredStaff.map((member) => (
                                     <tr key={member._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-slate-900/10 group-hover:bg-indigo-600 transition-all overflow-hidden">
                                                     {member.image ? (
                                                         <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${member.image}`} alt={member.name} className="w-full h-full object-cover" />
@@ -468,7 +470,7 @@ const StaffMaster = () => {
 
                                         <div className="form-group-premium">
                                             <label>Personnel Photo</label>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="relative group/img w-14 h-14 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-300">
                                                     {formData.image ? (
                                                         <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.image}`} alt="Preview" className="w-full h-full object-cover" />

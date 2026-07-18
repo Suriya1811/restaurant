@@ -221,7 +221,7 @@ const SupplierMaster = () => {
                             <Search size={20} />
                             <input type="text" placeholder="Search vendor registry..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                        <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
                             {filteredSuppliers.length} Vendors
                         </span>
                     </div>
@@ -251,7 +251,7 @@ const SupplierMaster = () => {
                                 ) : filteredSuppliers.map((sup) => (
                                     <tr key={sup._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                                     {sup.name.charAt(0).toUpperCase()}
                                                 </div>

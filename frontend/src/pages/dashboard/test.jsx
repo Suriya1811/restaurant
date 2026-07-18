@@ -390,11 +390,11 @@ const DisplayPage = () => {
                                     <Landmark size={28} />
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 ml-auto">
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-10">CASH</span>
                                         <span className="text-sm font-black text-green-600">₹ {rangeCashAmount.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 ml-auto">
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-10">BANK</span>
                                         <span className="text-sm font-black text-purple-600">₹ {rangeBankAmount.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                     </div>

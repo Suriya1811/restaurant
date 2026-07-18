@@ -88,7 +88,7 @@ const StatCard = memo(({ label, value, icon, color, trend, iconBg }) => (
 
 const ReportSectionHeader = memo(({ icon, title, subtitle }) => (
     <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 ml-auto">
             <div className="w-12 h-12 bg-indigo-600 flex items-center justify-center rounded-2xl shadow-lg shadow-indigo-200 text-white">
                 {icon}
             </div>

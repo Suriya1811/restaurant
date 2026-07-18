@@ -78,7 +78,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [groupFilter, setGroupFilter] = useState('All Groups');
-    const [activeTypeFilter, setActiveTypeFilter] = useState('Active');
+    const [activeTypeFilter, setActiveTypeFilter] = useState('All');
 
     // Column selection states
     const [visibleColumns, setVisibleColumns] = useState(DEFAULT_COLUMNS);
@@ -402,7 +402,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         const matchesGroup = groupFilter === 'All Groups' || l.group === groupFilter;
 
         const isActive = l.is_active !== false;
-        const matchesActive = activeTypeFilter === 'Active' ? isActive : !isActive;
+        const matchesActive = activeTypeFilter === 'All' ? true : (activeTypeFilter === 'Active' ? isActive : !isActive);
 
         return matchesSearch && matchesGroup && matchesActive;
     });
@@ -580,51 +580,42 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     </div>
 
                     {/* Filters Toolbar */}
-                    <div className="flex items-end justify-between gap-4 flex-wrap mb-6 bg-white p-4 rounded-xl border border-slate-100 shadow-sm no-print">
-                        <div className="flex items-center gap-4 flex-1 min-w-[300px]">
-                            {/* Search bar */}
-                            <div className="relative flex-1 min-w-[200px]">
-                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by Name, Print Name, Mobile No, GST No..."
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-200 !rounded-md text-sm outline-none focus:border-indigo-500 transition-colors"
-                                    value={searchTerm}
-                                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                />
-                            </div>
+                    <div className="toolbar-premium mb-4">
+                        <div className="search-premium">
+                            <Search size={20} />
+                            <input
+                                type="text"
+                                placeholder="Search by Name, Mobile No, GST..."
+                                value={searchTerm}
+                                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-4 ml-auto">
+                            <select
+                                value={groupFilter}
+                                onChange={e => { setGroupFilter(e.target.value); setCurrentPage(1); }}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                            >
+                                {availableGroupsForFilter.map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                ))}
+                            </select>
 
-                            {/* Group Filter */}
-                            <div className="flex flex-col">
-                                <span className="filter-label">Group Filter</span>
-                                <select
-                                    value={groupFilter}
-                                    onChange={e => { setGroupFilter(e.target.value); setCurrentPage(1); }}
-                                    className="px-3 py-2 border border-slate-200 !rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
-                                >
-                                    {availableGroupsForFilter.map(g => (
-                                        <option key={g} value={g}>{g}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Active type filter */}
-                            <div className="flex flex-col">
-                                <span className="filter-label">Active Type</span>
-                                <select
-                                    value={activeTypeFilter}
-                                    onChange={e => { setActiveTypeFilter(e.target.value); setCurrentPage(1); }}
-                                    className="px-3 py-2 border border-slate-200 !rounded-md text-sm bg-white font-semibold text-slate-700 focus:border-indigo-500 outline-none"
-                                >
-                                    <option value="Active">Active</option>
-                                    <option value="Deactive">Deactive</option>
-                                </select>
-                            </div>
-
-                            {/* Refresh */}
-                            <button onClick={fetchLedgers} className="p-2 border border-slate-200 hover:bg-slate-50 !rounded-md text-slate-600 transition-colors self-end" title="Refresh List">
-                                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-                            </button>
+                            <select
+                                value={activeTypeFilter}
+                                onChange={e => { setActiveTypeFilter(e.target.value); setCurrentPage(1); }}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                            >
+                                <option value="All">All Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Deactive">Deactive</option>
+                            </select>
+                            
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredLedgers.length}
+                            </span>
                         </div>
 
                         {/* Columns Selection Dropdown */}
@@ -766,7 +757,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                                 Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLedgers.length)} of {filteredLedgers.length} entries
                             </span>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 ml-auto">
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         disabled={currentPage === 1}

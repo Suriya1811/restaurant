@@ -721,7 +721,7 @@ const AdvancedReports = () => {
                                     ) : (
                                         daybook.map((tr, i) => (
                                             <div key={i} className="flex justify-between items-center p-5 hover:bg-slate-50/60 transition-colors">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-4 ml-auto">
                                                     <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black text-sm shadow-inner
                                                         ${tr.side === 'IN' ? 'bg-emerald-50 text-emerald-600' : tr.side === 'OUT' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'}`}>
                                                         <span>{tr.side === 'IN' ? '+' : '-'}</span>

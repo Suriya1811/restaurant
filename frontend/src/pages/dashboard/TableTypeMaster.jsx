@@ -26,6 +26,7 @@ const TableTypeMaster = () => {
     const [tableTypes, setTableTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -165,9 +166,11 @@ const TableTypeMaster = () => {
         setError('');
     };
 
-    const filteredTableTypes = tableTypes.filter(t =>
-        t.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTableTypes = tableTypes.filter(t => {
+        const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? t.is_active !== false : t.is_active === false);
+        return matchesSearch && matchesStatus;
+    });
 
 
     const exportCols = ['#', 'Table Type Name'];
@@ -239,9 +242,19 @@ const TableTypeMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Active Zones: {filteredTableTypes.length}
+                        <div className="flex items-center gap-4 ml-auto">
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                            >
+                                <option value="ALL">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="DEACTIVE">Deactive</option>
+                            </select>
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                TOTAL : {filteredTableTypes.length}
                             </span>
                         </div>
                     </div>
@@ -273,7 +286,7 @@ const TableTypeMaster = () => {
                                 ) : filteredTableTypes.map((type) => (
                                     <tr key={type._id} className="group">
                                         <td>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
                                                     <Layers size={18} />
                                                 </div>
