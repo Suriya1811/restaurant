@@ -6,7 +6,7 @@ import './Dashboard.css';
 import './PurchaseEntryForm.css';
 import {
     Settings, ChevronDown, Plus, Trash2, Loader2,
-    Upload, FileText, BarChart2, Printer, Save, XCircle
+    Upload, FileText, BarChart2, Printer, Save, XCircle, MoreHorizontal
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
@@ -14,8 +14,9 @@ const getToken = () => { try { return JSON.parse(localStorage.getItem('user'))?.
 
 const emptyItem = () => ({
     product_id: '', barcode: '', code: '', item_name: '', unit: '',
-    quantity: 1, purchase_rate: 0, amount: 0,
+    quantity: 1, purchase_rate: 0, rate_tax: 0, amount: 0,
     discount_percent: 0, discount_amount: 0,
+    cd_percent: 0, dc_amount: 0,
     gst_percent: 0, cgst_percent: 0, cgst_amount: 0,
     sgst_percent: 0, sgst_amount: 0, tax_amount: 0,
     total_amount: 0, cost_rate: 0, sales_rate: 0,
@@ -26,23 +27,29 @@ const calcItem = (item) => {
     const qty = parseFloat(item.quantity) || 0;
     const rate = parseFloat(item.purchase_rate) || 0;
     const disP = parseFloat(item.discount_percent) || 0;
+    const cdP = parseFloat(item.cd_percent) || 0;
     const gstP = parseFloat(item.gst_percent) || 0;
+
+    const rateTax = rate + (rate * (gstP / 100));
 
     const amount = qty * rate;
     const disAmt = amount * (disP / 100);
-    const taxableAmt = amount - disAmt;
+    const dcAmt = (amount - disAmt) * (cdP / 100);
+    const taxableAmt = amount - disAmt - dcAmt;
+    
     const cgstP = gstP / 2;
     const sgstP = gstP / 2;
-    const taxableTotal = taxableAmt;
-    const cgstAmt = taxableTotal * (cgstP / 100);
-    const sgstAmt = taxableTotal * (sgstP / 100);
+    const cgstAmt = taxableAmt * (cgstP / 100);
+    const sgstAmt = taxableAmt * (sgstP / 100);
     const taxAmt = cgstAmt + sgstAmt;
-    const totalAmt = taxableTotal + taxAmt;
+    const totalAmt = taxableAmt + taxAmt;
 
     return {
         ...item,
+        rate_tax: parseFloat(rateTax.toFixed(2)),
         amount: parseFloat(amount.toFixed(2)),
         discount_amount: parseFloat(disAmt.toFixed(2)),
+        dc_amount: parseFloat(dcAmt.toFixed(2)),
         cgst_percent: parseFloat(cgstP.toFixed(2)),
         cgst_amount: parseFloat(cgstAmt.toFixed(2)),
         sgst_percent: parseFloat(sgstP.toFixed(2)),
@@ -110,10 +117,10 @@ export default function PurchaseEntryForm() {
 
     // Column Config / Settings (Req 8, 9, 12, 14, 15)
     const [colConfig, setColConfig] = useState({
-        barcode: true, code: true, item_name: true, unit: true, qty: true,
-        rate: true, amount: true, dis_pct: true, dis_amt: true, gst: true,
-        tax: true, total: true, cost: true, sales: true, mrp: true, hsn: true,
-        addins_enabled: false, paymode_enabled: true
+        "S.NO": true, "BARCODE": true, "CODE": true, "ITEM_NAME": true, "UNIT": true, 
+        "QTY": true, "RATE": true, "RATE+TAX": true, "DIS%": true, "DIS_AMT": true, 
+        "CD%": true, "DC_AMT": true, "TOTAL": true, "PUR_RATE": true, "COST": true, 
+        "SALES_RATE": true, "MRP": true, "TOTAL_AMT": true, "HSN_CODE": true
     });
 
     const [showMoreDrawer, setShowMoreDrawer] = useState(false);
@@ -416,65 +423,39 @@ export default function PurchaseEntryForm() {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                    title="Purchase Entry"
-                    actions={
-                        <div className="flex items-center gap-2">
-                            <button className="btn-premium-primary !py-2 !px-4 !bg-slate-100 !text-slate-700" onClick={() => navigate('/dashboard/self-service/purchase-history')}>
-                                <BarChart2 size={14} /> 
-                                <span className="text-[10px] uppercase font-black">Statement</span>
+                <div className="flex items-center justify-between pb-3 border-b-2 border-slate-700 mb-6 mt-4 mx-2">
+                    <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight ml-2">PURCHASE ENTRY</h1>
+                    <div className="flex gap-4 items-center">
+                        <div className="relative">
+                            <button className="flex items-center gap-2 bg-[#f97316] text-white px-5 py-2.5 rounded-lg font-bold text-sm outline-none transition-opacity hover:opacity-90 shadow-sm" onClick={() => setShowColSettings(true)}>
+                                <Settings size={16} /> COLUMN SETTINGS
                             </button>
-                            <button className="btn-premium-primary !py-2 !px-4 !bg-slate-100 !text-slate-700">
-                                <Upload size={14} /> 
-                                <span className="text-[10px] uppercase font-black">Import</span>
-                            </button>
-                            <div>
-                                <button className="btn-premium-primary !py-2 !px-3 !bg-slate-100 !text-slate-700" title="Column Settings"
-                                    onClick={() => setShowColSettings(true)}>
-                                    <Settings size={16} />
-                                </button>
-                                {showColSettings && (
-                                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
-                                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                                            {/* Modal Header */}
-                                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                                <div>
-                                                    <h3 className="text-lg font-black text-slate-800 tracking-tight">Display Columns</h3>
-                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Configure active table grid columns</p>
-                                                </div>
-                                                <button onClick={() => setShowColSettings(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                                                    <XCircle size={20} className="text-slate-400" />
-                                                </button>
-                                            </div>
-
-                                            {/* Modal Body */}
-                                            <div className="p-6">
-                                                <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1">
-                                                    {Object.keys(colConfig).map(k => (
-                                                        <label key={k} className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2.5 rounded-xl border border-slate-100 transition-all">
-                                                            <input type="checkbox" checked={colConfig[k]} 
-                                                                onChange={() => setColConfig(prev => ({...prev, [k]: !prev[k]})) }
-                                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300" />
-                                                            <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{k.replace('_', ' ')}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Modal Footer */}
-                                            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
-                                                <button onClick={() => setShowColSettings(false)} className="w-full py-3 bg-slate-900 hover:bg-black text-white text-center rounded-xl font-bold tracking-widest uppercase text-xs transition-all">
-                                                    Done
-                                                </button>
-                                            </div>
-                                        </div>
+                            {showColSettings && (
+                                <div className="absolute right-0 top-[110%] w-[350px] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200 z-[2000] animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                        <h3 className="font-bold text-slate-800">Display Columns</h3>
+                                        <button onClick={() => setShowColSettings(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
+                                            <XCircle size={18} />
+                                        </button>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="p-4 grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
+                                        {Object.keys(colConfig).map(k => (
+                                            <label key={k} className="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" checked={colConfig[k]} 
+                                                    onChange={() => setColConfig(prev => ({...prev, [k]: !prev[k]})) }
+                                                    className="w-4 h-4 rounded text-[#f97316] focus:ring-[#f97316]" />
+                                                <span className="text-xs font-bold text-slate-700">{k.replace('_', ' ')}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    }
-                />
+                        <button className="flex items-center gap-2 bg-white text-[#ef4444] border border-[#ef4444] px-5 py-2.5 rounded-lg font-bold text-sm outline-none transition-colors hover:bg-red-50 shadow-sm" onClick={() => navigate(-1)}>
+                            <XCircle size={16} /> CLOSE
+                        </button>
+                    </div>
+                </div>
                 <div className="pef-container fade-in-up" style={{ animationDuration: '0.4s' }}>
 
                     {/* ─── Bill Header (Neat Unified Form) ─── */}
@@ -511,11 +492,12 @@ export default function PurchaseEntryForm() {
                             {/* Column 2 */}
                             <div className="pef-form-col">
                                 <div className="pef-f-group" ref={supplierRef}>
-                                    <label className="pef-f-label">SUPPLIER / VENDOR</label>
-                                    <div className="relative">
+                                    <label className="pef-f-label">Supplier</label>
+                                    <div className="flex w-full gap-2 relative">
+
                                         <input 
                                             id="supplier-search-field"
-                                            className="pef-f-input font-bold !bg-indigo-50/20 !border-indigo-100" 
+                                            className="pef-f-input font-bold flex-1" 
                                             value={supplierSearch}
                                             autoComplete="off"
                                             onFocus={() => setShowSupplierDropdown(true)}
@@ -578,57 +560,43 @@ export default function PurchaseEntryForm() {
                                                 <div className="pef-dropdown-footer">List End</div>
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="pef-f-group">
-                                        <label className="pef-f-label">GSTIN NO</label>
-                                        <input className="pef-f-input pef-f-readonly font-mono !text-[11px]" readOnly value={selectedSupplier?.gst_number || '—'} />
-                                    </div>
-                                    <div className="pef-f-group">
-                                        <label className="pef-f-label">OUTSTANDING</label>
-                                        <input className="pef-f-input pef-f-readonly font-black text-indigo-600 !text-right" 
-                                            readOnly value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : '₹0.00'} />
+                                        <button className="flex items-center justify-center w-10 border border-[#f97316] rounded-md text-[#f97316] hover:bg-orange-50 transition-colors" title="Add Supplier" onClick={() => navigate('/dashboard/self-service/ledgers/create')}>
+                                            <Plus size={16} />
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="pef-f-group">
-                                    <label className="pef-f-label">STORE ADDRESS</label>
-                                    <div className="relative">
-                                        <input className="pef-f-input pef-f-readonly !font-medium" readOnly value={selectedSupplier?.address || '—'} placeholder="Address" />
-                                        <button className="absolute right-1 top-1 w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
-                                            title="Add New Supplier" onClick={() => navigate('/dashboard/self-service/ledgers/create')}>
-                                            <Plus size={14} />
-                                        </button>
+                                    <label className="pef-f-label">GSTIN</label>
+                                    <input className="pef-f-input pef-f-readonly" readOnly value={selectedSupplier?.gst_number || ''} />
+                                </div>
+                                <div className="pef-f-group">
+                                    <label className="pef-f-label">Balance</label>
+                                    <div className="relative w-full">
+                                        <input className="pef-f-input pef-f-readonly font-bold !text-left" 
+                                            readOnly value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : ''} />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 font-bold text-xs bg-orange-100 px-1 rounded">CR</span>
+                                    </div>
+                                </div>
+                                <div className="pef-f-group">
+                                    <label className="pef-f-label">Address</label>
+                                    <div className="relative w-full">
+                                        <textarea className="pef-f-textarea w-full" readOnly value={selectedSupplier?.address || ''}></textarea>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Column 3 */}
                             <div className="pef-form-col">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="pef-f-group">
-                                        <label className="pef-f-label">REG. TYPE</label>
-                                        <div className="pef-f-select-wrap">
-                                            <ChevronDown size={11} className="pef-f-chevron" />
-                                            <select id="reg-type-field" className="pef-f-select" value={regType} 
-                                                onChange={e => setRegType(e.target.value)}>
-                                                <option value="Regular">Regular</option>
-                                                <option value="Composition">Composition</option>
-                                                <option value="Unregistered">Unregistered</option>
-                                                <option value="Consumer">Consumer</option>
-                                            </select>
-                                        </div>
+                                <div className="flex gap-2 w-full mt-2">
+                                    <div className="pef-f-group w-1/2">
+                                        <label className="pef-f-label">Days</label>
+                                        <input id="due-days-field" type="number" className="pef-f-input !font-bold text-center" min="0"
+                                            value={dueDays} onChange={e => handleDueDaysChange(e.target.value)} />
                                     </div>
-                                    <div className="pef-f-group">
-                                        <label className="pef-f-label">STATE</label>
-                                        <input id="state-name-field" className="pef-f-input font-bold" value={stateName} 
-                                            onChange={e => setStateName(e.target.value)} placeholder="State" />
+                                    <div className="pef-f-group w-1/2">
+                                        <label className="pef-f-label">Date</label>
+                                        <input className="pef-f-input !font-bold" type="date" value={dueDate} readOnly />
                                     </div>
-                                </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">DUE DAYS</label>
-                                    <input id="due-days-field" type="number" className="pef-f-input font-bold" min="0"
-                                        value={dueDays} onChange={e => handleDueDaysChange(e.target.value)} />
                                 </div>
                                 <div className="pef-f-group">
                                     <label className="pef-f-label">DUE DATE</label>
@@ -645,39 +613,33 @@ export default function PurchaseEntryForm() {
                             <table className="pef-table">
                                 <thead>
                                     <tr>
-                                        <th className="pef-th-sno">S.NO</th>
-                                        {colConfig.barcode && <th className="pef-th-barcode">BARCODE</th>}
-                                        {colConfig.code && <th className="pef-th-code">CODE</th>}
-                                        {colConfig.item_name && <th className="pef-th-name">ITEM NAME</th>}
-                                        {colConfig.unit && <th className="pef-th-unit">UNIT</th>}
-                                        {colConfig.qty && <th className="pef-th-qty">QTY</th>}
-                                        {colConfig.rate && <th className="pef-th-rate">RATE</th>}
-                                        {colConfig.amount && <th className="pef-th-amount">AMOUNT</th>}
-                                        {colConfig.dis_pct && <th className="pef-th-dis">DIS %</th>}
-                                        {colConfig.dis_amt && <th className="pef-th-dis">DIS AMT</th>}
-                                        {colConfig.gst && (
-                                            <>
-                                                <th className="pef-th-gst">GST %</th>
-                                                <th className="pef-th-gst">C-GST %</th>
-                                                <th className="pef-th-gst">C-GST AMT</th>
-                                                <th className="pef-th-gst">S-GST %</th>
-                                                <th className="pef-th-gst">S-GST AMT</th>
-                                            </>
-                                        )}
-                                        {colConfig.tax && <th className="pef-th-tax">TAX AMT</th>}
-                                        {colConfig.total && <th className="pef-th-total">TOTAL AMT</th>}
-                                        {colConfig.cost && <th className="pef-th-rate">COST RATE</th>}
-                                        {colConfig.sales && <th className="pef-th-rate">SALES RATE</th>}
-                                        {colConfig.mrp && <th className="pef-th-rate">MRP</th>}
-                                        {colConfig.hsn && <th className="pef-th-hsn">HSNCODE</th>}
+                                        {colConfig['S.NO'] && <th className="pef-th-sno">S.NO</th>}
+                                        {colConfig['BARCODE'] && <th className="pef-th-barcode">BARCODE</th>}
+                                        {colConfig['CODE'] && <th className="pef-th-code">CODE</th>}
+                                        {colConfig['ITEM_NAME'] && <th className="pef-th-name">ITEM NAME</th>}
+                                        {colConfig['UNIT'] && <th className="pef-th-unit">UNIT</th>}
+                                        {colConfig['QTY'] && <th className="pef-th-qty">QTY</th>}
+                                        {colConfig['RATE'] && <th className="pef-th-rate">RATE</th>}
+                                        {colConfig['RATE+TAX'] && <th className="pef-th-rate">RATE+TAX</th>}
+                                        {colConfig['DIS%'] && <th className="pef-th-dis">DIS %</th>}
+                                        {colConfig['DIS_AMT'] && <th className="pef-th-dis">DIS AMT</th>}
+                                        {colConfig['CD%'] && <th className="pef-th-dis">CD %</th>}
+                                        {colConfig['DC_AMT'] && <th className="pef-th-dis">DC AMT</th>}
+                                        {colConfig['TOTAL'] && <th className="pef-th-amount">TOTAL</th>}
+                                        {colConfig['PUR_RATE'] && <th className="pef-th-rate">PUR RATE</th>}
+                                        {colConfig['COST'] && <th className="pef-th-rate">COST</th>}
+                                        {colConfig['SALES_RATE'] && <th className="pef-th-rate">SALES RATE</th>}
+                                        {colConfig['MRP'] && <th className="pef-th-rate">MRP</th>}
+                                        {colConfig['TOTAL_AMT'] && <th className="pef-th-total">TOTAL AMT</th>}
+                                        {colConfig['HSN_CODE'] && <th className="pef-th-hsn">HSN CODE</th>}
                                         <th className="pef-th-del"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {items.map((item, idx) => (
                                         <tr key={idx} className="pef-item-row fade-in-up" style={{ animationDelay: `${idx * 0.05}s`, animationFillMode: 'both' }}>
-                                            <td className="pef-td-sno">{idx + 1}</td>
-                                            {colConfig.barcode && (
+                                            {colConfig['S.NO'] && <td className="pef-td-sno">{idx + 1}</td>}
+                                            {colConfig['BARCODE'] && (
                                                 <td>
                                                     <input className="pef-cell-input pef-w-barcode"
                                                         data-idx={idx} data-field="barcode"
@@ -687,7 +649,7 @@ export default function PurchaseEntryForm() {
                                                         placeholder="Barcode" />
                                                 </td>
                                             )}
-                                            {colConfig.code && (
+                                            {colConfig['CODE'] && (
                                                 <td>
                                                     <input className="pef-cell-input pef-w-sm"
                                                         data-idx={idx} data-field="code"
@@ -697,7 +659,7 @@ export default function PurchaseEntryForm() {
                                                         placeholder="Code" />
                                                 </td>
                                             )}
-                                            {colConfig.item_name && (
+                                            {colConfig['ITEM_NAME'] && (
                                                 <td className="pef-td-name pef-item-name-cell">
                                                     <div className="relative">
                                                         <input
@@ -748,7 +710,7 @@ export default function PurchaseEntryForm() {
                                                     </div>
                                                 </td>
                                             )}
-                                            {colConfig.unit && (
+                                            {colConfig['UNIT'] && (
                                                 <td>
                                                     <input className="pef-cell-input pef-w-unit"
                                                         data-idx={idx} data-field="unit"
@@ -757,7 +719,7 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'unit', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.qty && (
+                                            {colConfig['QTY'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-qty pef-num"
                                                         data-idx={idx} data-field="quantity"
@@ -767,7 +729,7 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'quantity', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.rate && (
+                                            {colConfig['RATE'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-rate pef-num"
                                                         data-idx={idx} data-field="purchase_rate"
@@ -777,8 +739,17 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'purchase_rate', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.amount && <td className="pef-td-computed">{item.amount.toFixed(2)}</td>}
-                                            {colConfig.dis_pct && (
+                                            {colConfig['RATE+TAX'] && (
+                                                <td>
+                                                    <input type="number" className="pef-cell-input pef-w-rate pef-num"
+                                                        data-idx={idx} data-field="rate_tax"
+                                                        min="0" step="0.01"
+                                                        value={item.rate_tax}
+                                                        onKeyDown={e => handleItemKeyDown(e, idx, 'rate_tax')}
+                                                        onChange={e => handleItemChange(idx, 'rate_tax', e.target.value)} />
+                                                </td>
+                                            )}
+                                            {colConfig['DIS%'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-pct pef-num"
                                                         data-idx={idx} data-field="discount_percent"
@@ -788,26 +759,30 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'discount_percent', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.dis_amt && <td className="pef-td-computed">{item.discount_amount.toFixed(2)}</td>}
-                                            {colConfig.gst && (
-                                                <>
-                                                    <td>
-                                                        <input type="number" className="pef-cell-input pef-w-pct pef-num"
-                                                            data-idx={idx} data-field="gst_percent"
-                                                            min="0" max="100" step="0.01"
-                                                            value={item.gst_percent}
-                                                            onKeyDown={e => handleItemKeyDown(e, idx, 'gst_percent')}
-                                                            onChange={e => handleItemChange(idx, 'gst_percent', e.target.value)} />
-                                                    </td>
-                                                    <td className="pef-td-computed">{item.cgst_percent.toFixed(2)}</td>
-                                                    <td className="pef-td-computed">{item.cgst_amount.toFixed(2)}</td>
-                                                    <td className="pef-td-computed">{item.sgst_percent.toFixed(2)}</td>
-                                                    <td className="pef-td-computed">{item.sgst_amount.toFixed(2)}</td>
-                                                </>
+                                            {colConfig['DIS_AMT'] && <td className="pef-td-computed">{item.discount_amount.toFixed(2)}</td>}
+                                            {colConfig['CD%'] && (
+                                                <td>
+                                                    <input type="number" className="pef-cell-input pef-w-pct pef-num"
+                                                        data-idx={idx} data-field="cd_percent"
+                                                        min="0" max="100" step="0.01"
+                                                        value={item.cd_percent}
+                                                        onKeyDown={e => handleItemKeyDown(e, idx, 'cd_percent')}
+                                                        onChange={e => handleItemChange(idx, 'cd_percent', e.target.value)} />
+                                                </td>
                                             )}
-                                            {colConfig.tax && <td className="pef-td-computed pef-tax">{item.tax_amount.toFixed(2)}</td>}
-                                            {colConfig.total && <td className="pef-td-computed pef-total">{item.total_amount.toFixed(2)}</td>}
-                                            {colConfig.cost && (
+                                            {colConfig['DC_AMT'] && <td className="pef-td-computed">{item.dc_amount.toFixed(2)}</td>}
+                                            {colConfig['TOTAL'] && <td className="pef-td-computed">{item.amount.toFixed(2)}</td>}
+                                            {colConfig['PUR_RATE'] && (
+                                                <td>
+                                                    <input type="number" className="pef-cell-input pef-w-rate pef-num"
+                                                        data-idx={idx} data-field="purchase_rate"
+                                                        min="0" step="0.01"
+                                                        value={item.purchase_rate}
+                                                        onKeyDown={e => handleItemKeyDown(e, idx, 'purchase_rate')}
+                                                        onChange={e => handleItemChange(idx, 'purchase_rate', e.target.value)} />
+                                                </td>
+                                            )}
+                                            {colConfig['COST'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-rate pef-num"
                                                         data-idx={idx} data-field="cost_rate"
@@ -817,7 +792,7 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'cost_rate', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.sales && (
+                                            {colConfig['SALES_RATE'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-rate pef-num"
                                                         data-idx={idx} data-field="sales_rate"
@@ -827,7 +802,7 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'sales_rate', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.mrp && (
+                                            {colConfig['MRP'] && (
                                                 <td>
                                                     <input type="number" className="pef-cell-input pef-w-rate pef-num"
                                                         data-idx={idx} data-field="mrp"
@@ -837,7 +812,8 @@ export default function PurchaseEntryForm() {
                                                         onChange={e => handleItemChange(idx, 'mrp', e.target.value)} />
                                                 </td>
                                             )}
-                                            {colConfig.hsn && (
+                                            {colConfig['TOTAL_AMT'] && <td className="pef-td-computed pef-total">{item.total_amount.toFixed(2)}</td>}
+                                            {colConfig['HSN_CODE'] && (
                                                 <td>
                                                     <input className="pef-cell-input pef-w-hsn"
                                                         data-idx={idx} data-field="hsn_code"
@@ -861,70 +837,37 @@ export default function PurchaseEntryForm() {
                     </div>
 
                     {/* ─── Footer ─── */}
-                    <div className="pef-footer">
-                        <div className="pef-footer-left">
-                            <div className="pef-footer-stat">
-                                <span className="pef-footer-lbl">TOTAL ITEMS:</span>
-                                <span className="pef-footer-val">{totalItems}</span>
+                    <div className="flex items-center justify-between w-full pt-4 mt-2">
+                        <textarea className="w-1/4 border border-[#ea580c] rounded-md p-3 h-[52px] resize-none text-sm outline-none focus:ring-1 focus:ring-orange-500" 
+                            placeholder="Remarks" 
+                            value={remarks}
+                            onChange={e => setRemarks(e.target.value)}
+                        />
+                        
+                        <div className="flex items-center gap-4">
+                            <button className="flex items-center gap-2 bg-[#ea580c] text-white px-5 h-[52px] rounded-md font-bold text-sm uppercase shadow-sm hover:bg-orange-600 transition-colors">
+                                <FileText size={16} /> GST DETAILS
+                            </button>
+                            <button className="flex items-center gap-2 bg-[#ea580c] text-white px-5 h-[52px] rounded-md font-bold text-sm uppercase shadow-sm hover:bg-orange-600 transition-colors" onClick={() => setShowMoreDrawer(true)}>
+                                <MoreHorizontal size={16} /> MORE
+                            </button>
+                            
+                            <div className="bg-[#0f172a] text-white flex items-center px-6 rounded-md h-[52px] shadow-sm">
+                                <div className="flex flex-col items-center justify-center pr-6 border-r border-white/20 h-full">
+                                    <span className="text-[9px] font-bold tracking-widest text-slate-300">ROUND OFF</span>
+                                    <span className="text-base font-bold">₹{parseFloat(roundOff || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center pl-6 h-full">
+                                    <span className="text-[9px] font-bold tracking-widest text-slate-300">NET AMOUNT</span>
+                                    <span className="text-lg font-black text-[#ea580c]">₹{totals.grand_total.toFixed(2)}</span>
+                                </div>
                             </div>
-                            <div className="pef-footer-stat">
-                                <span className="pef-footer-lbl">TOTAL QTY:</span>
-                                <span className="pef-footer-val">{totalQty.toFixed(2)}</span>
-                            </div>
-                            <div className="pef-footer-stat">
-                                <span className="pef-footer-lbl">TAXABLE AMT:</span>
-                                <span className="pef-footer-val">₹{(totals.sub_total - totals.discount_amount).toFixed(2)}</span>
-                            </div>
-                            <div className="pef-footer-stat">
-                                <span className="pef-footer-lbl">TAX AMT:</span>
-                                <span className="pef-footer-val">₹{totals.tax_amount.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div className="pef-net-amount">
-                            <div className="text-right mr-6">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Other/RoundOff</div>
-                                <div className="text-sm font-black text-slate-600">₹{(parseFloat(otherCharges) + parseFloat(roundOff)).toFixed(2)}</div>
-                            </div>
-                            <div className="flex flex-col items-end mr-4">
-                                <span className="pef-net-lbl">NET AMOUNT</span>
-                                <span className="pef-net-val">₹{totals.grand_total.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* ─── Action Bar ─── */}
-                    <div className="pef-action-bar">
-                        <button className="pef-action-btn pef-remarks-btn"
-                            onClick={() => setShowRemarksModal(true)}>
-                            REMARKS
-                        </button>
-                        <div className="pef-action-right">
-                            {colConfig.addins_enabled && (
-                                <button className="pef-action-btn pef-addins-btn" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>
-                                    ADDINS
-                                </button>
-                            )}
-                            <button className="pef-action-btn pef-more-btn"
-                                onClick={() => setShowMoreDrawer(true)}>
-                                MORE
-                            </button>
-                            {colConfig.paymode_enabled && (
-                                <button className="pef-action-btn pef-paymode-btn"
-                                    onClick={() => setShowPayMode(!showPayMode)}>
-                                    PAYMODE
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex gap-2">
-                             <button className="btn-export print"
-                                disabled={saving}
-                                onClick={() => handleSave(true)}>
-                                {saving ? <Loader2 size={14} className="pef-spinner" /> : <><Printer size={14} /> SAVE &amp; PRINT</>}
-                            </button>
-                            <button className="pef-action-btn pef-save-btn"
+                            <button className="flex items-center gap-3 bg-[#ea580c] text-white px-8 h-[52px] rounded-md font-black text-xl uppercase shadow-md hover:bg-orange-600 transition-colors"
                                 disabled={saving}
                                 onClick={() => handleSave(false)}>
-                                {saving ? <Loader2 size={14} className="pef-spinner" /> : <><Save size={14} /> SAVE</>}
+                                {saving ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} />} 
+                                SAVE
                             </button>
                         </div>
                     </div>

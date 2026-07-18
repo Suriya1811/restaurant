@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import ReportToolbar, { printReport } from '@/components/common/ReportToolbar';
+import Header from '@/components/dashboard/Header';
+import { Download, Printer, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { printReport } from '@/components/common/ReportToolbar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -26,17 +29,42 @@ const fmt = (num) => {
     return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const API = import.meta.env.VITE_API_URL;
+const getToken = () => JSON.parse(localStorage.getItem('user'))?.token;
+
 const TrialBalance = () => {
+    const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [viewMode, setViewMode] = useState('NORMAL');
+    const [data, setData] = useState([]);
     
+    const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
     });
 
-    const data = mockTrialBalanceData;
+    useEffect(() => {
+        const fetchTrialBalance = async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(`${API}/reports/trial-balance?startDate=${filters.startDate}&endDate=${filters.endDate}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const json = await res.json();
+                if (json.success) {
+                    setData(json.data);
+                }
+            } catch (error) {
+                console.error('Error fetching Trial Balance:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTrialBalance();
+    }, [filters.startDate, filters.endDate]);
 
     const totals = data.reduce((acc, row) => ({
         opDr: acc.opDr + row.opDr,
@@ -51,9 +79,19 @@ const TrialBalance = () => {
 
     const exportToCSV = () => {
         const headers = ["Account Name", "Opening Balance (Dr)", "Opening Balance (Cr)", "Transactions (Dr)", "Transactions (Cr)", "Closing Balance (Dr)", "Closing Balance (Cr)"];
-        const rows = data.map(d => [
-            d.name, d.opDr, d.opCr, d.trxDr, d.trxCr, d.clDr, d.clCr
-        ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+        const rows = [];
+        data.forEach(group => {
+            rows.push([
+                `[Group] ${group.group}`, group.opDr, group.opCr, group.trxDr, group.trxCr, group.clDr, group.clCr
+            ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+            if (viewMode === 'DETAIL') {
+                group.ledgers.forEach(ledger => {
+                    rows.push([
+                        `    ${ledger.name}`, ledger.opDr, ledger.opCr, ledger.trxDr, ledger.trxCr, ledger.clDr, ledger.clCr
+                    ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+                });
+            }
+        });
         
         rows.push([
             "Total", totals.opDr, totals.opCr, totals.trxDr, totals.trxCr, totals.clDr, totals.clCr
@@ -93,12 +131,20 @@ const TrialBalance = () => {
             'Dr', 'Cr', 'Dr', 'Cr', 'Dr', 'Cr'
         ]];
         
-        const body = data.map(d => [
-            d.name,
-            fmt(d.opDr), fmt(d.opCr),
-            fmt(d.trxDr), fmt(d.trxCr),
-            fmt(d.clDr), fmt(d.clCr)
-        ]);
+        const body = [];
+        data.forEach(group => {
+            body.push([
+                { content: `[Group] ${group.group}`, styles: { fontStyle: 'bold' } },
+                fmt(group.opDr), fmt(group.opCr), fmt(group.trxDr), fmt(group.trxCr), fmt(group.clDr), fmt(group.clCr)
+            ]);
+            if (viewMode === 'DETAIL') {
+                group.ledgers.forEach(ledger => {
+                    body.push([
+                        `    ${ledger.name}`, fmt(ledger.opDr), fmt(ledger.opCr), fmt(ledger.trxDr), fmt(ledger.trxCr), fmt(ledger.clDr), fmt(ledger.clCr)
+                    ]);
+                });
+            }
+        });
 
         body.push([{ content: 'Total', styles: { fontStyle: 'bold' } }, fmt(totals.opDr), fmt(totals.opCr), fmt(totals.trxDr), fmt(totals.trxCr), fmt(totals.clDr), fmt(totals.clCr)]);
 
@@ -107,7 +153,7 @@ const TrialBalance = () => {
             head: head,
             body: body,
             theme: 'grid',
-            headStyles: { fillColor: [79, 70, 229], halign: 'center' },
+            headStyles: { fillColor: [15, 23, 42], textColor: [249, 115, 22], halign: 'center' }, // dark blue bg, orange text
             styles: { fontSize: 8 },
             columnStyles: {
                 0: { halign: 'left' },
@@ -130,12 +176,20 @@ const TrialBalance = () => {
 
     const handlePrint = () => {
         const headers = ['Account Name', 'Op Balance (Dr)', 'Op Balance (Cr)', 'Transactions (Dr)', 'Transactions (Cr)', 'Closing (Dr)', 'Closing (Cr)'];
-        const rows = data.map(d => [
-            d.name,
-            fmt(d.opDr), fmt(d.opCr),
-            fmt(d.trxDr), fmt(d.trxCr),
-            fmt(d.clDr), fmt(d.clCr)
-        ]);
+        const rows = [];
+        data.forEach(group => {
+            rows.push([
+                `[Group] ${group.group}`, fmt(group.opDr), fmt(group.opCr), fmt(group.trxDr), fmt(group.trxCr), fmt(group.clDr), fmt(group.clCr)
+            ]);
+            if (viewMode === 'DETAIL') {
+                group.ledgers.forEach(ledger => {
+                    rows.push([
+                        `    ${ledger.name}`, fmt(ledger.opDr), fmt(ledger.opCr), fmt(ledger.trxDr), fmt(ledger.trxCr), fmt(ledger.clDr), fmt(ledger.clCr)
+                    ]);
+                });
+            }
+        });
+
         printReport(
             'Trial Balance',
             `From: ${filters.startDate} | To: ${filters.endDate} | Balanced: ${totals.clDr === totals.clCr ? 'YES ✓' : 'NO ✗'}`,
@@ -166,19 +220,88 @@ const TrialBalance = () => {
             `}</style>
 
             <main className="dashboard-main flex flex-col h-screen overflow-hidden bg-slate-50 relative">
-                <ReportToolbar 
+                
+                <Header 
                     title="Trial Balance"
                     toggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                    filters={filters}
-                    setFilters={setFilters}
-                    loading={loading}
-                    onRefresh={handleRefresh}
-                    onExportCSV={exportToCSV}
-                    onExportPDF={exportToPDF}
-                    onPrint={handlePrint}
+                    onClose={() => navigate('/dashboard/self-service/home')}
+                    actions={
+                        <>
+                            <button type="button" className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm" onClick={exportToCSV} title="Export to Excel">
+                                <Download size={14} className="text-emerald-500" />
+                                <span>Excel</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm" onClick={exportToPDF} title="Export to PDF">
+                                <Download size={14} className="text-rose-500" />
+                                <span>PDF</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm" onClick={handlePrint} title="Print">
+                                <Printer size={14} className="text-indigo-500" />
+                                <span>Print</span>
+                            </button>
+                        </>
+                    }
                 />
+                <div className="master-content-layout fade-in flex flex-col">
+                    <div className="toolbar-premium no-print">
+                        <div className="flex flex-row items-center gap-4 flex-1">
+                            <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="border-orange-500 focus:ring-orange-500"
+                                    style={{ borderColor: '#f97316' }}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">From Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.startDate} 
+                                    onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">To Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.endDate} 
+                                    onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setViewMode('NORMAL')}
+                                    className={`px-4 py-1.5 rounded text-xs font-bold border transition-colors ${
+                                        viewMode === 'NORMAL' 
+                                        ? 'bg-[#0f172a] text-[#f97316] border-[#0f172a]' 
+                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    Normal
+                                </button>
+                                <button 
+                                    onClick={() => setViewMode('DETAIL')}
+                                    className={`px-4 py-1.5 rounded text-xs font-bold border transition-colors ${
+                                        viewMode === 'DETAIL' 
+                                        ? 'bg-[#0f172a] text-[#f97316] border-[#0f172a]' 
+                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    Detailed
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 print-section relative">
+<div className="flex-1 overflow-y-auto print-section relative">
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-black text-slate-900 uppercase">Trial Balance</h2>
                         <p className="text-slate-600 font-medium">Generated on: {new Date().toLocaleString('en-GB')}</p>
@@ -186,38 +309,59 @@ const TrialBalance = () => {
                     </div>
 
                     <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-full relative">
-                        <div className="overflow-x-auto flex-1">
+                        <div className="overflow-x-auto flex-1 bg-white">
                             <table className="w-full text-left min-w-[800px]">
-                                <thead className="bg-[#1e293b] text-white sticky top-0 z-10">
+                                <thead className="bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm">
                                     <tr>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider border-b border-r border-slate-600" rowSpan="2">Account Name</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-600" colSpan="2">Opening Balance</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-600" colSpan="2">Transactions</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-slate-600" colSpan="2">Closing Balance</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider border-b border-r border-slate-700" rowSpan="2">Account Name</th>
+                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Opening Balance</th>
+                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Transactions</th>
+                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-slate-700" colSpan="2">Closing Balance</th>
                                     </tr>
-                                    <tr className="bg-[#334155]">
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-600 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-600 w-32">Cr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-600 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-600 w-32">Cr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-600 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-slate-600 w-32">Cr.</th>
+                                    <tr className="bg-[#1e293b] text-[#f97316]">
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-slate-700 w-32">Cr.</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
-                                    {data.map((row, i) => (
-                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-3 text-sm font-semibold text-slate-800 border-r border-slate-200">{row.name}</td>
-                                            <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(row.opDr)}</td>
-                                            <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(row.opCr)}</td>
-                                            <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(row.trxDr)}</td>
-                                            <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(row.trxCr)}</td>
-                                            <td className="px-6 py-3 text-sm text-right font-medium text-slate-800 border-r border-slate-200">{fmt(row.clDr)}</td>
-                                            <td className="px-6 py-3 text-sm text-right font-medium text-slate-800">{fmt(row.clCr)}</td>
+                                    {data.length === 0 && (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-8 text-center text-slate-500 font-medium">No transactions found for the selected period.</td>
                                         </tr>
+                                    )}
+                                    {data.map((group, i) => (
+                                        <React.Fragment key={i}>
+                                            <tr className="bg-slate-50 hover:bg-slate-100 transition-colors">
+                                                <td className="px-6 py-3 text-sm font-black text-slate-900 border-r border-slate-200 uppercase">{group.group}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opDr)}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opCr)}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxDr)}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxCr)}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.clDr)}</td>
+                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700">{fmt(group.clCr)}</td>
+                                            </tr>
+                                            {viewMode === 'DETAIL' && group.ledgers.map((ledger, j) => (
+                                                <tr key={`${i}-${j}`} className="hover:bg-orange-50/30 transition-colors bg-white">
+                                                    <td className="px-6 py-3 pl-12 text-sm font-semibold text-slate-700 border-r border-slate-200 flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                                                        {ledger.name}
+                                                    </td>
+                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opCr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxCr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-medium text-slate-800 border-r border-slate-200">{fmt(ledger.clDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-medium text-slate-800">{fmt(ledger.clCr)}</td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
                                     ))}
                                 </tbody>
-                                <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t-2 border-orange-200">
+                                <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-orange-300">
                                     <tr>
                                         <td className="px-6 py-4 text-sm font-black text-orange-600 uppercase border-r border-orange-200">Total</td>
                                         <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.opDr)}</td>
@@ -241,6 +385,7 @@ const TrialBalance = () => {
                         )}
                     </div>
                 </div>
+            </div>
             </main>
         </div>
     );

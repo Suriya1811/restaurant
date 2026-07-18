@@ -309,71 +309,90 @@ const TableTypeMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium">
-                            <div className="drawer-header-premium">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'Modify Zone' : 'Architect Zone'}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Spatial Entity Definition</p>
+                    <div className="fixed inset-0 md:pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
+                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
+                            <h2 className="text-xl font-bold text-black tracking-tight">
+                                {isEditing ? 'Modify Zone' : 'Table Type Creation'}
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
+                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+                            >
+                                <X size={16} /> CLOSE
+                            </button>
+                        </div>
+
+                        <div className="px-8 py-8 w-full flex flex-col overflow-y-auto">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
+                                    <AlertCircle size={18} /> {error}
                                 </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-slate-500 hover:text-slate-800" />
-                                </button>
-                            </div>
-                            <div className="drawer-body-premium">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
-                                        <AlertCircle size={20} /> {error}
-                                    </div>
-                                )}
-                                <form id="table-type-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
-                                    <div className="form-group-premium">
-                                        <label>Zone Name *</label>
+                            )}
+
+                            <form id="table-type-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex flex-col flex-1">
+                                <div className="flex flex-col gap-6 max-w-3xl">
+                                    <div className="flex items-center">
+                                        <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
+                                            Zone Name <span className="text-[#f97316]">*</span>
+                                        </label>
                                         <input
                                             type="text"
                                             required
-                                            className="input-premium"
                                             placeholder="e.g. GARDEN / AC HALL"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
+                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                            style={{ border: '1px solid #f97316' }}
                                         />
                                     </div>
-                                    <div className="form-group-premium">
-                                        <label>Assigned Captain</label>
+                                    <div className="flex items-center">
+                                        <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
+                                            Assigned Captain
+                                        </label>
                                         <input
                                             type="text"
-                                            className="input-premium"
                                             placeholder="e.g. RAJESH"
                                             value={formData.captain || ''}
                                             onChange={(e) => setFormData({ ...formData, captain: e.target.value.toUpperCase() })}
+                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                            style={{ border: '1px solid #f97316' }}
                                         />
                                     </div>
-                                    <div className="form-group-premium">
-                                        <label>Assigned Waiter</label>
+                                    <div className="flex items-center">
+                                        <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
+                                            Assigned Waiter
+                                        </label>
                                         <input
                                             type="text"
-                                            className="input-premium"
                                             placeholder="e.g. CHANDRU"
                                             value={formData.waiter || ''}
                                             onChange={(e) => setFormData({ ...formData, waiter: e.target.value.toUpperCase() })}
+                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                            style={{ border: '1px solid #f97316' }}
                                         />
                                     </div>
-                                </form>
-                            </div>
-                            <div className="drawer-footer-premium">
-                                <button type="submit" form="table-type-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'Commit Changes' : 'Launch Zone')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
-                            </div>
+                                </div>
+
+                                <div className="flex justify-end mt-12 w-full max-w-5xl absolute bottom-8 right-8">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="font-bold px-8 py-2.5 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 text-white shadow-sm hover:opacity-90"
+                                        style={{ backgroundColor: '#f97316' }}
+                                    >
+                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : 'Save'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                         <SaveConfirmationModal 
                             isOpen={showSaveConfirm} 
                             onConfirm={confirmSave} 
                             onCancel={cancelSave} 
                         />
-                    </>
+                    </div>
                 )}
             </main>
         </div>

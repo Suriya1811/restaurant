@@ -227,7 +227,7 @@ const GroupMaster = () => {
             <main className="dashboard-main flex flex-col h-screen relative bg-slate-50 font-sans">
                 {/* Custom Header matching the screenshot */}
                 <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4 ml-auto">
+                    <div className="flex items-center gap-4">
                         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">GROUP MASTER</h1>
                     </div>
                     <div className="flex items-center gap-2">

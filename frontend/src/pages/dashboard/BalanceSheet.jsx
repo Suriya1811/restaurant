@@ -1,126 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import ReportToolbar, { printReport } from '@/components/common/ReportToolbar';
+import Header from '@/components/dashboard/Header';
+import { Download, Printer, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { printReport } from '@/components/common/ReportToolbar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getNatureForGroup } from '@/utils/standardGroups';
 
-const mockBalanceSheetData = {
-    liabilities: [
-        {
-            group: "Capital Account",
-            total: 500000,
-            ledgers: [
-                { name: "Mr. Kumar Capital A/c", amount: 300000 },
-                { name: "Mrs. Kumar Capital A/c", amount: 200000 }
-            ]
-        },
-        {
-            group: "Secured Loans",
-            total: 300000,
-            ledgers: [
-                { name: "Bank Loan", amount: 300000 }
-            ]
-        },
-        {
-            group: "Unsecured Loans",
-            total: 150000,
-            ledgers: [
-                { name: "Term Loan", amount: 100000 },
-                { name: "Vehicle Loan", amount: 50000 }
-            ]
-        },
-        {
-            group: "Current Liabilities",
-            total: 275000,
-            ledgers: [
-                { name: "Sundry Creditors", amount: 150000 },
-                { name: "GST Payable", amount: 50000 },
-                { name: "Outstanding Expenses", amount: 75000 }
-            ]
-        }
-    ],
-    assets: [
-        {
-            group: "Fixed Assets",
-            total: 850000,
-            ledgers: [
-                { name: "Building", amount: 500000 },
-                { name: "Furniture", amount: 150000 },
-                { name: "Motor Vehicle", amount: 200000 }
-            ]
-        },
-        {
-            group: "Current Assets",
-            total: 425000,
-            ledgers: [
-                { name: "Stock", amount: 220000 },
-                { name: "Sundry Debtors", amount: 130000 },
-                { name: "Advance to Supplier", amount: 75000 }
-            ]
-        },
-        {
-            group: "Cash & Bank",
-            total: 210000,
-            ledgers: [
-                { name: "Cash in Hand", amount: 60000 },
-                { name: "Indian Bank", amount: 100000 },
-                { name: "HDFC Bank", amount: 50000 }
-            ]
-        },
-        {
-            group: "Loans & Advances",
-            total: 140000,
-            ledgers: [
-                { name: "Staff Advance", amount: 140000 }
-            ]
-        }
-    ]
-};
+const API = import.meta.env.VITE_API_URL;
+const getToken = () => JSON.parse(localStorage.getItem('user'))?.token;
 
 const fmt = (num) => {
-    if (!num) return '-';
+    if (!num) return '';
     return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const BalanceSheet = () => {
+    const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isDetailView, setIsDetailView] = useState(false);
+    const [data, setData] = useState({ liabilities: [], assets: [] });
     
+    const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
     });
 
-    const data = mockBalanceSheetData;
+    useEffect(() => {
+        const fetchBalanceSheet = async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(`${API}/reports/trial-balance?startDate=${filters.startDate}&endDate=${filters.endDate}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const json = await res.json();
+                if (json.success) {
+                    const liabilities = [];
+                    const assets = [];
+                    json.data.forEach(group => {
+                        const nature = getNatureForGroup(group.group);
+                        const total = group.clDr > 0 ? group.clDr : group.clCr;
+                        const ledgers = group.ledgers.map(l => ({
+                            name: l.name,
+                            amount: l.clDr > 0 ? l.clDr : l.clCr
+                        }));
+                        if (nature === 'LIABILITIES') liabilities.push({ group: group.group, total, ledgers });
+                        else if (nature === 'ASSETS') assets.push({ group: group.group, total, ledgers });
+                    });
+                    setData({ liabilities, assets });
+                }
+            } catch (error) {
+                console.error('Error fetching Balance Sheet:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchBalanceSheet();
+    }, [filters.startDate, filters.endDate]);
 
     const totalLiabilities = data.liabilities.reduce((sum, g) => sum + g.total, 0);
     const totalAssets = data.assets.reduce((sum, g) => sum + g.total, 0);
-    const isBalanced = totalLiabilities === totalAssets;
 
     const exportToCSV = () => {
         const rows = [["Liabilities", "Amount", "Assets", "Amount"]];
-        
         const maxLen = Math.max(data.liabilities.length, data.assets.length);
         
-        // This is a simplified flat export. For real complex detail exports, 
-        // a more complex row alignment is needed, but this works for standard view
         for (let i = 0; i < maxLen; i++) {
             const lGroup = data.liabilities[i];
             const aGroup = data.assets[i];
             
             rows.push([
-                lGroup ? lGroup.group : "",
-                lGroup ? lGroup.total : "",
-                aGroup ? aGroup.group : "",
-                aGroup ? aGroup.total : ""
-            ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+                lGroup ? "[Group] " + lGroup.group : "", lGroup ? lGroup.total : "",
+                aGroup ? "[Group] " + aGroup.group : "", aGroup ? aGroup.total : ""
+            ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
+            
+            if (isDetailView) {
+                const lLedgers = lGroup ? lGroup.ledgers : [];
+                const aLedgers = aGroup ? aGroup.ledgers : [];
+                const maxLedgers = Math.max(lLedgers.length, aLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const lL = lLedgers[j];
+                    const aL = aLedgers[j];
+                    rows.push([
+                        lL ? "    " + lL.name : "", lL ? lL.amount : "",
+                        aL ? "    " + aL.name : "", aL ? aL.amount : ""
+                    ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
+                }
+            }
         }
 
         rows.push([
             "Total", totalLiabilities, "Total", totalAssets
-        ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+        ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
 
         const csvContent = "data:text/csv;charset=utf-8," + 
             "Balance Sheet\n" + 
@@ -157,11 +132,27 @@ const BalanceSheet = () => {
             const aGroup = data.assets[i];
             
             body.push([
-                lGroup ? lGroup.group : "",
+                lGroup ? "[Group] " + lGroup.group : "",
                 lGroup ? fmt(lGroup.total) : "",
-                aGroup ? aGroup.group : "",
+                aGroup ? "[Group] " + aGroup.group : "",
                 aGroup ? fmt(aGroup.total) : ""
             ]);
+            
+            if (isDetailView) {
+                const lLedgers = lGroup ? lGroup.ledgers : [];
+                const aLedgers = aGroup ? aGroup.ledgers : [];
+                const maxLedgers = Math.max(lLedgers.length, aLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const lL = lLedgers[j];
+                    const aL = aLedgers[j];
+                    body.push([
+                        lL ? "    " + lL.name : "",
+                        lL ? fmt(lL.amount) : "",
+                        aL ? "    " + aL.name : "",
+                        aL ? fmt(aL.amount) : ""
+                    ]);
+                }
+            }
         }
 
         body.push([
@@ -176,7 +167,7 @@ const BalanceSheet = () => {
             head: head,
             body: body,
             theme: 'grid',
-            headStyles: { fillColor: [15, 23, 42], halign: 'left' },
+            headStyles: { fillColor: [15, 23, 42], textColor: [249, 115, 22], halign: 'left' },
             styles: { fontSize: 9 },
             columnStyles: {
                 1: { halign: 'right' },
@@ -197,9 +188,26 @@ const BalanceSheet = () => {
         const maxLen = Math.max(data.liabilities.length, data.assets.length);
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
-            const l = data.liabilities[i];
-            const a = data.assets[i];
-            rows.push([l ? l.group : '', l ? fmt(l.total) : '', a ? a.group : '', a ? fmt(a.total) : '']);
+            const lGroup = data.liabilities[i];
+            const aGroup = data.assets[i];
+            rows.push([
+                lGroup ? "[Group] " + lGroup.group : "", lGroup ? fmt(lGroup.total) : "", 
+                aGroup ? "[Group] " + aGroup.group : "", aGroup ? fmt(aGroup.total) : ""
+            ]);
+            
+            if (isDetailView) {
+                const lLedgers = lGroup ? lGroup.ledgers : [];
+                const aLedgers = aGroup ? aGroup.ledgers : [];
+                const maxLedgers = Math.max(lLedgers.length, aLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const lL = lLedgers[j];
+                    const aL = aLedgers[j];
+                    rows.push([
+                        lL ? "    " + lL.name : "", lL ? fmt(lL.amount) : "",
+                        aL ? "    " + aL.name : "", aL ? fmt(aL.amount) : ""
+                    ]);
+                }
+            }
         }
         printReport(
             'Balance Sheet',
@@ -215,20 +223,19 @@ const BalanceSheet = () => {
             <div className="w-full">
                 {groups.map((g, i) => (
                     <React.Fragment key={i}>
-                        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 hover:bg-orange-50/30 transition-colors">
-                            <span className="text-sm font-bold text-orange-600">{g.group}</span>
-                            <span className="text-sm font-bold text-slate-900">{fmt(g.total)}</span>
+                        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 hover:bg-slate-100 transition-colors bg-slate-50">
+                            <span className="text-sm font-black text-slate-900 uppercase">{g.group}</span>
+                            <span className="text-sm font-bold text-slate-700">{fmt(g.total)}</span>
                         </div>
-                        {isDetailView && (
-                            <div className="bg-slate-50/50 border-b border-slate-200 overflow-hidden transition-all duration-300">
-                                {g.ledgers.map((l, idx) => (
-                                    <div key={idx} className="flex items-center justify-between px-6 py-2 pl-10 border-b border-slate-100 last:border-0 hover:bg-slate-100 transition-colors">
-                                        <span className="text-sm text-slate-700 font-medium">{l.name}</span>
-                                        <span className="text-sm text-slate-600">{fmt(l.amount)}</span>
-                                    </div>
-                                ))}
+                        {isDetailView && g.ledgers.map((l, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-6 py-3 pl-12 border-b border-slate-200 bg-white hover:bg-orange-50/30 transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                                    <span className="text-sm text-slate-700 font-semibold">{l.name}</span>
+                                </div>
+                                <span className="text-sm text-slate-600">{fmt(l.amount)}</span>
                             </div>
-                        )}
+                        ))}
                     </React.Fragment>
                 ))}
             </div>
@@ -254,92 +261,137 @@ const BalanceSheet = () => {
             `}</style>
 
             <main className="dashboard-main flex flex-col h-screen overflow-hidden bg-slate-50 relative">
-                <ReportToolbar 
+                
+                <Header 
                     title="Balance Sheet"
                     toggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                    filters={filters}
-                    setFilters={setFilters}
-                    loading={loading}
-                    onRefresh={handleRefresh}
-                    onExportCSV={exportToCSV}
-                    onExportPDF={exportToPDF}
-                    onPrint={handlePrint}
+                    onClose={() => navigate('/dashboard/self-service/home')}
+                    actions={
+                        <>
+                            <button type="button" className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm" onClick={exportToCSV} title="Export to Excel">
+                                <Download size={14} className="text-emerald-500" />
+                                <span>Excel</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm" onClick={exportToPDF} title="Export to PDF">
+                                <Download size={14} className="text-rose-500" />
+                                <span>PDF</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm" onClick={handlePrint} title="Print">
+                                <Printer size={14} className="text-indigo-500" />
+                                <span>Print</span>
+                            </button>
+                        </>
+                    }
                 />
-
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 print-section relative">
-                    
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="hidden print:block">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase">Balance Sheet</h2>
-                            <p className="text-slate-600 font-medium">As on: {filters.endDate}</p>
+                <div className="master-content-layout fade-in flex flex-col">
+                    <div className="toolbar-premium no-print">
+                        <div className="flex flex-row items-center gap-4 flex-1">
+                            <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="border-orange-500 focus:ring-orange-500"
+                                    style={{ borderColor: '#f97316' }}
+                                />
+                            </div>
                         </div>
-                        
-                        <div className="flex bg-slate-200 p-1 rounded-lg ml-auto no-print">
-                            <button 
-                                onClick={() => setIsDetailView(false)}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${!isDetailView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                            >
-                                Normal View
-                            </button>
-                            <button 
-                                onClick={() => setIsDetailView(true)}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${isDetailView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                            >
-                                Detail View
-                            </button>
+                        <div className="flex gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">From Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.startDate} 
+                                    onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">To Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.endDate} 
+                                    onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
+<div className="flex-1 overflow-y-auto print-section relative">
+                    
+                    <div className="hidden print:block mb-6">
+                        <h2 className="text-2xl font-black text-slate-900 uppercase">Balance Sheet</h2>
+                        <p className="text-slate-600 font-medium">As on: {filters.endDate}</p>
+                    </div>
+
                     <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col mb-4">
+
+
                         {/* Headers */}
-                        <div className="flex bg-[#0f172a] text-white sticky top-0 z-10">
-                            <div className="flex-1 flex border-r border-slate-600">
+                        <div className="flex bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm">
+                            <div className="flex-1 flex border-r border-slate-700">
                                 <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Liabilities</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-600">Amount (₹)</div>
+                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
                             </div>
                             <div className="flex-1 flex">
                                 <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Assets</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-600">Amount (₹)</div>
+                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
                             </div>
                         </div>
 
                         {/* Body content */}
-                        <div className="flex flex-col sm:flex-row items-start relative">
+                        <div className="flex flex-col sm:flex-row items-start relative min-h-[300px]">
+                            {data.liabilities.length === 0 && data.assets.length === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-500 font-medium bg-white">
+                                    No transactions found for the selected period.
+                                </div>
+                            )}
+                            
                             {/* Liabilities side */}
-                            <div className="flex-1 w-full border-b sm:border-b-0 sm:border-r border-slate-200 min-h-full">
+                            <div className="flex-1 w-full sm:border-r border-slate-200 h-full">
                                 {renderTableSide(data.liabilities)}
                             </div>
                             
                             {/* Assets side */}
-                            <div className="flex-1 w-full min-h-full">
+                            <div className="flex-1 w-full h-full">
                                 {renderTableSide(data.assets)}
                             </div>
                         </div>
 
                         {/* Footer Totals */}
-                        <div className="flex bg-[#fff7ed] border-t-2 border-orange-200 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                        <div className="flex bg-[#fff7ed] border-t border-orange-300 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                             <div className="flex-1 flex border-r border-orange-200">
                                 <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{fmt(totalLiabilities)}</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalLiabilities) : ''}</div>
                             </div>
                             <div className="flex-1 flex">
                                 <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{fmt(totalAssets)}</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalAssets) : ''}</div>
+                            </div>
+                        </div>
+
+                        {/* Difference Row */}
+                        <div className="flex bg-[#fff7ed] border-t border-orange-200 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                            <div className="flex-1 flex border-r border-orange-200">
+                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
+                                    {(totalLiabilities > 0 || totalAssets > 0) && totalLiabilities > totalAssets ? fmt(totalLiabilities - totalAssets) : ''}
+                                </div>
+                            </div>
+                            <div className="flex-1 flex">
+                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
+                                    {(totalLiabilities > 0 || totalAssets > 0) && totalAssets > totalLiabilities ? fmt(totalAssets - totalLiabilities) : ''}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {isBalanced ? (
-                        <div className="bg-emerald-50 px-6 py-3 border border-emerald-100 flex items-center justify-center rounded-lg shadow-sm">
-                            <span className="text-emerald-700 font-bold text-sm">Difference is Zero (Balanced)</span>
-                        </div>
-                    ) : (
-                        <div className="bg-rose-50 px-6 py-3 border border-rose-100 flex items-center justify-center rounded-lg shadow-sm">
-                            <span className="text-rose-700 font-bold text-sm">Difference: {fmt(Math.abs(totalLiabilities - totalAssets))} (Not Balanced)</span>
-                        </div>
-                    )}
-
                 </div>
+            </div>
             </main>
         </div>
     );

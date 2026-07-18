@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import ReportToolbar, { printReport } from '@/components/common/ReportToolbar';
-import { Loader2, Eye, X, FileText, Printer, Wallet, Landmark, Activity, Info, Download } from 'lucide-react';
+import Header from '@/components/dashboard/Header';
+import { useNavigate } from 'react-router-dom';
+import { printReport } from '@/components/common/ReportToolbar';
+import { Loader2, Eye, X, FileText, Printer, Wallet, Landmark, Activity, Info, Download, Search } from 'lucide-react';
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const CashAndBank = () => {
+    const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     
@@ -19,6 +23,7 @@ const CashAndBank = () => {
         snapshots: []
     });
 
+    const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
@@ -220,19 +225,66 @@ const CashAndBank = () => {
             `}</style>
 
             <main className="dashboard-main flex flex-col h-screen overflow-hidden bg-slate-50 relative">
-                <ReportToolbar 
+                
+                <Header 
                     title="Cash & Bank"
-                    toggleSidebar={toggleSidebar}
-                    filters={filters}
-                    setFilters={setFilters}
-                    loading={loading}
-                    onRefresh={fetchAudit}
-                    onExportCSV={exportToCSV}
-                    onExportPDF={exportToPDF}
-                    onPrint={handlePrint}
+                    toggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                    onClose={() => navigate('/dashboard/self-service/home')}
+                    actions={
+                        <>
+                            <button type="button" className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm" onClick={exportToCSV} title="Export to Excel">
+                                <Download size={14} className="text-emerald-500" />
+                                <span>Excel</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm" onClick={exportToPDF} title="Export to PDF">
+                                <Download size={14} className="text-rose-500" />
+                                <span>PDF</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm" onClick={handlePrint} title="Print">
+                                <Printer size={14} className="text-indigo-500" />
+                                <span>Print</span>
+                            </button>
+                        </>
+                    }
                 />
+                <div className="master-content-layout fade-in flex flex-col">
+                    <div className="toolbar-premium no-print">
+                        <div className="flex flex-row items-center gap-4 flex-1">
+                            <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="border-orange-500 focus:ring-orange-500"
+                                    style={{ borderColor: '#f97316' }}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">From Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.startDate} 
+                                    onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">To Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.endDate} 
+                                    onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 print-section relative">
+<div className="flex-1 overflow-y-auto print-section relative">
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-black text-slate-900 uppercase">Cash & Bank Statement</h2>
                         <p className="text-slate-600 font-medium">Audit Trail of Cash and Bank Movements</p>
@@ -429,6 +481,7 @@ const CashAndBank = () => {
                         )}
                     </div>
                 </div>
+            </div>
             </main>
         </div>
     );

@@ -870,10 +870,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                                         <div className="flex items-center">
                                             <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
-                                                <span>UNDER</span>
+                                                <span>UNDER <span className="text-red-500">*</span></span>
                                                 <span>:</span>
                                             </label>
                                             <select
+                                                required
                                                 value={mapStandardGroupToUI(formData.group) || ''}
                                                 onChange={e => setFormData({ ...formData, group: mapUIGroupToStandard(e.target.value) })}
                                                 className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"

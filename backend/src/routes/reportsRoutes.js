@@ -26,7 +26,8 @@ const {
     getDaybookReport,
     getCashBankReport,
     getSalesSummary,
-    getGstr1Report
+    getGstr1Report,
+    getTrialBalance
 } = require('../controllers/reportsController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -110,5 +111,8 @@ router.get('/accounts/cash-bank', getCashBankReport);
 
 // GST Reports
 router.get('/gst/gstr1', getGstr1Report);
+
+// Trial Balance
+router.get('/trial-balance', getTrialBalance);
 
 module.exports = router;

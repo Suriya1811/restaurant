@@ -3,13 +3,15 @@ import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import {
     Search, Plus, Calendar, FileText, ChevronDown,
-    ArrowDownCircle, ArrowUpCircle, X, Download, Save, Loader2, Edit, Trash2, XCircle, FileSpreadsheet, FileIcon, Printer, AlertCircle
+    ArrowDownCircle, ArrowUpCircle, X, Download, Save, Loader2, Edit, Trash2, XCircle, FileSpreadsheet, FileIcon, Printer, AlertCircle, Settings, PlusCircle
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
 const VouchersPage = () => {
+    const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     
@@ -45,12 +47,16 @@ const VouchersPage = () => {
     const calculateMetrics = () => {
         let cashIn = 0, bankIn = 0, cashOut = 0, bankOut = 0;
         vouchers.forEach(v => {
-            // Very simplified logic based on mock data requirement.
-            // In a real app, this depends heavily on the debit/credit ledger's group.
-            if (v.voucher_type === 'Receipt') cashIn += v.amount;
-            else if (v.voucher_type === 'Payment') cashOut += v.amount;
+            if (v.voucher_type?.toLowerCase().includes('receipt')) {
+                // Simplified mock logic assuming everything is cash for now, or split if needed
+                cashIn += v.amount;
+            } else if (v.voucher_type?.toLowerCase().includes('payment')) {
+                cashOut += v.amount;
+            }
         });
-        return { cashIn, bankIn, cashOut, bankOut };
+        const totalIn = cashIn + bankIn;
+        const totalOut = cashOut + bankOut;
+        return { cashIn, bankIn, cashOut, bankOut, totalIn, totalOut };
     };
 
     const metrics = calculateMetrics();
@@ -308,176 +314,274 @@ const VouchersPage = () => {
         <div className="flex h-screen bg-[#F8FAFC]">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                    isCollapsed={isCollapsed} 
-                    headerActions={
-                        <>
-                            <button onClick={exportToCSV} className="btn-export excel">
-                                <FileSpreadsheet size={16} /> Excel
-                            </button>
-                            <button onClick={exportToPDF} className="btn-export pdf">
-                                <FileIcon size={16} /> PDF
-                            </button>
-                            <button onClick={handlePrint} className="btn-export print">
-                                <Printer size={16} /> Print
-                            </button>
-                        </>
-                    }
-                />
-                
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                    <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+                <main className="flex-1 overflow-y-auto">
+                    <div className="mx-auto w-full">
                         
-                        {/* Header & Filters */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                                <h1 className="text-xl font-bold text-slate-800">Voucher</h1>
+                        {/* Header */}
+                        <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-slate-100">
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Voucher Display</h1>
+                            <div className="flex items-center gap-3">
+                                <button onClick={exportToCSV} className="btn-export excel" title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button onClick={exportToPDF} className="btn-export pdf" title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button onClick={handlePrint} className="btn-export print" title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-export" style={{borderColor: '#f97316', color: '#f97316'}} title="Column Settings">
+                                    <span className="text-[10px] uppercase font-black text-[#f97316]">Column Settings</span>
+                                    <ChevronDown size={14} />
+                                </button>
+                                <button onClick={handleCreateClick} className="btn-action-add">
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Create Voucher</span>
+                                </button>
+                                <button onClick={() => navigate(-1)} className="btn-export" style={{borderColor: '#e11d48', color: '#e11d48'}} title="Close">
+                                    <X size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-600">Close</span>
+                                </button>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end no-print">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Filter By</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700"
-                                        value={filterType}
-                                        onChange={e => setFilterType(e.target.value)}
-                                    >
-                                        <option value="ALL">All</option>
-                                        {voucherSeries.map(s => (
-                                            <option key={s._id} value={s.series_name}>{s.series_name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Cancel Type</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700"
-                                        value={cancelFilter}
-                                        onChange={e => setCancelFilter(e.target.value)}
-                                    >
-                                        <option value="ALL">All</option>
-                                        <option value="ACTIVE">Active</option>
-                                        <option value="CANCELLED">Cancelled</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Search By</label>
+                        <div className="p-4 md:p-6 space-y-6">
+                            {/* Filters Row */}
+                            <div className="flex items-center justify-between gap-6 pb-2">
+                                <div className="flex-1 max-w-sm">
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" size={16} />
                                         <input 
                                             type="text" 
-                                            placeholder="Voucher Number / Particulars"
-                                            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                                            placeholder="Search Voucher Number / Particulars"
+                                            className="w-full pl-9 pr-3 py-2 border border-orange-400 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-700"
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-2 col-span-1 md:col-span-2 no-print">
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">From Date</label>
-                                        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+                                <div className="flex items-center gap-6">
+                                    <div className="flex flex-col">
+                                        <label className="text-[11px] font-black text-slate-700 mb-1">Voucher Type</label>
+                                        <div className="relative border border-slate-200 rounded-lg bg-white w-40">
+                                            <select 
+                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
+                                                value={filterType}
+                                                onChange={e => setFilterType(e.target.value)}
+                                            >
+                                                <option value="ALL">All</option>
+                                                {voucherSeries.map(s => (
+                                                    <option key={s._id} value={s.series_name}>{s.series_name}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" size={14} />
+                                        </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">To Date</label>
-                                        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+                                    <div className="flex flex-col">
+                                        <label className="text-[11px] font-black text-slate-700 mb-1">Cancel Type</label>
+                                        <div className="relative border border-slate-200 rounded-lg bg-white w-40">
+                                            <select 
+                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
+                                                value={cancelFilter}
+                                                onChange={e => setCancelFilter(e.target.value)}
+                                            >
+                                                <option value="ALL">All</option>
+                                                <option value="ACTIVE">Active</option>
+                                                <option value="CANCELLED">Cancelled</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" size={14} />
+                                        </div>
                                     </div>
-                                    <div className="flex-none flex items-end">
-                                        <button onClick={handleCreateClick} className="h-[38px] px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors whitespace-nowrap">
-                                            <Plus size={16} /> Create Voucher
-                                        </button>
+                                    <div className="flex flex-col">
+                                        <label className="text-[11px] font-black text-slate-700 mb-1">From Date</label>
+                                        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Metric Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white rounded-xl border border-emerald-100 p-4 shadow-sm flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
-                                    <ArrowDownCircle size={24} />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Cash Inflow</div>
-                                    <div className="text-xl font-black text-slate-800">₹ {metrics.cashIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white rounded-xl border border-blue-100 p-4 shadow-sm flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 border border-blue-100">
-                                    <ArrowDownCircle size={24} />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Bank Inflow</div>
-                                    <div className="text-xl font-black text-slate-800">₹ {metrics.bankIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl border border-rose-100 p-4 shadow-sm flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 border border-rose-100">
-                                    <ArrowUpCircle size={24} />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Cash Outflow</div>
-                                    <div className="text-xl font-black text-slate-800">₹ {metrics.cashOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[11px] font-black text-slate-700 mb-1">To Date</label>
+                                        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-xl border border-fuchsia-100 p-4 shadow-sm flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-fuchsia-50 flex items-center justify-center text-fuchsia-500 border border-fuchsia-100">
-                                    <ArrowUpCircle size={24} />
+                        {/* Metric Cards */}
+                        <div className="grid grid-cols-5 gap-4">
+                            {/* Cash */}
+                            <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#ff5722] text-white flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-black text-slate-800 uppercase">CASH</div>
+                                        <div className="text-xl font-black text-slate-900">₹ {(metrics.cashIn - metrics.cashOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Bank Outflow</div>
-                                    <div className="text-xl font-black text-slate-800">₹ {metrics.bankOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                <div className="flex justify-between pt-3 text-[11px] font-black">
+                                    <div>
+                                        <div className="text-slate-900">Cash In</div>
+                                        <div className="text-emerald-500 mt-0.5">₹ {metrics.cashIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div className="text-right border-l border-slate-100 pl-4">
+                                        <div className="text-slate-900">Cash Out</div>
+                                        <div className="text-rose-500 mt-0.5">₹ {metrics.cashOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bank */}
+                            <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#ff5722] text-white flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-black text-slate-800 uppercase">BANK</div>
+                                        <div className="text-xl font-black text-slate-900">₹ {(metrics.bankIn - metrics.bankOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between pt-3 text-[11px] font-black">
+                                    <div>
+                                        <div className="text-slate-900">Bank In</div>
+                                        <div className="text-emerald-500 mt-0.5">₹ {metrics.bankIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div className="text-right border-l border-slate-100 pl-4">
+                                        <div className="text-slate-900">Bank Out</div>
+                                        <div className="text-rose-500 mt-0.5">₹ {metrics.bankOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Total */}
+                            <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#ff5722] text-white flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-black text-slate-800 uppercase">TOTAL</div>
+                                        <div className="text-xl font-black text-slate-900">₹ {(metrics.totalIn - metrics.totalOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between pt-3 text-[11px] font-black">
+                                    <div>
+                                        <div className="text-slate-900">Total In</div>
+                                        <div className="text-emerald-500 mt-0.5">₹ {metrics.totalIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div className="text-right border-l border-slate-100 pl-4">
+                                        <div className="text-slate-900">Total Out</div>
+                                        <div className="text-rose-500 mt-0.5">₹ {metrics.totalOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cash Balance */}
+                            <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#ff5722] text-white flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-black text-slate-800 uppercase">CASH BALANCE</div>
+                                        <div className="text-xl font-black text-slate-900">₹ {(metrics.cashIn - metrics.cashOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-center pt-3 text-[11px] font-black text-center">
+                                    <div>
+                                        <div className="text-slate-900">Cash Balance</div>
+                                        <div className="text-emerald-500 mt-0.5">₹ {(metrics.cashIn - metrics.cashOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bank Balance */}
+                            <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#ff5722] text-white flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-black text-slate-800 uppercase">BANK BALANCE</div>
+                                        <div className="text-xl font-black text-slate-900">₹ {(metrics.bankIn - metrics.bankOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-center pt-3 text-[11px] font-black text-center">
+                                    <div>
+                                        <div className="text-slate-900">Bank Balance</div>
+                                        <div className="text-blue-500 mt-0.5">₹ {(metrics.bankIn - metrics.bankOut).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Data Table */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
+                                <table className="w-full text-center border-collapse min-w-[1000px]">
                                     <thead>
-                                        <tr className="bg-slate-50/80 border-b border-slate-200">
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Date</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Voucher Number</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Voucher Type</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Particulars</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Cash In</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Cash Out</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700">Type</th>
-                                            <th className="py-3 px-4 text-xs font-bold text-slate-700 text-center">Action</th>
+                                        <tr className="bg-[#0f172a] border-b border-slate-700">
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Date</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Number</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Type</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase text-left">Particulars</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cash In</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cash Out</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Bank In</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Bank Out</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Total In</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Total Out</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Type</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cancel Type</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Status</th>
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y divide-slate-100 bg-white">
                                         {loading ? (
-                                            <tr><td colSpan="8" className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
+                                            <tr><td colSpan="14" className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
                                         ) : filteredVouchers.length === 0 ? (
-                                            <tr><td colSpan="8" className="py-8 text-center text-slate-400">No vouchers found</td></tr>
+                                            <tr><td colSpan="14" className="py-8 text-center text-slate-400">No vouchers found</td></tr>
                                         ) : (
                                             filteredVouchers.map((v) => {
                                                 const isReceipt = v.voucher_type?.toLowerCase().includes('receipt');
                                                 const cashIn = isReceipt ? v.amount : '-';
                                                 const cashOut = !isReceipt ? v.amount : '-';
-                                                const typeStr = 'Cash'; // simplified for mock
+                                                // Assuming mock bank is '-' for now
+                                                const bankIn = '-';
+                                                const bankOut = '-';
+                                                const totalIn = cashIn;
+                                                const totalOut = cashOut;
+                                                const typeStr = 'Cash'; 
                                                 return (
-                                                    <tr key={v._id} className="hover:bg-slate-50/50 transition-colors group">
-                                                        <td className="py-3 px-4 text-sm font-medium text-slate-700 whitespace-nowrap">
+                                                    <tr key={v._id} className="hover:bg-slate-50 transition-colors group">
+                                                        <td className="py-3 px-3 text-xs font-black text-slate-700 whitespace-nowrap">
                                                             {new Date(v.date).toLocaleDateString('en-GB')}
                                                         </td>
-                                                        <td className="py-3 px-4 text-sm text-slate-600">{v.voucher_number}</td>
-                                                        <td className="py-3 px-4 text-sm text-slate-600">{v.voucher_type}</td>
-                                                        <td className="py-3 px-4 text-sm text-slate-800">{v.narration || '-'}</td>
-                                                        <td className="py-3 px-4 text-sm font-medium text-slate-800">{cashIn !== '-' ? cashIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-4 text-sm font-medium text-slate-800">{cashOut !== '-' ? cashOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-4 text-sm text-slate-600">{typeStr}</td>
-                                                        <td className="py-3 px-4">
-                                                            <div className="flex justify-center">
-                                                                <button onClick={() => handleDelete(v._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete">
-                                                                    <Trash2 size={16} />
+                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_number}</td>
+                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_type}</td>
+                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700 text-left">{v.narration || '-'}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashIn !== '-' ? cashIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashOut !== '-' ? cashOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankIn}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankOut}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalIn !== '-' ? totalIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalOut !== '-' ? totalOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{typeStr}</td>
+                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">-</td>
+                                                        <td className="py-3 px-3 text-xs font-bold text-slate-700">Active</td>
+                                                        <td className="py-3 px-3">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button className="flex items-center gap-1 px-1.5 py-1 border border-orange-500 text-orange-500 rounded text-[10px] font-bold hover:bg-orange-50 transition-colors">
+                                                                    <Edit size={10} /> Alter
+                                                                </button>
+                                                                <button className="flex items-center gap-1 px-1.5 py-1 border border-rose-500 text-rose-500 rounded text-[10px] font-bold hover:bg-rose-50 transition-colors">
+                                                                    <XCircle size={10} /> Cancel
+                                                                </button>
+                                                                <button onClick={() => handleDelete(v._id)} className="flex items-center gap-1 px-1.5 py-1 border border-rose-500 text-rose-500 rounded text-[10px] font-bold hover:bg-rose-50 transition-colors" title="Delete">
+                                                                    <Trash2 size={10} /> Delete
                                                                 </button>
                                                             </div>
                                                         </td>
@@ -491,14 +595,14 @@ const VouchersPage = () => {
                             <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-500 flex justify-between items-center no-print">
                                 <span>Showing 1 to {filteredVouchers.length} of {filteredVouchers.length} entries</span>
                                 <div className="flex items-center gap-1">
-                                    <button className="px-2 py-1 border border-slate-200 rounded bg-white text-slate-400">&lt;</button>
-                                    <button className="px-2 py-1 border border-[#FF5722] rounded bg-[#FF5722] text-white">1</button>
-                                    <button className="px-2 py-1 border border-slate-200 rounded bg-white text-slate-600 hover:bg-slate-50">&gt;</button>
+                                    <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white font-bold">&lt;</button>
+                                    <button className="px-2.5 py-1 border border-[#f97316] rounded bg-[#f97316] text-white font-bold">1</button>
+                                    <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white font-bold">&gt;</button>
                                 </div>
                             </div>
                         </div>
-
                     </div>
+                </div>
                 </main>
             </div>
 
@@ -511,13 +615,13 @@ const VouchersPage = () => {
                         {/* Modal Header */}
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-500 flex items-center justify-center">
                                     <FileText size={18} />
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-800">Create Voucher</h2>
+                                <h2 className="text-xl font-bold text-slate-800">Voucher Creation</h2>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="btn-action-close">
-                                <XCircle size={16} /> Close
+                            <button onClick={() => setShowModal(false)} className="flex items-center gap-1.5 px-3 py-1.5 border border-rose-500 text-rose-600 font-bold text-xs rounded-lg hover:bg-rose-50 transition-colors">
+                                <XCircle size={14} /> Close
                             </button>
                         </div>
 
@@ -530,13 +634,13 @@ const VouchersPage = () => {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
                                 {/* Voucher Type */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Voucher Type <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Type <span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <select 
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium appearance-none focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
                                             value={formData.voucher_type}
                                             onChange={e => setFormData({...formData, voucher_type: e.target.value})}
                                         >
@@ -545,16 +649,16 @@ const VouchersPage = () => {
                                                 <option key={s._id} value={s.series_name}>{s.series_name}</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
                                     </div>
                                 </div>
 
                                 {/* Voucher Number Preview */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Voucher Number <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Number <span className="text-rose-500">*</span></label>
                                     <input 
                                         type="text" 
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-slate-500 font-semibold shadow-sm"
+                                        className="w-full bg-slate-50 border border-orange-400 rounded-xl px-4 py-3 text-slate-600 font-semibold shadow-sm"
                                         value={formData.voucher_number || 'Select type first'}
                                         readOnly
                                         disabled
@@ -563,11 +667,11 @@ const VouchersPage = () => {
 
                                 {/* Date */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Date <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Date <span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <input 
                                             type="date" 
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 pr-10 text-slate-700 font-medium focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 pr-10 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
                                             value={formData.date}
                                             onChange={e => setFormData({...formData, date: e.target.value})}
                                         />
@@ -575,13 +679,13 @@ const VouchersPage = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
                                 {/* Party Name */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Party Name <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Party Name <span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <select 
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium appearance-none focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
                                             value={formData.party_ledger}
                                             onChange={e => setFormData({...formData, party_ledger: e.target.value})}
                                         >
@@ -590,19 +694,19 @@ const VouchersPage = () => {
                                                 <option key={l._id} value={l._id}>{l.name}</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
                                     </div>
-                                    <div className="mt-2 px-1 text-sm font-medium text-blue-600 bg-blue-50/50 rounded py-1 inline-block">Balance: ₹ 0.00</div>
+                                    <div className="mt-2 px-1 text-[11px] font-bold text-blue-600 inline-block">Balance: ₹ 0.00</div>
                                 </div>
 
                                 {/* Amount */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Amount <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Amount <span className="text-rose-500">*</span></label>
                                     <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</div>
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">₹</div>
                                         <input 
                                             type="number" 
-                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+                                            className="w-full bg-white border border-orange-400 rounded-xl pl-8 pr-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
                                             value={formData.amount}
                                             onChange={e => setFormData({...formData, amount: e.target.value})}
                                             placeholder="0.00"
@@ -612,10 +716,10 @@ const VouchersPage = () => {
 
                                 {/* Type (Payment Ledger) */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Type <span className="text-rose-500">*</span></label>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Type <span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <select 
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium appearance-none focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
                                             value={formData.payment_ledger}
                                             onChange={e => setFormData({...formData, payment_ledger: e.target.value})}
                                         >
@@ -630,16 +734,16 @@ const VouchersPage = () => {
                                                 ))
                                             )}
                                         </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Narration */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Narration <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Narration <span className="text-rose-500">*</span></label>
                                 <textarea 
-                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm resize-none h-24"
+                                    className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm resize-none h-24"
                                     value={formData.narration}
                                     onChange={e => setFormData({...formData, narration: e.target.value})}
                                     placeholder="Enter narration details..."
@@ -648,13 +752,13 @@ const VouchersPage = () => {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-center shrink-0">
+                        <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
                             <button 
                                 onClick={handleSubmit}
                                 disabled={submitting || !formData.voucher_type || !formData.party_ledger || !formData.amount || !formData.payment_ledger}
-                                className="bg-[#FF5722] hover:bg-[#F4511E] text-white px-8 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[160px] justify-center"
+                                className="bg-[#f97316] hover:bg-orange-600 text-white px-8 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                 {submitting ? 'Saving...' : 'Save'}
                             </button>
                         </div>

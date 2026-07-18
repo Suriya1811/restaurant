@@ -1939,3 +1939,129 @@ exports.getGstr1Report = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get Trial Balance
+exports.getTrialBalance = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        let start = new Date(startDate || new Date().setMonth(new Date().getMonth() - 1));
+        start.setHours(0, 0, 0, 0);
+        let end = new Date(endDate || new Date());
+        end.setHours(23, 59, 59, 999);
+
+        const Ledger = require('../models/Ledger');
+        const Voucher = require('../models/Voucher');
+
+        // Fetch all ledgers
+        const ledgers = await Ledger.find({ company_id: req.user.restaurant_id });
+
+        // Fetch all vouchers up to end date (ignoring deleted/cancelled vouchers if applicable, wait, voucher doesn't have is_deleted by default but let's assume all valid)
+        const vouchers = await Voucher.find({
+            company_id: req.user.restaurant_id,
+            date: { $lte: end }
+        });
+
+        const ledgerMap = {};
+        ledgers.forEach(l => {
+            ledgerMap[l._id.toString()] = {
+                _id: l._id,
+                name: l.name,
+                group: l.group || 'Ungrouped',
+                opDr: l.balance_type === 'DR' ? (l.opening_balance || 0) : 0,
+                opCr: l.balance_type === 'CR' ? (l.opening_balance || 0) : 0,
+                trxDr: 0,
+                trxCr: 0,
+                clDr: 0,
+                clCr: 0
+            };
+        });
+
+        vouchers.forEach(v => {
+            const date = new Date(v.date);
+            const amt = v.amount || 0;
+            const isBeforeStart = date < start;
+            
+            // Debit Side
+            if (v.debit_ledger && ledgerMap[v.debit_ledger.toString()]) {
+                if (isBeforeStart) {
+                    ledgerMap[v.debit_ledger.toString()].opDr += amt;
+                } else {
+                    ledgerMap[v.debit_ledger.toString()].trxDr += amt;
+                }
+            }
+
+            // Credit Side
+            if (v.credit_ledger && ledgerMap[v.credit_ledger.toString()]) {
+                if (isBeforeStart) {
+                    ledgerMap[v.credit_ledger.toString()].opCr += amt;
+                } else {
+                    ledgerMap[v.credit_ledger.toString()].trxCr += amt;
+                }
+            }
+        });
+
+        const groupMap = {};
+
+        Object.values(ledgerMap).forEach(l => {
+            // Net the Opening Balance
+            const netOp = l.opDr - l.opCr;
+            if (netOp > 0) { l.opDr = netOp; l.opCr = 0; }
+            else if (netOp < 0) { l.opCr = Math.abs(netOp); l.opDr = 0; }
+            else { l.opDr = 0; l.opCr = 0; }
+            
+            // Net the Closing Balance (Op + TrxDr - TrxCr)
+            const netClosing = l.opDr - l.opCr + l.trxDr - l.trxCr;
+            if (netClosing > 0) { l.clDr = netClosing; l.clCr = 0; }
+            else if (netClosing < 0) { l.clCr = Math.abs(netClosing); l.clDr = 0; }
+            else { l.clDr = 0; l.clCr = 0; }
+
+            // Filter out ledgers with absolutely 0 balances and transactions
+            if (l.opDr === 0 && l.opCr === 0 && l.trxDr === 0 && l.trxCr === 0 && l.clDr === 0 && l.clCr === 0) {
+                return;
+            }
+
+            if (!groupMap[l.group]) {
+                groupMap[l.group] = {
+                    group: l.group,
+                    opDr: 0, opCr: 0, trxDr: 0, trxCr: 0, clDr: 0, clCr: 0,
+                    ledgers: []
+                };
+            }
+
+            const g = groupMap[l.group];
+            g.opDr += l.opDr;
+            g.opCr += l.opCr;
+            g.trxDr += l.trxDr;
+            g.trxCr += l.trxCr;
+            g.clDr += l.clDr;
+            g.clCr += l.clCr;
+
+            g.ledgers.push(l);
+        });
+
+        // Format and sort groups
+        const groups = Object.values(groupMap).map(g => {
+            // Net the group's Op and Cl balances just like ledgers
+            const netOp = g.opDr - g.opCr;
+            if (netOp > 0) { g.opDr = netOp; g.opCr = 0; }
+            else if (netOp < 0) { g.opCr = Math.abs(netOp); g.opDr = 0; }
+            else { g.opDr = 0; g.opCr = 0; }
+
+            const netCl = g.clDr - g.clCr;
+            if (netCl > 0) { g.clDr = netCl; g.clCr = 0; }
+            else if (netCl < 0) { g.clCr = Math.abs(netCl); g.clDr = 0; }
+            else { g.clDr = 0; g.clCr = 0; }
+
+            g.ledgers.sort((a, b) => a.name.localeCompare(b.name));
+            return g;
+        });
+
+        groups.sort((a, b) => a.group.localeCompare(b.group));
+
+        res.status(200).json({ success: true, data: groups });
+
+    } catch (error) {
+        console.error('Trial Balance Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

@@ -1,95 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import ReportToolbar, { printReport } from '@/components/common/ReportToolbar';
+import Header from '@/components/dashboard/Header';
+import { Download, Printer, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { printReport } from '@/components/common/ReportToolbar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getNatureForGroup } from '@/utils/standardGroups';
 
-const mockProfitLossData = {
-    expenses: [
-        {
-            group: "Direct Expenses",
-            total: 350000,
-            ledgers: [
-                { name: "Purchase A/c", amount: 250000 },
-                { name: "Freight Inward", amount: 50000 },
-                { name: "Carriage Inward", amount: 50000 }
-            ]
-        },
-        {
-            group: "Indirect Expenses",
-            total: 175000,
-            ledgers: [
-                { name: "Salary", amount: 100000 },
-                { name: "Rent", amount: 50000 },
-                { name: "Electricity", amount: 25000 }
-            ]
-        },
-        {
-            group: "Depreciation",
-            total: 50000,
-            ledgers: [
-                { name: "Building Depreciation", amount: 30000 },
-                { name: "Furniture Depreciation", amount: 20000 }
-            ]
-        }
-    ],
-    income: [
-        {
-            group: "Direct Income",
-            total: 850000,
-            ledgers: [
-                { name: "Sales A/c", amount: 800000 },
-                { name: "Service Income", amount: 50000 }
-            ]
-        },
-        {
-            group: "Indirect Income",
-            total: 75000,
-            ledgers: [
-                { name: "Interest Received", amount: 25000 },
-                { name: "Commission Received", amount: 50000 }
-            ]
-        },
-        {
-            group: "Other Income",
-            total: 25000,
-            ledgers: [
-                { name: "Miscellaneous Income", amount: 25000 }
-            ]
-        }
-    ]
-};
+const API = import.meta.env.VITE_API_URL;
+const getToken = () => JSON.parse(localStorage.getItem('user'))?.token;
 
 const fmt = (num) => {
-    if (!num) return '-';
+    if (!num) return '';
     return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const ProfitLoss = () => {
+    const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isDetailView, setIsDetailView] = useState(false);
+    const [data, setData] = useState({ expenses: [], income: [] });
     
+    const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
     });
 
-    const data = mockProfitLossData;
+    useEffect(() => {
+        const fetchProfitLoss = async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(`${API}/reports/trial-balance?startDate=${filters.startDate}&endDate=${filters.endDate}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const json = await res.json();
+                if (json.success) {
+                    const expenses = [];
+                    const income = [];
+                    json.data.forEach(group => {
+                        const nature = getNatureForGroup(group.group);
+                        const total = group.clDr > 0 ? group.clDr : group.clCr;
+                        const ledgers = group.ledgers.map(l => ({
+                            name: l.name,
+                            amount: l.clDr > 0 ? l.clDr : l.clCr
+                        }));
+                        if (nature === 'EXPENSES') expenses.push({ group: group.group, total, ledgers });
+                        else if (nature === 'INCOME') income.push({ group: group.group, total, ledgers });
+                    });
+                    setData({ expenses, income });
+                }
+            } catch (error) {
+                console.error('Error fetching Profit Loss:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfitLoss();
+    }, [filters.startDate, filters.endDate]);
 
     const totalExpenses = data.expenses.reduce((sum, g) => sum + g.total, 0);
     const totalIncome = data.income.reduce((sum, g) => sum + g.total, 0);
-    
-    const isProfit = totalIncome >= totalExpenses;
-    const netDifference = Math.abs(totalIncome - totalExpenses);
-    
-    // Balanced Total
-    const grandTotal = Math.max(totalExpenses, totalIncome);
 
     const exportToCSV = () => {
         const rows = [["Expenses", "Amount", "Income", "Amount"]];
-        
         const maxLen = Math.max(data.expenses.length, data.income.length);
         
         for (let i = 0; i < maxLen; i++) {
@@ -97,27 +74,31 @@ const ProfitLoss = () => {
             const iGroup = data.income[i];
             
             rows.push([
-                eGroup ? eGroup.group : "",
-                eGroup ? eGroup.total : "",
-                iGroup ? iGroup.group : "",
-                iGroup ? iGroup.total : ""
-            ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+                eGroup ? "[Group] " + eGroup.group : "", eGroup ? eGroup.total : "",
+                iGroup ? "[Group] " + iGroup.group : "", iGroup ? iGroup.total : ""
+            ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
+            
+            if (isDetailView) {
+                const eLedgers = eGroup ? eGroup.ledgers : [];
+                const iLedgers = iGroup ? iGroup.ledgers : [];
+                const maxLedgers = Math.max(eLedgers.length, iLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const eL = eLedgers[j];
+                    const iL = iLedgers[j];
+                    rows.push([
+                        eL ? "    " + eL.name : "", eL ? eL.amount : "",
+                        iL ? "    " + iL.name : "", iL ? iL.amount : ""
+                    ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
+                }
+            }
         }
 
-        // Add Net Profit / Loss row
         rows.push([
-            isProfit ? "Net Profit" : "",
-            isProfit ? netDifference : "",
-            !isProfit ? "Net Loss" : "",
-            !isProfit ? netDifference : ""
-        ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
-
-        rows.push([
-            "Total", grandTotal, "Total", grandTotal
-        ].map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','));
+            "Total", totalExpenses, "Total", totalIncome
+        ].map(cell => `"\${String(cell).replace(/"/g, '""')}"`).join(','));
 
         const csvContent = "data:text/csv;charset=utf-8," + 
-            "Profit & Loss Report\n" + 
+            "Profit & Loss Account\n" + 
             `Filters - From: ${filters.startDate} | To: ${filters.endDate}\n\n` +
             rows.join('\n');
             
@@ -134,7 +115,7 @@ const ProfitLoss = () => {
         const doc = new jsPDF('landscape');
         
         doc.setFontSize(18);
-        doc.text('Profit & Loss Report', 14, 22);
+        doc.text('Profit & Loss Account', 14, 22);
         doc.setFontSize(11);
         doc.setTextColor(100);
         doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 30);
@@ -151,26 +132,34 @@ const ProfitLoss = () => {
             const iGroup = data.income[i];
             
             body.push([
-                eGroup ? eGroup.group : "",
+                eGroup ? "[Group] " + eGroup.group : "",
                 eGroup ? fmt(eGroup.total) : "",
-                iGroup ? iGroup.group : "",
+                iGroup ? "[Group] " + iGroup.group : "",
                 iGroup ? fmt(iGroup.total) : ""
             ]);
+            
+            if (isDetailView) {
+                const eLedgers = eGroup ? eGroup.ledgers : [];
+                const iLedgers = iGroup ? iGroup.ledgers : [];
+                const maxLedgers = Math.max(eLedgers.length, iLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const eL = eLedgers[j];
+                    const iL = iLedgers[j];
+                    body.push([
+                        eL ? "    " + eL.name : "",
+                        eL ? fmt(eL.amount) : "",
+                        iL ? "    " + iL.name : "",
+                        iL ? fmt(iL.amount) : ""
+                    ]);
+                }
+            }
         }
-        
-        // Add Net Profit / Loss row
-        body.push([
-            isProfit ? { content: 'Net Profit', styles: { fontStyle: 'bold', textColor: [21, 128, 61] } } : "",
-            isProfit ? { content: fmt(netDifference), styles: { fontStyle: 'bold', textColor: [21, 128, 61] } } : "",
-            !isProfit ? { content: 'Net Loss', styles: { fontStyle: 'bold', textColor: [225, 29, 72] } } : "",
-            !isProfit ? { content: fmt(netDifference), styles: { fontStyle: 'bold', textColor: [225, 29, 72] } } : ""
-        ]);
 
         body.push([
             { content: 'Total', styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }, 
-            { content: fmt(grandTotal), styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }, 
+            { content: fmt(totalExpenses), styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }, 
             { content: 'Total', styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }, 
-            { content: fmt(grandTotal), styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }
+            { content: fmt(totalIncome), styles: { fontStyle: 'bold', textColor: [234, 88, 12] } }
         ]);
 
         autoTable(doc, {
@@ -178,7 +167,7 @@ const ProfitLoss = () => {
             head: head,
             body: body,
             theme: 'grid',
-            headStyles: { fillColor: [15, 23, 42], halign: 'left' },
+            headStyles: { fillColor: [15, 23, 42], textColor: [249, 115, 22], halign: 'left' },
             styles: { fontSize: 9 },
             columnStyles: {
                 1: { halign: 'right' },
@@ -199,59 +188,56 @@ const ProfitLoss = () => {
         const maxLen = Math.max(data.expenses.length, data.income.length);
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
-            const e = data.expenses[i];
-            const inc = data.income[i];
-            rows.push([e ? e.group : '', e ? fmt(e.total) : '', inc ? inc.group : '', inc ? fmt(inc.total) : '']);
+            const eGroup = data.expenses[i];
+            const iGroup = data.income[i];
+            rows.push([
+                eGroup ? "[Group] " + eGroup.group : "", eGroup ? fmt(eGroup.total) : "", 
+                iGroup ? "[Group] " + iGroup.group : "", iGroup ? fmt(iGroup.total) : ""
+            ]);
+            
+            if (isDetailView) {
+                const eLedgers = eGroup ? eGroup.ledgers : [];
+                const iLedgers = iGroup ? iGroup.ledgers : [];
+                const maxLedgers = Math.max(eLedgers.length, iLedgers.length);
+                for(let j=0; j<maxLedgers; j++) {
+                    const eL = eLedgers[j];
+                    const iL = iLedgers[j];
+                    rows.push([
+                        eL ? "    " + eL.name : "", eL ? fmt(eL.amount) : "",
+                        iL ? "    " + iL.name : "", iL ? fmt(iL.amount) : ""
+                    ]);
+                }
+            }
         }
-        if (isProfit) rows.push(['Net Profit', fmt(netDifference), '', '']);
-        else rows.push(['', '', 'Net Loss', fmt(netDifference)]);
         printReport(
             'Profit & Loss Account',
-            `From: ${filters.startDate} | To: ${filters.endDate} | ${isProfit ? `Net Profit: ${fmt(netDifference)}` : `Net Loss: ${fmt(netDifference)}`}`,
+            `As on: ${filters.endDate} | From: ${filters.startDate}`,
             headers,
             rows,
-            { label: 'Grand Total', cells: [fmt(grandTotal), '', fmt(grandTotal)] }
+            { label: 'Total', cells: [fmt(totalExpenses), 'Total', fmt(totalIncome)] }
         );
     };
 
-    const renderTableSide = (groups, isExpenseSide) => {
+    const renderTableSide = (groups) => {
         return (
-            <div className="w-full flex flex-col h-full">
-                <div className="flex-1">
-                    {groups.map((g, i) => (
-                        <React.Fragment key={i}>
-                            <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 hover:bg-orange-50/30 transition-colors">
-                                <span className="text-sm font-bold text-orange-600">{g.group}</span>
-                                <span className="text-sm font-bold text-slate-900">{fmt(g.total)}</span>
-                            </div>
-                            {isDetailView && (
-                                <div className="bg-slate-50/50 border-b border-slate-200 overflow-hidden transition-all duration-300">
-                                    {g.ledgers.map((l, idx) => (
-                                        <div key={idx} className="flex items-center justify-between px-6 py-2 pl-10 border-b border-slate-100 last:border-0 hover:bg-slate-100 transition-colors">
-                                            <span className="text-sm text-slate-700 font-medium">{l.name}</span>
-                                            <span className="text-sm text-slate-600">{fmt(l.amount)}</span>
-                                        </div>
-                                    ))}
+            <div className="w-full">
+                {groups.map((g, i) => (
+                    <React.Fragment key={i}>
+                        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 hover:bg-slate-100 transition-colors bg-slate-50">
+                            <span className="text-sm font-black text-slate-900 uppercase">{g.group}</span>
+                            <span className="text-sm font-bold text-slate-700">{fmt(g.total)}</span>
+                        </div>
+                        {isDetailView && g.ledgers.map((l, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-6 py-3 pl-12 border-b border-slate-200 bg-white hover:bg-orange-50/30 transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                                    <span className="text-sm text-slate-700 font-semibold">{l.name}</span>
                                 </div>
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
-                
-                {/* Net Profit / Loss padding row to balance visual height if needed, but handled by flex-1 above */}
-                {/* Render Net Profit on Expense Side, or Net Loss on Income Side */}
-                {isExpenseSide && isProfit && (
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-emerald-50 mt-auto">
-                        <span className="text-sm font-black text-emerald-700">Net Profit</span>
-                        <span className="text-sm font-black text-emerald-700">{fmt(netDifference)}</span>
-                    </div>
-                )}
-                {!isExpenseSide && !isProfit && (
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-rose-50 mt-auto">
-                        <span className="text-sm font-black text-rose-700">Net Loss</span>
-                        <span className="text-sm font-black text-rose-700">{fmt(netDifference)}</span>
-                    </div>
-                )}
+                                <span className="text-sm text-slate-600">{fmt(l.amount)}</span>
+                            </div>
+                        ))}
+                    </React.Fragment>
+                ))}
             </div>
         );
     };
@@ -275,93 +261,137 @@ const ProfitLoss = () => {
             `}</style>
 
             <main className="dashboard-main flex flex-col h-screen overflow-hidden bg-slate-50 relative">
-                <ReportToolbar 
-                    title="Profit & Loss"
+                
+                <Header 
+                    title="Profit & Loss Account"
                     toggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                    filters={filters}
-                    setFilters={setFilters}
-                    loading={loading}
-                    onRefresh={handleRefresh}
-                    onExportCSV={exportToCSV}
-                    onExportPDF={exportToPDF}
-                    onPrint={handlePrint}
+                    onClose={() => navigate('/dashboard/self-service/home')}
+                    actions={
+                        <>
+                            <button type="button" className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm" onClick={exportToCSV} title="Export to Excel">
+                                <Download size={14} className="text-emerald-500" />
+                                <span>Excel</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm" onClick={exportToPDF} title="Export to PDF">
+                                <Download size={14} className="text-rose-500" />
+                                <span>PDF</span>
+                            </button>
+                            <button type="button" className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm" onClick={handlePrint} title="Print">
+                                <Printer size={14} className="text-indigo-500" />
+                                <span>Print</span>
+                            </button>
+                        </>
+                    }
                 />
-
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 print-section relative">
-                    
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="hidden print:block">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase">Profit & Loss</h2>
-                            <p className="text-slate-600 font-medium">Period: {filters.startDate} to {filters.endDate}</p>
+                <div className="master-content-layout fade-in flex flex-col">
+                    <div className="toolbar-premium no-print">
+                        <div className="flex flex-row items-center gap-4 flex-1">
+                            <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="border-orange-500 focus:ring-orange-500"
+                                    style={{ borderColor: '#f97316' }}
+                                />
+                            </div>
                         </div>
-                        
-                        <div className="flex bg-slate-200 p-1 rounded-lg ml-auto no-print">
-                            <button 
-                                onClick={() => setIsDetailView(false)}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${!isDetailView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                            >
-                                Normal View
-                            </button>
-                            <button 
-                                onClick={() => setIsDetailView(true)}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${isDetailView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                            >
-                                Detail View
-                            </button>
+                        <div className="flex gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">From Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.startDate} 
+                                    onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase">To Date</label>
+                                <input 
+                                    type="date" 
+                                    value={filters.endDate} 
+                                    onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))} 
+                                    className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
+<div className="flex-1 overflow-y-auto print-section relative">
+                    
+                    <div className="hidden print:block mb-6">
+                        <h2 className="text-2xl font-black text-slate-900 uppercase">Profit & Loss Account</h2>
+                        <p className="text-slate-600 font-medium">As on: {filters.endDate}</p>
+                    </div>
+
                     <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col mb-4">
+
+
                         {/* Headers */}
-                        <div className="flex bg-[#0f172a] text-white sticky top-0 z-10">
-                            <div className="flex-1 flex border-r border-slate-600">
+                        <div className="flex bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm">
+                            <div className="flex-1 flex border-r border-slate-700">
                                 <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Expenses</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-600">Amount (₹)</div>
+                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
                             </div>
                             <div className="flex-1 flex">
                                 <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Income</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-600">Amount (₹)</div>
+                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
                             </div>
                         </div>
 
                         {/* Body content */}
-                        <div className="flex flex-col sm:flex-row items-stretch relative">
+                        <div className="flex flex-col sm:flex-row items-start relative min-h-[300px]">
+                            {data.expenses.length === 0 && data.income.length === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-500 font-medium bg-white">
+                                    No transactions found for the selected period.
+                                </div>
+                            )}
+                            
                             {/* Expenses side */}
-                            <div className="flex-1 w-full border-b sm:border-b-0 sm:border-r border-slate-200 flex">
-                                {renderTableSide(data.expenses, true)}
+                            <div className="flex-1 w-full sm:border-r border-slate-200 h-full">
+                                {renderTableSide(data.expenses)}
                             </div>
                             
                             {/* Income side */}
-                            <div className="flex-1 w-full flex">
-                                {renderTableSide(data.income, false)}
+                            <div className="flex-1 w-full h-full">
+                                {renderTableSide(data.income)}
                             </div>
                         </div>
 
                         {/* Footer Totals */}
-                        <div className="flex bg-[#fff7ed] border-t-2 border-orange-200 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                        <div className="flex bg-[#fff7ed] border-t border-orange-300 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                             <div className="flex-1 flex border-r border-orange-200">
                                 <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{fmt(grandTotal)}</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalExpenses > 0 || totalIncome > 0) ? fmt(totalExpenses) : ''}</div>
                             </div>
                             <div className="flex-1 flex">
                                 <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{fmt(grandTotal)}</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalExpenses > 0 || totalIncome > 0) ? fmt(totalIncome) : ''}</div>
+                            </div>
+                        </div>
+
+                        {/* Difference Row */}
+                        <div className="flex bg-[#fff7ed] border-t border-orange-200 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                            <div className="flex-1 flex border-r border-orange-200">
+                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
+                                    {(totalExpenses > 0 || totalIncome > 0) && totalExpenses > totalIncome ? fmt(totalExpenses - totalIncome) : ''}
+                                </div>
+                            </div>
+                            <div className="flex-1 flex">
+                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
+                                    {(totalExpenses > 0 || totalIncome > 0) && totalIncome > totalExpenses ? fmt(totalIncome - totalExpenses) : ''}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-center py-2">
-                        {isProfit ? (
-                            <span className="text-emerald-700 font-bold text-sm bg-emerald-50 px-6 py-2 rounded-full border border-emerald-100">
-                                Net Profit for the Period: {fmt(netDifference)}
-                            </span>
-                        ) : (
-                            <span className="text-rose-700 font-bold text-sm bg-rose-50 px-6 py-2 rounded-full border border-rose-100">
-                                Net Loss for the Period: {fmt(netDifference)}
-                            </span>
-                        )}
-                    </div>
                 </div>
+            </div>
             </main>
         </div>
     );
