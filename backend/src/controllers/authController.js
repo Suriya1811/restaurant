@@ -217,20 +217,33 @@ exports.register = async (req, res) => {
             owner_name,
             email,
             mobile,
+            user_id = 'admin',
             password,
             confirm_password,
+            password_enabled = true,
             security_control_enabled,
             logo_url
         } = req.body;
 
+        const isPasswordEnabled = password_enabled !== false;
+
         // 1. Basic Validation
         if (!company_name || !store_name || !print_name || !restaurant_type ||
-            !address || !owner_name || !email || !mobile || !password) {
+            !address || !owner_name || !email || !mobile) {
             return res.status(400).json({ message: 'Please provide all required fields' });
         }
+        
+        if (user_id !== 'admin') {
+            return res.status(400).json({ message: 'User ID must be admin' });
+        }
 
-        if (password !== confirm_password) {
-            return res.status(400).json({ message: 'Passwords do not match' });
+        if (isPasswordEnabled) {
+            if (!password) {
+                return res.status(400).json({ message: 'Password is required when password protection is enabled' });
+            }
+            if (password !== confirm_password) {
+                return res.status(400).json({ message: 'Passwords do not match' });
+            }
         }
 
         // 2. Date Validations & Defaults
@@ -271,7 +284,10 @@ exports.register = async (req, res) => {
                 name: owner_name,
                 email,
                 mobile,
-                password,
+                user_id: user_id.toLowerCase(),
+                password: isPasswordEnabled ? password : '',
+                password_enabled: isPasswordEnabled,
+                password_initialized: isPasswordEnabled,
                 restaurant_id: restaurant._id,
                 security_control_enabled: security_control_enabled !== false, // Default to true
                 role: 'OWNER'
@@ -283,7 +299,7 @@ exports.register = async (req, res) => {
 
             res.status(201).json({
                 success: true,
-                token: generateToken(user._id),
+                // Removed token generation to prevent auto-login
                 user: {
                     id: user._id,
                     name: user.name,
@@ -359,8 +375,8 @@ exports.login = async (req, res) => {
     try {
         const { username, password, company_name } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide username and password' });
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Please provide username' });
         }
 
         // MASTER ADMIN DEFAULT LOGIN BYPASS
@@ -395,12 +411,13 @@ exports.login = async (req, res) => {
             }
         }
 
-        // Build query: find user by email, mobile, or username
+        // Build query: find user by email, mobile, username or user_id
         let query = {
             $or: [
                 { email: username.toLowerCase() },
                 { mobile: username },
-                { username: username.toLowerCase() }
+                { username: username.toLowerCase() },
+                { user_id: username.toLowerCase() }
             ]
         };
 
@@ -427,6 +444,18 @@ exports.login = async (req, res) => {
         let validUser = null;
         for (const u of users) {
             if (u.is_active === false) continue;
+            
+            // If password is not enabled (passwordless login)
+            if (u.password_enabled === false) {
+                validUser = u;
+                break;
+            }
+            
+            // Otherwise, we need a password
+            if (!password) {
+                return res.status(400).json({ success: false, message: 'Password is required' });
+            }
+            
             const isMatch = await u.matchPassword(password);
             if (isMatch) {
                 validUser = u;
@@ -472,4 +501,70 @@ exports.login = async (req, res) => {
     }
 };
 
+// @desc    Check password status for login
+// @route   POST /api/auth/check-status
+// @access  Public
+exports.checkPasswordStatus = async (req, res) => {
+    try {
+        const { username, company_name } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Username is required' });
+        }
+        
+        let query = {
+            $or: [
+                { email: username.toLowerCase() },
+                { mobile: username },
+                { username: username.toLowerCase() },
+                { user_id: username.toLowerCase() }
+            ]
+        };
+        
+        if (company_name) {
+            const restaurant = await Restaurant.findOne({
+                $or: [
+                    { company_name: company_name },
+                    { store_name: company_name },
+                    { print_name: company_name }
+                ]
+            });
+            if (restaurant) {
+                query.restaurant_id = restaurant._id;
+            }
+        }
+        
+        const user = await User.findOne(query);
+        
+        if (!user) {
+            // Return true for non-existent users so we don't leak account existence by showing/hiding password
+            return res.json({ success: true, password_enabled: true });
+        }
+        
+        // Return actual status
+        return res.json({ 
+            success: true, 
+            password_enabled: user.password_enabled !== false 
+        });
+        
+    } catch (error) {
+        console.error('Check status error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 
+// @desc    Get all registered companies
+// @route   GET /api/auth/companies
+// @access  Public
+exports.getCompanies = async (req, res) => {
+    try {
+        const companies = await Restaurant.find({}, '_id company_name store_name print_name logo_url');
+        res.status(200).json({
+            success: true,
+            data: companies
+        });
+    } catch (error) {
+        console.error('Get companies error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch companies' });
+    }
+};

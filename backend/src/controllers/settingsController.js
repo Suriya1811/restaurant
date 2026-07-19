@@ -27,7 +27,8 @@ exports.getUserSettings = async (req, res) => {
                     ownerName: user.name,
                     email: user.email,
                     mobile: user.mobile || '',
-                    businessName: restaurant.company_name
+                    businessName: restaurant.company_name,
+                    password_enabled: user.password_enabled !== false
                 },
                 restaurant: {
                     restaurant_type: restaurant.restaurant_type,
@@ -247,12 +248,31 @@ exports.updateProfile = async (req, res) => {
 exports.changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmPassword } = req.body;
+        
+        // Get user with password
+        const user = await User.findById(req.user.id).select('+password');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
 
         // Validate input
-        if (!currentPassword || !newPassword || !confirmPassword) {
+        const requiresCurrent = user.password_initialized !== false;
+        
+        if (requiresCurrent && !currentPassword) {
             return res.status(400).json({
                 success: false,
-                message: 'All password fields are required'
+                message: 'Current password is required'
+            });
+        }
+        
+        if (!newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password and confirm password are required'
             });
         }
 
@@ -270,27 +290,21 @@ exports.changePassword = async (req, res) => {
             });
         }
 
-        // Get user with password
-        const user = await User.findById(req.user.id).select('+password');
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        // Check current password
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: 'Current password is incorrect'
-            });
+        // Check current password if required
+        if (requiresCurrent) {
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Current password is incorrect'
+                });
+            }
         }
 
         // Set plain password — the User model's pre-save hook will hash it
         user.password = newPassword;
+        user.password_initialized = true;
+        user.password_enabled = true;
         await user.save();
 
         res.status(200).json({
@@ -299,6 +313,71 @@ exports.changePassword = async (req, res) => {
         });
     } catch (error) {
         console.error('Change password error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Toggle password protection
+// @route   PUT /api/settings/toggle-password
+// @access  Private (Admin, Owner)
+exports.togglePasswordProtection = async (req, res) => {
+    try {
+        const { enabled, currentPassword } = req.body;
+
+        if (enabled === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Enabled status is required'
+            });
+        }
+
+        const user = await User.findById(req.user.id).select('+password');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Enabling password protection when none exists requires creating one first
+        if (enabled && user.password_initialized === false) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please create a password first'
+            });
+        }
+
+        // Disabling password protection requires current password verification
+        if (!enabled && user.password_initialized !== false) {
+            if (!currentPassword) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Current password is required to disable password protection'
+                });
+            }
+
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Current password is incorrect'
+                });
+            }
+        }
+
+        user.password_enabled = enabled;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Password protection ${enabled ? 'enabled' : 'disabled'} successfully`,
+            data: {
+                password_enabled: user.password_enabled
+            }
+        });
+    } catch (error) {
+        console.error('Toggle password error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

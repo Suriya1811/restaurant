@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Login.css'; // Reuse login styling
@@ -8,13 +8,51 @@ import './Login.css'; // Reuse login styling
 const LandingPage = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    
+    // Get selected company
+    const selectedCompany = location.state?.company;
+    const companyLogo = location.state?.logo_url;
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isPasswordRequired, setIsPasswordRequired] = useState(true);
+    const [checkingPassword, setCheckingPassword] = useState(false);
+    
     const [formData, setFormData] = useState({
-        username: '',
+        username: 'admin',
         password: ''
     });
+
+    useEffect(() => {
+        if (!selectedCompany) {
+            navigate('/');
+        } else {
+            // Auto check password requirement for admin on mount
+            checkPasswordRequirement('admin');
+        }
+    }, [selectedCompany, navigate]);
+    
+    const checkPasswordRequirement = async (username) => {
+        if (!username || !selectedCompany) return;
+        setCheckingPassword(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/check-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, company_name: selectedCompany })
+            });
+            const data = await response.json();
+            if (data.success && data.password_enabled !== undefined) {
+                setIsPasswordRequired(data.password_enabled);
+            }
+        } catch (err) {
+            console.error('Failed to check password requirement', err);
+        } finally {
+            setCheckingPassword(false);
+        }
+    };
 
     const handleChange = (e) => {
         setFormData({
@@ -28,7 +66,7 @@ const LandingPage = () => {
         setLoading(true);
         setError('');
 
-        const res = await login({ username: formData.username, password: formData.password });
+        const res = await login({ username: formData.username, password: formData.password, company_name: selectedCompany });
 
         if (res.success) {
             navigate('/dashboard/self-service/home');
@@ -51,12 +89,16 @@ const LandingPage = () => {
                 >
                     <div className="form-header mb-8 flex flex-col items-center text-center">
                         <Link to="/">
-                            <img
-                                src="/Logo_new_bg.png"
-                                alt="Yugam Software Logo"
-                                style={{ maxWidth: '250px', height: 'auto' }}
-                            />
+                            {companyLogo ? (
+                                <img src={companyLogo} alt={selectedCompany} style={{ maxWidth: '150px', height: 'auto', marginBottom: '1rem', borderRadius: '8px' }} />
+                            ) : (
+                                <div className="w-16 h-16 bg-[#2563eb] text-white rounded-xl flex items-center justify-center text-2xl font-bold mb-4 shadow-lg shadow-blue-500/30">
+                                    {selectedCompany?.charAt(0).toUpperCase()}
+                                </div>
+                            )}
                         </Link>
+                        <h2 className="text-2xl font-bold text-gray-800">{selectedCompany}</h2>
+                        <p className="text-gray-500 text-sm mt-1">Please sign in to continue</p>
                     </div>
 
                     {error && (
@@ -68,8 +110,8 @@ const LandingPage = () => {
                     <form onSubmit={handleSubmit} className="w-full mt-6">
                         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6 shadow-sm">
                             {/* Email Field */}
-                            <div className="px-5 py-3 border-b border-gray-200">
-                                <label className="block text-[13px] font-medium text-gray-500 mb-1">Email address</label>
+                            <div className="px-5 py-3 border-b border-gray-200 relative">
+                                <label className="block text-[13px] font-medium text-gray-500 mb-1">User ID or Email</label>
                                 <input
                                     type="text"
                                     name="username"
@@ -77,30 +119,34 @@ const LandingPage = () => {
                                     className="w-full text-base font-semibold text-gray-900 bg-[#edf2f7] outline-none border-none py-1.5 px-3 rounded-sm focus:ring-0"
                                     value={formData.username}
                                     onChange={handleChange}
+                                    onBlur={(e) => checkPasswordRequirement(e.target.value)}
                                 />
                             </div>
+                            
                             {/* Password Field */}
-                            <div className="px-5 pt-3 pb-5 relative">
-                                <label className="block text-[13px] font-medium text-gray-500 mb-1">Password</label>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    required
-                                    className="w-full text-base font-semibold text-gray-900 bg-[#edf2f7] outline-none border-none py-1.5 px-3 rounded-sm focus:ring-0 pr-10"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                />
-                                <div 
-                                    className="absolute right-5 top-10 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                     {showPassword ? (
-                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                                     ) : (
-                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                     )}
+                            {isPasswordRequired && (
+                                <div className="px-5 pt-3 pb-5 relative">
+                                    <label className="block text-[13px] font-medium text-gray-500 mb-1">Password</label>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        required={isPasswordRequired}
+                                        className="w-full text-base font-semibold text-gray-900 bg-[#edf2f7] outline-none border-none py-1.5 px-3 rounded-sm focus:ring-0 pr-10"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                    />
+                                    <div 
+                                        className="absolute right-5 top-10 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                         {showPassword ? (
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                         ) : (
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                         )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Remember me */}

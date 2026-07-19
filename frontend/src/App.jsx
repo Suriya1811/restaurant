@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
 const RegisterRestaurant = lazy(() => import('./pages/RegisterRestaurant.jsx'));
+const CompanySelection = lazy(() => import('./pages/CompanySelection.jsx'));
 const SelfServiceDashboard = lazy(() => import('./pages/dashboard/SelfServiceDashboard.jsx'));
 const ProductMaster = lazy(() => import('./pages/dashboard/ProductMaster.jsx'));
 const CategoryMaster = lazy(() => import('./pages/dashboard/CategoryMaster.jsx'));
@@ -104,7 +105,7 @@ function AppRoutes() {
 
     return (
         <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<CompanySelection />} />
             <Route
                 path="/register"
                 element={user ? <Navigate to={getLandingPage()} /> : <RegisterRestaurant />}
