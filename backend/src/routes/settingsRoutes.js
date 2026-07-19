@@ -12,7 +12,8 @@ const {
     updateBillSeries,
     updateModuleSettings,
     createNewProfile,
-    verifyExtraModulesPassword
+    verifyExtraModulesPassword,
+    togglePasswordProtection
 } = require('../controllers/settingsController');
 const {
     createBackup,
@@ -36,6 +37,7 @@ router.put('/profile', updateProfile);
 
 // Change password
 router.put('/password', changePassword);
+router.put('/toggle-password', togglePasswordProtection);
 
 // Update printer settings
 router.put('/printer', updatePrinterSettings);

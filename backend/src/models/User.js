@@ -23,9 +23,17 @@ const userSchema = new mongoose.Schema({
         required: false,
         trim: true
     },
+    user_id: {
+        type: String,
+        default: 'admin',
+        trim: true,
+        lowercase: true
+    },
     password: {
         type: String,
-        required: [true, 'Password is required'],
+        required: function() {
+            return this.password_enabled;
+        },
         minlength: [6, 'Password must be at least 6 characters'],
         select: false
     },
@@ -44,6 +52,14 @@ const userSchema = new mongoose.Schema({
         default: null
     },
     is_active: {
+        type: Boolean,
+        default: true
+    },
+    password_enabled: {
+        type: Boolean,
+        default: true
+    },
+    password_initialized: {
         type: Boolean,
         default: true
     },
@@ -74,6 +90,10 @@ userSchema.index(
 userSchema.index(
     { username: 1, restaurant_id: 1 },
     { unique: true, partialFilterExpression: { username: { $exists: true, $type: "string" } } }
+);
+userSchema.index(
+    { user_id: 1, restaurant_id: 1 },
+    { unique: true, partialFilterExpression: { user_id: { $exists: true, $type: "string" } } }
 );
 
 // Hash password before saving

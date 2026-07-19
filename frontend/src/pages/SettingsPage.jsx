@@ -12,7 +12,7 @@ import {
     User, Key, Printer, FileText, Eye, EyeOff,
     Save, CheckCircle, Palette, AlertCircle, Loader2,
     Building2, Phone, Mail, Lock, Settings, TestTube,
-    LayoutTemplate, Shield, ChevronRight, Sliders, Hash, List, CalendarDays, Search, Wallet
+    LayoutTemplate, Shield, ChevronRight, Sliders, Hash, List, CalendarDays, Search, Wallet, ShieldCheck
 } from 'lucide-react';
 
 const SYSTEM_MODULES_CONFIG = [
@@ -44,6 +44,7 @@ const SettingsPage = () => {
         ownerName: '', email: '', mobile: '', businessName: '', restaurantType: '', billingLayout: 'SIDEBAR'
     });
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [passwordEnabled, setPasswordEnabled] = useState(true);
     const [printerForm, setPrinterForm] = useState({ enabled: false, width: '58mm' });
     const [billForm, setBillForm] = useState({ header: '', footer: '', gstNo: '', autoPrint: false });
 
@@ -89,6 +90,9 @@ const SettingsPage = () => {
                     restaurantType: restaurant.restaurant_type || '',
                     billingLayout: restaurant.billing_layout || 'SIDEBAR'
                 }));
+                if (profile.password_enabled !== undefined) {
+                    setPasswordEnabled(profile.password_enabled);
+                }
                 if (result.data.printer) setPrinterForm(result.data.printer);
                 if (result.data.billFormat) setBillForm(result.data.billFormat);
                 if (result.data.modules) {
@@ -217,10 +221,39 @@ const SettingsPage = () => {
                 body: JSON.stringify(passwordForm)
             });
             const result = await response.json();
-            if (result.success) { setSuccess(prev => ({ ...prev, password: true })); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setTimeout(() => setSuccess(prev => ({ ...prev, password: false })), 3000); }
+            if (result.success) { 
+                setSuccess(prev => ({ ...prev, password: true })); 
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); 
+                // Set password enabled to true if they created a new one
+                setPasswordEnabled(true);
+                setTimeout(() => setSuccess(prev => ({ ...prev, password: false })), 3000); 
+            }
             else { setErrors(prev => ({ ...prev, password: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, password: 'Failed to change password' })); }
         finally { setSaving(prev => ({ ...prev, password: false })); }
+    };
+
+    const togglePassword = async () => {
+        setSaving(prev => ({ ...prev, passwordToggle: true })); clearError('passwordToggle');
+        try {
+            const savedUser = localStorage.getItem('user');
+            const { token } = JSON.parse(savedUser);
+            const newEnabledState = !passwordEnabled;
+            
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/toggle-password`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ enabled: newEnabledState, currentPassword: passwordForm.currentPassword })
+            });
+            const result = await response.json();
+            if (result.success) { 
+                setPasswordEnabled(result.data.password_enabled);
+                setSuccess(prev => ({ ...prev, passwordToggle: true })); 
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setTimeout(() => setSuccess(prev => ({ ...prev, passwordToggle: false })), 3000); 
+            }
+            else { setErrors(prev => ({ ...prev, passwordToggle: result.message })); }
+        } catch (err) { setErrors(prev => ({ ...prev, passwordToggle: 'Failed to toggle password protection' })); }
+        finally { setSaving(prev => ({ ...prev, passwordToggle: false })); }
     };
 
     const savePrinterSettings = async () => {
@@ -298,7 +331,8 @@ const SettingsPage = () => {
         { id: 'general', icon: <Sliders size={18} />, label: 'General', sub: 'Enable modules' },
         { id: 'voucher_series', icon: <Wallet size={18} />, label: 'Voucher Series', sub: 'Dynamic vouchers' },
         { id: 'user_rights', icon: <Lock size={18} />, label: 'User Rights', sub: 'Roles & permissions' },
-        { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' }
+        { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' },
+        { id: 'security', icon: <ShieldCheck size={18} />, label: 'Security', sub: 'Password protection' }
     ];
 
     if (loading) return (
@@ -439,6 +473,82 @@ const SettingsPage = () => {
                                                     </label>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Security Tab */}
+                            {activeTab === 'security' && (
+                                <div className="fade-in">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+                                        <div>
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Security Settings</h3>
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Manage login security</p>
+                                        </div>
+                                    </div>
+
+                                    {errors.passwordToggle && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.passwordToggle}</div>}
+                                    {success.passwordToggle && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Password protection updated!</div>}
+                                    
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 mb-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="font-bold text-slate-800 text-sm">Require Password on Login</h4>
+                                                <p className="text-xs text-slate-500 mt-1">When enabled, users must enter a password to access the POS system.</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={passwordEnabled} 
+                                                    onChange={togglePassword} 
+                                                    disabled={saving.passwordToggle}
+                                                    className="sr-only peer" 
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                            </label>
+                                        </div>
+                                        {/* If disabling, might require current password based on backend logic */}
+                                        {!passwordEnabled && (
+                                            <div className="mt-4 p-4 bg-amber-50 rounded border border-amber-100 text-amber-700 text-xs">
+                                                <AlertCircle size={14} className="inline mr-1" /> Login is currently passwordless. Anyone with the User ID can access the system.
+                                            </div>
+                                        )}
+                                        {/* To disable we need current password if one is set, handled by UI prompt or inline */}
+                                        {/* We will let the toggle trigger. If it fails due to no current password, the user can type it in the form below. */}
+                                    </div>
+
+                                    {errors.password && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.password}</div>}
+                                    {success.password && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Password updated successfully!</div>}
+
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-4">Update Password</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="form-group-premium">
+                                                <label>Current Password</label>
+                                                <input 
+                                                    type="password" 
+                                                    name="currentPassword" 
+                                                    className="input-premium !rounded" 
+                                                    value={passwordForm.currentPassword} 
+                                                    onChange={handlePasswordChange} 
+                                                    placeholder="Required to change or disable password" 
+                                                />
+                                            </div>
+                                            <div className="hidden md:block"></div>
+                                            <div className="form-group-premium">
+                                                <label>New Password</label>
+                                                <input type="password" name="newPassword" className="input-premium !rounded" value={passwordForm.newPassword} onChange={handlePasswordChange} />
+                                            </div>
+                                            <div className="form-group-premium">
+                                                <label>Confirm New Password</label>
+                                                <input type="password" name="confirmPassword" className="input-premium !rounded" value={passwordForm.confirmPassword} onChange={handlePasswordChange} />
+                                            </div>
+                                        </div>
+                                        <div className="mt-6 flex justify-end">
+                                            <button onClick={changePassword} disabled={saving.password} className="btn-premium-primary !py-2 !px-6 !text-sm flex items-center gap-2">
+                                                {saving.password ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} UPDATE PASSWORD
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

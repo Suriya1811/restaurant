@@ -111,19 +111,8 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, userData);
-            const normalizedUser = {
-                ...data.user,
-                _id: data.user.id,
-                token: data.token,
-                restaurant_type: data.restaurant.restaurant_type,
-                restaurant_name: data.restaurant.store_name || data.restaurant.name,
-                logo_url: data.restaurant.logo_url || userData.logo_url
-            };
-            setUser(normalizedUser);
-            setPermissions(null);
-            localStorage.setItem('user', JSON.stringify(normalizedUser));
-            localStorage.removeItem('permissions');
-            return { success: true, data: normalizedUser };
+            // DO NOT create a login session automatically
+            return { success: true, data: data };
         } catch (error) {
             return {
                 success: false,
