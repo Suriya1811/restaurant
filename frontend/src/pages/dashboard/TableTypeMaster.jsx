@@ -24,9 +24,10 @@ const TableTypeMaster = () => {
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [tableTypes, setTableTypes] = useState([]);
+    const [captains, setCaptains] = useState([]);
+    const [waiters, setWaiters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -60,12 +61,30 @@ const TableTypeMaster = () => {
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/table-types`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                setTableTypes(data.data);
+            const [typesRes, captRes, waitRes] = await Promise.all([
+                fetch(`${import.meta.env.VITE_API_URL}/table-types`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${import.meta.env.VITE_API_URL}/captains`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${import.meta.env.VITE_API_URL}/waiters`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
+            const typesData = await typesRes.json();
+            const captData = await captRes.json();
+            const waitData = await waitRes.json();
+
+            if (typesData.success) {
+                setTableTypes(typesData.data);
+            }
+            if (captData.success) {
+                setCaptains(captData.data);
+            }
+            if (waitData.success) {
+                setWaiters(waitData.data);
             }
         } catch (err) {
             console.error("Failed to fetch table types", err);
@@ -167,9 +186,7 @@ const TableTypeMaster = () => {
     };
 
     const filteredTableTypes = tableTypes.filter(t => {
-        const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? t.is_active !== false : t.is_active === false);
-        return matchesSearch && matchesStatus;
+        return t.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
 
@@ -243,16 +260,6 @@ const TableTypeMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
                             <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
                                 TOTAL : {filteredTableTypes.length}
                             </span>
@@ -351,27 +358,33 @@ const TableTypeMaster = () => {
                                         <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
                                             Assigned Captain
                                         </label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. RAJESH"
+                                        <select
                                             value={formData.captain || ''}
-                                            onChange={(e) => setFormData({ ...formData, captain: e.target.value.toUpperCase() })}
-                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                            onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
+                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
                                             style={{ border: '1px solid #f97316' }}
-                                        />
+                                        >
+                                            <option value="">Select captain</option>
+                                            {captains.map(c => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="flex items-center">
                                         <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
                                             Assigned Waiter
                                         </label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. CHANDRU"
+                                        <select
                                             value={formData.waiter || ''}
-                                            onChange={(e) => setFormData({ ...formData, waiter: e.target.value.toUpperCase() })}
-                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                            onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
+                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
                                             style={{ border: '1px solid #f97316' }}
-                                        />
+                                        >
+                                            <option value="">Select waiter</option>
+                                            {waiters.map(w => (
+                                                <option key={w._id} value={w.name}>{w.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 

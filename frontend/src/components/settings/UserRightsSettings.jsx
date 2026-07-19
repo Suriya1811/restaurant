@@ -41,11 +41,12 @@ const UserRightsSettings = () => {
     };
 
     const [users, setUsers] = useState([]);
+    const [filterRole, setFilterRole] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [userForm, setUserForm] = useState({
-        name: '', username: '', password: '', role: 'STAFF', is_active: true
+        name: '', username: '', password: '', role: 'STAFF', is_active: true, password_enabled: true
     });
     const [permissions, setPermissions] = useState(() => initPermissions());
     const [expandedModules, setExpandedModules] = useState({});
@@ -79,7 +80,7 @@ const UserRightsSettings = () => {
     const selectUser = (user) => {
         if (!user) {
             setSelectedUserId(null);
-            setUserForm({ name: '', username: '', password: '', role: 'STAFF', is_active: true });
+            setUserForm({ name: '', username: '', password: '', role: 'STAFF', is_active: true, password_enabled: true });
             setPermissions(initPermissions());
             setError('');
             setSuccess('');
@@ -91,7 +92,8 @@ const UserRightsSettings = () => {
             username: user.username || '',
             password: '', // blank on edit
             role: user.role || 'STAFF',
-            is_active: user.is_active !== false
+            is_active: user.is_active !== false,
+            password_enabled: user.password_enabled !== false
         });
         setPermissions(initPermissions(user.permissions || []));
         setError('');
@@ -127,8 +129,8 @@ const UserRightsSettings = () => {
             setError('Name, Username, and User Type are required');
             return;
         }
-        if (!selectedUserId && !userForm.password) {
-            setError('Password is required for new users');
+        if (!selectedUserId && userForm.password_enabled && !userForm.password) {
+            setError('Password is required for new users when password protection is enabled');
             return;
         }
         
@@ -198,29 +200,50 @@ const UserRightsSettings = () => {
     }
 
     return (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row h-[700px]">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row" style={{ height: 'calc(100vh - 220px)' }}>
             {/* Users List Sidebar */}
             <div className="w-full md:w-64 border-r border-slate-200 bg-slate-50 flex flex-col shrink-0 overflow-y-auto">
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-slate-50 z-10">
-                    <h3 className="font-bold text-slate-800">Users</h3>
-                    <button onClick={() => selectUser(null)} className="p-1.5 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Add New User">
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => setFilterRole(filterRole === 'ADMIN' ? null : 'ADMIN')}
+                            className={`text-xs font-black uppercase tracking-widest transition-colors ${filterRole === 'ADMIN' ? 'text-orange-600 underline underline-offset-4 decoration-2' : 'text-orange-400 hover:text-orange-500'}`}
+                        >
+                            Admins
+                        </button>
+                        <button 
+                            onClick={() => setFilterRole(filterRole === 'STAFF' ? null : 'STAFF')}
+                            className={`text-xs font-black uppercase tracking-widest transition-colors ${filterRole === 'STAFF' ? 'text-orange-600 underline underline-offset-4 decoration-2' : 'text-orange-400 hover:text-orange-500'}`}
+                        >
+                            Users
+                        </button>
+                    </div>
+                    <button onClick={() => selectUser(null)} className="p-1.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200 transition-colors" title="Add New User">
                         <Plus size={16} />
                     </button>
                 </div>
                 <div className="p-2 space-y-1">
-                    {users.map(u => (
+                    {(filterRole ? users.filter(u => u.role === filterRole) : users).map(u => (
                         <div key={u._id} onClick={() => selectUser(u)}
-                            className={`p-3 rounded cursor-pointer flex items-center justify-between group transition-colors ${selectedUserId === u._id ? 'bg-indigo-600 text-white shadow' : 'hover:bg-slate-200 text-slate-700'}`}>
-                            <div className="truncate">
-                                <p className="font-semibold text-sm truncate">{u.name}</p>
-                                <p className={`text-xs mt-0.5 truncate ${selectedUserId === u._id ? 'text-indigo-200' : 'text-slate-500'}`}>@{u.username}</p>
+                            className={`p-3 rounded cursor-pointer flex items-center justify-between group transition-colors ${selectedUserId === u._id ? 'bg-orange-500 text-white shadow' : 'hover:bg-slate-200 text-slate-700'}`}>
+                            <div className="truncate flex-1 pr-2">
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-sm truncate">{u.name}</p>
+                                    <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${selectedUserId === u._id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                        {u.role === 'ADMIN' ? 'Admin' : 'User'}
+                                    </span>
+                                </div>
+                                <p className={`text-xs mt-0.5 truncate ${selectedUserId === u._id ? 'text-orange-100' : 'text-slate-500'}`}>@{u.username}</p>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); deleteUser(u._id); }} className={`p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${selectedUserId === u._id ? 'hover:bg-indigo-500 text-indigo-200' : 'hover:bg-red-100 text-red-500'}`}>
+                            <button onClick={(e) => { e.stopPropagation(); deleteUser(u._id); }} className={`p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${selectedUserId === u._id ? 'hover:bg-orange-600 text-orange-100' : 'hover:bg-red-100 text-red-500'}`}>
                                 <Trash2 size={14} />
                             </button>
                         </div>
                     ))}
                     {users.length === 0 && <p className="text-center text-slate-500 text-sm mt-4">No users found</p>}
+                    {users.length > 0 && filterRole && users.filter(u => u.role === filterRole).length === 0 && (
+                        <p className="text-center text-slate-500 text-sm mt-4">No {filterRole === 'ADMIN' ? 'admins' : 'users'} found</p>
+                    )}
                 </div>
             </div>
 
@@ -228,30 +251,15 @@ const UserRightsSettings = () => {
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white relative">
                 
                 {/* Left Section: User Details */}
-                <div className="w-full md:w-1/3 border-r border-slate-200 p-6 overflow-y-auto bg-slate-50/30">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">
+                <div className="w-full md:w-1/3 border-r border-slate-200 p-4 lg:p-5 overflow-y-auto bg-slate-50/30">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-3">
                         {selectedUserId ? 'Edit User' : 'New User'}
                     </h3>
 
-                    {error && <div className="bg-rose-50 text-rose-600 p-3 rounded mb-4 text-sm font-semibold flex items-center gap-2"><AlertCircle size={16}/> {error}</div>}
-                    {success && <div className="bg-emerald-50 text-emerald-700 p-3 rounded mb-4 text-sm font-semibold flex items-center gap-2"><Check size={16}/> {success}</div>}
+                    {error && <div className="bg-rose-50 text-rose-600 p-3 rounded mb-3 text-sm font-semibold flex items-center gap-2"><AlertCircle size={16}/> {error}</div>}
+                    {success && <div className="bg-emerald-50 text-emerald-700 p-3 rounded mb-3 text-sm font-semibold flex items-center gap-2"><Check size={16}/> {success}</div>}
 
-                    <div className="space-y-5">
-                        <div className="form-group-premium">
-                            <label>Name</label>
-                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Full Name" 
-                                value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} />
-                        </div>
-                        <div className="form-group-premium">
-                            <label>Username</label>
-                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Username (login ID)" 
-                                value={userForm.username} onChange={e => setUserForm({...userForm, username: e.target.value.toLowerCase()})} />
-                        </div>
-                        <div className="form-group-premium">
-                            <label>Password {selectedUserId && <span className="text-slate-400 font-normal">(Leave blank to keep current)</span>}</label>
-                            <input type="password" className="input-premium !rounded !bg-white" placeholder="Password" 
-                                value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} />
-                        </div>
+                    <div className="space-y-3">
                         <div className="form-group-premium">
                             <label>User Type</label>
                             <select className="input-premium !rounded !bg-white" 
@@ -261,17 +269,45 @@ const UserRightsSettings = () => {
                             </select>
                         </div>
                         <div className="form-group-premium">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={userForm.is_active} onChange={e => setUserForm({...userForm, is_active: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"/>
-                                <span>Active Account</span>
-                            </label>
+                            <label>Name</label>
+                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Full Name" 
+                                autoComplete="off"
+                                value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} />
+                        </div>
+                        <div className="form-group-premium">
+                            <label>Username</label>
+                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Username (login ID)" 
+                                autoComplete="off"
+                                value={userForm.username} onChange={e => setUserForm({...userForm, username: e.target.value.toLowerCase()})} />
+                        </div>
+                        <div className="form-group-premium">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="mb-0">Password {selectedUserId && <span className="text-slate-400 font-normal">(Leave blank to keep current)</span>}</label>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={userForm.password_enabled} 
+                                        onChange={(e) => setUserForm({ ...userForm, password_enabled: e.target.checked })} 
+                                        className="sr-only peer" 
+                                    />
+                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                                </label>
+                            </div>
+                            {userForm.password_enabled && (
+                                <input type="password" className="input-premium !rounded !bg-white" placeholder="Password" 
+                                    autoComplete="new-password"
+                                    value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} />
+                            )}
+                            {!userForm.password_enabled && (
+                                <div className="text-xs text-slate-500 italic mt-1">Password protection is disabled. User can login using username only.</div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="mt-8">
-                        <button onClick={saveUser} disabled={saving} className="w-full btn-premium-primary !py-3 flex items-center justify-center gap-2">
+                    <div className="mt-5">
+                        <button onClick={saveUser} disabled={saving} className="w-full !bg-orange-500 hover:!bg-orange-600 text-white shadow-lg shadow-orange-200 font-bold rounded-lg !py-2.5 flex items-center justify-center gap-2 transition-all">
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                            SAVE USER
+                            SAVE
                         </button>
                     </div>
                 </div>
@@ -281,7 +317,7 @@ const UserRightsSettings = () => {
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">User Permissions</h3>
                         {userForm.role === 'ADMIN' && (
-                            <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                                 Admins have full access
                             </span>
                         )}
@@ -294,7 +330,7 @@ const UserRightsSettings = () => {
                             
                             return (
                                 <div key={mod.key} className="border border-slate-200 rounded-lg overflow-hidden">
-                                    <div className={`flex items-center justify-between p-3 cursor-pointer ${isExpanded ? 'bg-indigo-50/50 border-b border-slate-200' : 'hover:bg-slate-50'}`}
+                                    <div className={`flex items-center justify-between p-3 cursor-pointer ${isExpanded ? 'bg-orange-50/50 border-b border-slate-200' : 'hover:bg-slate-50'}`}
                                         onClick={() => toggleModuleExpand(mod.key)}>
                                         <div className="flex items-center gap-3">
                                             <div onClick={e => e.stopPropagation()} className="flex items-center h-full">
@@ -302,7 +338,7 @@ const UserRightsSettings = () => {
                                                     type="checkbox" 
                                                     checked={perms.view} 
                                                     onChange={(e) => handlePermToggle(mod.key, 'view', e.target.checked)}
-                                                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer"
+                                                    className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer"
                                                 />
                                             </div>
                                             <span className="font-bold text-slate-700 text-sm">{mod.label}</span>
@@ -313,15 +349,15 @@ const UserRightsSettings = () => {
                                     {isExpanded && (
                                         <div className="p-4 bg-slate-50/50 grid grid-cols-2 md:grid-cols-4 gap-4">
                                             <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={perms.view} onChange={e => handlePermToggle(mod.key, 'view', e.target.checked)} className="rounded text-indigo-600 w-3.5 h-3.5 border-slate-300"/>
+                                                <input type="checkbox" checked={perms.view} onChange={e => handlePermToggle(mod.key, 'view', e.target.checked)} className="rounded text-orange-600 w-3.5 h-3.5 border-slate-300"/>
                                                 <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">View</span>
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={perms.alter} onChange={e => handlePermToggle(mod.key, 'alter', e.target.checked)} className="rounded text-indigo-600 w-3.5 h-3.5 border-slate-300"/>
+                                                <input type="checkbox" checked={perms.alter} onChange={e => handlePermToggle(mod.key, 'alter', e.target.checked)} className="rounded text-orange-600 w-3.5 h-3.5 border-slate-300"/>
                                                 <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Alter</span>
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={perms.cancel} onChange={e => handlePermToggle(mod.key, 'cancel', e.target.checked)} className="rounded text-indigo-600 w-3.5 h-3.5 border-slate-300"/>
+                                                <input type="checkbox" checked={perms.cancel} onChange={e => handlePermToggle(mod.key, 'cancel', e.target.checked)} className="rounded text-orange-600 w-3.5 h-3.5 border-slate-300"/>
                                                 <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Cancel</span>
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer">

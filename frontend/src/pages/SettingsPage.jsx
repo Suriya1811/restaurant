@@ -331,14 +331,13 @@ const SettingsPage = () => {
         { id: 'general', icon: <Sliders size={18} />, label: 'General', sub: 'Enable modules' },
         { id: 'voucher_series', icon: <Wallet size={18} />, label: 'Voucher Series', sub: 'Dynamic vouchers' },
         { id: 'user_rights', icon: <Lock size={18} />, label: 'User Rights', sub: 'Roles & permissions' },
-        { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' },
-        { id: 'security', icon: <ShieldCheck size={18} />, label: 'Security', sub: 'Password protection' }
+        { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' }
     ];
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50">
             <div className="text-center">
-                <Settings className="animate-spin text-indigo-600 mx-auto mb-4" size={56} />
+                <Settings className="animate-spin text-orange-600 mx-auto mb-4" size={56} />
                 <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Loading Configuration...</p>
             </div>
         </div>
@@ -351,7 +350,7 @@ const SettingsPage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={toggleSidebar} />
+                <Header toggleSidebar={toggleSidebar} title="Settings" />
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">
                         
@@ -363,7 +362,7 @@ const SettingsPage = () => {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-6 py-3 rounded-md font-bold text-sm transition-all shadow-sm
                                         ${activeTab === tab.id 
-                                            ? 'bg-indigo-600 text-white shadow-indigo-200' 
+                                            ? 'bg-orange-600 text-white shadow-orange-200' 
                                             : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
                                         }`}
                                 >
@@ -407,7 +406,7 @@ const SettingsPage = () => {
                                                 </div>
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" name="enabled" checked={printerForm.enabled} onChange={handlePrinterChange} className="sr-only peer" />
-                                                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-orange-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
                                                 </label>
                                             </div>
 
@@ -417,7 +416,7 @@ const SettingsPage = () => {
                                                     <div className="flex gap-3">
                                                         {['58mm', '80mm'].map(w => (
                                                             <button key={w} type="button" onClick={() => setPrinterForm(prev => ({ ...prev, width: w }))}
-                                                                className={`flex-1 p-5 rounded border-2 font-black text-sm uppercase tracking-widest transition-all ${printerForm.width === w ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 text-slate-400'}`}>
+                                                                className={`flex-1 p-5 rounded border-2 font-black text-sm uppercase tracking-widest transition-all ${printerForm.width === w ? 'border-orange-600 bg-orange-50 text-orange-900' : 'border-slate-100 text-slate-400'}`}>
                                                                 {w} {w === '58mm' ? '— Compact' : '— Standard'}
                                                             </button>
                                                         ))}
@@ -469,86 +468,10 @@ const SettingsPage = () => {
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer ml-auto">
                                                         <input type="checkbox" name="autoPrint" checked={billForm.autoPrint} onChange={handleBillChange} className="sr-only peer" />
-                                                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-orange-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
                                                     </label>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Security Tab */}
-                            {activeTab === 'security' && (
-                                <div className="fade-in">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Security Settings</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Manage login security</p>
-                                        </div>
-                                    </div>
-
-                                    {errors.passwordToggle && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.passwordToggle}</div>}
-                                    {success.passwordToggle && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Password protection updated!</div>}
-                                    
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 mb-6">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h4 className="font-bold text-slate-800 text-sm">Require Password on Login</h4>
-                                                <p className="text-xs text-slate-500 mt-1">When enabled, users must enter a password to access the POS system.</p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={passwordEnabled} 
-                                                    onChange={togglePassword} 
-                                                    disabled={saving.passwordToggle}
-                                                    className="sr-only peer" 
-                                                />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                            </label>
-                                        </div>
-                                        {/* If disabling, might require current password based on backend logic */}
-                                        {!passwordEnabled && (
-                                            <div className="mt-4 p-4 bg-amber-50 rounded border border-amber-100 text-amber-700 text-xs">
-                                                <AlertCircle size={14} className="inline mr-1" /> Login is currently passwordless. Anyone with the User ID can access the system.
-                                            </div>
-                                        )}
-                                        {/* To disable we need current password if one is set, handled by UI prompt or inline */}
-                                        {/* We will let the toggle trigger. If it fails due to no current password, the user can type it in the form below. */}
-                                    </div>
-
-                                    {errors.password && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.password}</div>}
-                                    {success.password && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Password updated successfully!</div>}
-
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        <h4 className="font-bold text-slate-800 text-sm mb-4">Update Password</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="form-group-premium">
-                                                <label>Current Password</label>
-                                                <input 
-                                                    type="password" 
-                                                    name="currentPassword" 
-                                                    className="input-premium !rounded" 
-                                                    value={passwordForm.currentPassword} 
-                                                    onChange={handlePasswordChange} 
-                                                    placeholder="Required to change or disable password" 
-                                                />
-                                            </div>
-                                            <div className="hidden md:block"></div>
-                                            <div className="form-group-premium">
-                                                <label>New Password</label>
-                                                <input type="password" name="newPassword" className="input-premium !rounded" value={passwordForm.newPassword} onChange={handlePasswordChange} />
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>Confirm New Password</label>
-                                                <input type="password" name="confirmPassword" className="input-premium !rounded" value={passwordForm.confirmPassword} onChange={handlePasswordChange} />
-                                            </div>
-                                        </div>
-                                        <div className="mt-6 flex justify-end">
-                                            <button onClick={changePassword} disabled={saving.password} className="btn-premium-primary !py-2 !px-6 !text-sm flex items-center gap-2">
-                                                {saving.password ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} UPDATE PASSWORD
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -581,10 +504,10 @@ const SettingsPage = () => {
                                                     { val: 'TOP_HEADER', label: 'Top Header Layout', sub: 'Categories displayed across the top', icon: <Sliders size={28} /> }
                                                 ].map(({ val, label, sub, icon }) => (
                                                     <button key={val} type="button" onClick={() => setProfileForm(prev => ({ ...prev, billingLayout: val }))}
-                                                        className={`p-8 rounded border-2 flex flex-col items-center gap-4 text-center transition-all ${profileForm.billingLayout === val ? 'border-indigo-600 bg-indigo-50/60 shadow-lg shadow-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}>
-                                                        <div className={`w-16 h-16 rounded flex items-center justify-center ${profileForm.billingLayout === val ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'} transition-all`}>{icon}</div>
+                                                        className={`p-8 rounded border-2 flex flex-col items-center gap-4 text-center transition-all ${profileForm.billingLayout === val ? 'border-orange-600 bg-orange-50/60 shadow-lg shadow-orange-50' : 'border-slate-100 hover:border-slate-200'}`}>
+                                                        <div className={`w-16 h-16 rounded flex items-center justify-center ${profileForm.billingLayout === val ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-400'} transition-all`}>{icon}</div>
                                                         <div>
-                                                            <div className={`font-black text-base uppercase tracking-tight ${profileForm.billingLayout === val ? 'text-indigo-700' : 'text-slate-700'}`}>{label}</div>
+                                                            <div className={`font-black text-base uppercase tracking-tight ${profileForm.billingLayout === val ? 'text-orange-700' : 'text-slate-700'}`}>{label}</div>
                                                             <div className="text-xs font-bold text-slate-400 mt-1">{sub}</div>
                                                         </div>
                                                     </button>
@@ -632,7 +555,7 @@ const SettingsPage = () => {
                                                             onChange={(e) => setModuleForm({ ...moduleForm, [toggle.key]: e.target.checked })} 
                                                             className="sr-only peer" 
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                                                     </label>
                                                 </div>
                                             ))}
@@ -664,7 +587,7 @@ const SettingsPage = () => {
                                             {Object.keys(billSeriesForm).map((key) => (
                                                 <div key={key} className="p-6 bg-slate-50/50 rounded border border-slate-100">
                                                     <div className="flex items-center gap-2 mb-6">
-                                                        <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
+                                                        <div className="w-2 h-2 rounded-full bg-orange-600"></div>
                                                         <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">{key.replace('_', ' ')} Series</h4>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

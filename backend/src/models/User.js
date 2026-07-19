@@ -32,9 +32,9 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: function() {
+            // Password only required if password protection is enabled
             return this.password_enabled;
         },
-        minlength: [6, 'Password must be at least 6 characters'],
         select: false
     },
     role: {

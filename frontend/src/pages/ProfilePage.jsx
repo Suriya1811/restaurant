@@ -9,7 +9,7 @@ import {
     User, Key, Save, CheckCircle, AlertCircle, Loader2,
     Building2, Phone, Mail, Database,
     FileJson, HardDrive, Clock, ShieldCheck, ArrowLeft, Sliders, X,
-    Plus, Folder, RefreshCw, Download, Upload
+    Plus, Folder, RefreshCw, Download, Upload, Trash2
 } from 'lucide-react';
 import { useFormNavigation } from '@/hooks/useFormNavigation';
 import SaveConfirmationModal from '@/components/common/SaveConfirmationModal';
@@ -185,7 +185,7 @@ const ProfilePage = () => {
                 if (setUser) {
                     const updatedUser = { 
                         ...user, 
-                        logo_url: profileForm.logo_url || user?.logo_url,
+                        logo_url: profileForm.logo_url !== undefined ? profileForm.logo_url : user?.logo_url,
                         businessName: profileForm.businessName || user?.businessName,
                         store_name: profileForm.store_name || user?.store_name,
                         email: profileForm.email || user?.email,
@@ -313,7 +313,7 @@ const ProfilePage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main">
-                <Header toggleSidebar={toggleSidebar} restaurantName={profileForm.businessName || profileForm.store_name} />
+                <Header toggleSidebar={toggleSidebar} title="Profile" restaurantName={profileForm.businessName || profileForm.store_name} />
                 <div className="profile-spacious-layout fade-in">
 
 
@@ -416,8 +416,19 @@ const ProfilePage = () => {
                                                             <div className="w-2/3">
                                                                 <input type="file" name="logo_url" accept=".jpg,.jpeg,.pdf" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" onChange={handleProfileChange} />
                                                                 {profileForm.logo_url && (
-                                                                    <div className="mt-2">
+                                                                    <div className="mt-2 flex items-center gap-3">
                                                                         <img src={profileForm.logo_url} alt="Logo Preview" style={{ maxWidth: '80px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                                                                        <button 
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setProfileForm(prev => ({ ...prev, logo_url: '' }));
+                                                                                const input = document.getElementsByName('logo_url')[0];
+                                                                                if (input) input.value = '';
+                                                                            }}
+                                                                            className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 rounded font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer bg-white flex items-center gap-1.5"
+                                                                        >
+                                                                            <Trash2 size={13} /> Remove Logo
+                                                                        </button>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -477,7 +488,7 @@ const ProfilePage = () => {
                                             </div>
 
                                             <div className="flex justify-end pt-4">
-                                                <button type="submit" disabled={saving.profile} className="btn-premium-primary !py-2.5 !px-10 flex items-center gap-2">
+                                                <button type="submit" disabled={saving.profile} className="btn-action-save !py-2.5 !px-10 flex items-center gap-2">
                                                     {saving.profile ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                                                     {isNewProfile ? 'CREATE PROFILE' : 'UPDATE DETAILS'}
                                                 </button>
@@ -501,12 +512,6 @@ const ProfilePage = () => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => { setIsEditing(true); setActiveTab('view'); }} className="btn-premium-outline !py-1.5 !px-4 !text-xs">EDIT DETAILS</button>
-                                                <button
-                                                    onClick={() => { setIsNewProfile(true); setActiveTab('view'); }}
-                                                    className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5"
-                                                >
-                                                    <Plus size={13} /> CREATE NEW
-                                                </button>
                                             </div>
                                         </div>
 

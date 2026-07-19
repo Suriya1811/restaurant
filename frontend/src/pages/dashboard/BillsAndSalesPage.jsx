@@ -619,7 +619,7 @@ const BillsAndSalesPage = () => {
                 {/* Payment Modal */}
                 {showPaymentModal && selectedOrderForPayment && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[3000] flex items-center justify-center p-4">
-                        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-8 border border-white/20 animate-in zoom-in duration-300">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-100 animate-in zoom-in duration-300">
                             <div className="flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 tracking-tight">Collect Payment</h3>
@@ -820,7 +820,7 @@ const BillsAndSalesPage = () => {
                         }
                     }}
                 >
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm p-6 border border-white/20 relative animate-in zoom-in duration-300">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-100 relative animate-in zoom-in duration-300">
                         <h3 className="text-2xl font-black text-slate-800 tracking-tighter mb-6 pr-8">Create New Party</h3>
                         
                         <form onSubmit={handleCreateParty} className="space-y-4">

@@ -39,11 +39,7 @@ const RegisterRestaurant = () => {
         email: '',
         gstin: '',
         fssai_no: '',
-        logo_url: '',
-        user_id: 'admin',
-        password_enabled: true,
-        password: '',
-        confirm_password: ''
+        logo_url: ''
     });
 
     const handleChange = (e) => {
@@ -77,12 +73,6 @@ const RegisterRestaurant = () => {
         if (e) e.preventDefault();
         setLoading(true);
         setError('');
-
-        if (formData.password_enabled && formData.password !== formData.confirm_password) {
-            setError('Passwords do not match');
-            setLoading(false);
-            return;
-        }
 
         const registrationData = {
             ...formData,
@@ -379,68 +369,6 @@ const RegisterRestaurant = () => {
                                         </div>
                                     )}
                                 </div>
-                            </div>
-
-                            <div className="mt-8 mb-6">
-                                <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Security Control</h3>
-                            </div>
-                            
-                            <div className="input-grid">
-                                <div className="input-group">
-                                    <label className="input-header">User ID</label>
-                                    <input
-                                        type="text"
-                                        name="user_id"
-                                        required
-                                        readOnly
-                                        className="input-field-professional bg-gray-100 cursor-not-allowed"
-                                        value={formData.user_id}
-                                    />
-                                    <span className="text-xs text-gray-500 mt-1">Default user ID is 'admin' for the owner account.</span>
-                                </div>
-                                
-                                <div className="input-group flex items-center justify-between" style={{ gridColumn: '1 / -1' }}>
-                                    <label className="input-header mb-0">Enable Password Protection</label>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            name="password_enabled"
-                                            className="sr-only peer"
-                                            checked={formData.password_enabled}
-                                            onChange={handleChange}
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
-                                </div>
-
-                                {formData.password_enabled && (
-                                    <>
-                                        <div className="input-group">
-                                            <label className="input-header">Password</label>
-                                            <input
-                                                type="password"
-                                                name="password"
-                                                required={formData.password_enabled}
-                                                placeholder="Password"
-                                                className="input-field-professional"
-                                                value={formData.password}
-                                                onChange={handleChange}
-                                            />
-                                        </div>
-                                        <div className="input-group">
-                                            <label className="input-header">Confirm Password</label>
-                                            <input
-                                                type="password"
-                                                name="confirm_password"
-                                                required={formData.password_enabled}
-                                                placeholder="Confirm Password"
-                                                className="input-field-professional"
-                                                value={formData.confirm_password}
-                                                onChange={handleChange}
-                                            />
-                                        </div>
-                                    </>
-                                )}
                             </div>
 
                             <button

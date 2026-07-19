@@ -21,40 +21,33 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
             </button>
 
             {isOpen && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-auto">
-                    <div
-                        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" 
                         onClick={(e) => {
                             e.stopPropagation();
                             setIsOpen(false);
-                        }}
+                        }} 
                     />
-                    <div className="relative w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <h3 className="font-black text-slate-800 text-[13px] uppercase">Actions</h3>
-                            <button
+                    <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl relative z-10 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-800 uppercase tracking-wider text-sm">Select Action</h3>
+                            <button 
                                 type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsOpen(false);
-                                }}
-                                className="text-slate-400 hover:text-red-500 transition-colors"
+                                onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} 
+                                className="text-slate-400 hover:text-red-500"
                             >
-                                <X size={16} strokeWidth={2.5} />
+                                <X size={18} />
                             </button>
                         </div>
-                        <div className="p-2 flex flex-col gap-1 text-left">
+                        <div className="p-2 flex flex-col gap-1">
                             {onEdit && (
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsOpen(false);
-                                        onEdit(item);
-                                    }}
-                                    className="w-full px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
+                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onEdit(item); }}
+                                    className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
-                                    <Edit size={16} className="text-blue-500" /> Alter
+                                    <Edit size={18} className="text-blue-500" /> Alter
                                 </button>
                             )}
 
@@ -62,35 +55,27 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                                 <>
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsOpen(false);
-                                            onStatusChange(item, false);
-                                        }}
+                                        onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, false); }}
                                         disabled={!isActive}
-                                        className={`w-full px-4 py-2.5 text-[13px] font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${
+                                        className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${
                                             isActive
                                                 ? 'text-slate-700 hover:bg-orange-50 hover:text-orange-600'
                                                 : 'text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed'
                                         }`}
                                     >
-                                        <XCircle size={16} className={isActive ? 'text-orange-500' : 'text-slate-400'} /> Deactivate
+                                        <XCircle size={18} className={isActive ? 'text-orange-500' : 'text-slate-400'} /> Deactivate
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsOpen(false);
-                                            onStatusChange(item, true);
-                                        }}
+                                        onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, true); }}
                                         disabled={isActive}
-                                        className={`w-full px-4 py-2.5 text-[13px] font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${
+                                        className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${
                                             isActive
                                                 ? 'text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed'
                                                 : 'text-slate-700 hover:bg-green-50 hover:text-green-600'
                                         }`}
                                     >
-                                        <CheckCircle size={16} className={isActive ? 'text-slate-400' : 'text-green-500'} /> Activate
+                                        <CheckCircle size={18} className={isActive ? 'text-slate-400' : 'text-green-500'} /> Activate
                                     </button>
                                 </>
                             )}
@@ -98,14 +83,10 @@ const ActionDropdown = ({ item, onEdit, onStatusChange, onDelete }) => {
                             {onDelete && (
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsOpen(false);
-                                        onDelete(item);
-                                    }}
-                                    className="w-full px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
+                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onDelete(item); }}
+                                    className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
-                                    <Trash2 size={16} className="text-red-500" /> Delete
+                                    <Trash2 size={18} className="text-red-500" /> Delete
                                 </button>
                             )}
                         </div>

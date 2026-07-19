@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
 const CompanySelection = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -25,8 +27,27 @@ const CompanySelection = () => {
         fetchCompanies();
     }, []);
 
-    const handleSelectCompany = (company) => {
-        navigate('/login', { state: { company: company.company_name, logo_url: company.logo_url } });
+    const handleSelectCompany = async (company) => {
+        try {
+            const statusRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/company-status/${encodeURIComponent(company.company_name)}`);
+            const statusResult = await statusRes.json();
+            
+            if (statusResult.success && !statusResult.has_admin) {
+                // Direct login without password
+                const loginRes = await login({ company_name: company.company_name, direct_owner_login: true }); 
+                if (loginRes.success) {
+                    navigate('/dashboard/self-service/home');
+                } else {
+                    navigate('/login', { state: { company: company.company_name, logo_url: company.logo_url } });
+                }
+            } else {
+                // Requires password, go to login
+                navigate('/login', { state: { company: company.company_name, logo_url: company.logo_url } });
+            }
+        } catch (err) {
+            console.error("Failed to check company status:", err);
+            navigate('/login', { state: { company: company.company_name, logo_url: company.logo_url } });
+        }
     };
 
     return (

@@ -433,155 +433,127 @@ const StaffMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium">
-                            <div className="drawer-header-premium">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'Modify Personnel' : 'Architect Personnel'}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{staffType} Asset Registry</p>
-                                </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-slate-500 hover:text-slate-800" />
-                                </button>
-                            </div>
-                            <div className="drawer-body-premium">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
-                                        <AlertCircle size={20} /> {error}
-                                    </div>
-                                )}
-                                <form id="staff-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Personnel Identifier Label *</label>
-                                            <div className="relative">
-                                                <UserCircle size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="input-premium !pl-12"
-                                                    placeholder="e.g. RAHUL SHARMA"
-                                                    value={formData.name}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
-                                                />
-                                            </div>
-                                        </div>
+                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
+                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? `MODIFY ${staffType}` : `${staffType} CREATION`}</h2>
+                            <button 
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
+                            >
+                                <XCircle size={20} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
 
-                                        <div className="form-group-premium">
-                                            <label>Personnel Photo</label>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="relative group/img w-14 h-14 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-300">
-                                                    {formData.image ? (
-                                                        <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.image}`} alt="Preview" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Camera size={20} className="text-slate-300 group-hover/img:text-indigo-400" />
-                                                    )}
+                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
+                                    <AlertCircle size={16} className="shrink-0" /> {error}
+                                </div>
+                            )}
+
+                            <form id="staff-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div>
+                                        <div className="w-full mb-1">
+                                            <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider">Personnel Details</h3>
+                                        </div>
+                                        <hr className="border-t border-orange-500 mt-1 mb-4" />
+
+                                        <div className="flex flex-col gap-4 max-w-4xl">
+                                            <div className="grid grid-cols-12 items-center gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Personnel Name <span className="text-red-500">*</span></label>
+                                                <div className="col-span-9">
                                                     <input
-                                                        type="file"
-                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                        onChange={handleImageUpload}
-                                                        accept="image/*"
+                                                        type="text"
+                                                        required
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
+                                                        placeholder="e.g. RAHUL SHARMA"
+                                                        value={formData.name}
+                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                                                     />
                                                 </div>
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">
-                                                    Recommended<br />1:1 Aspect Ratio
+                                            </div>
+                                            <div className="grid grid-cols-12 items-center gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Primary Cell No <span className="text-red-500">*</span></label>
+                                                <div className="col-span-9">
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
+                                                        placeholder="10-digit primary contact"
+                                                        value={formData.phone}
+                                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-12 items-center gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Secondary Cell No</label>
+                                                <div className="col-span-9">
+                                                    <input
+                                                        type="text"
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
+                                                        placeholder="Secondary contact"
+                                                        value={formData.cell_no_2}
+                                                        onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-12 items-center gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Joining Date</label>
+                                                <div className="col-span-9">
+                                                    <input
+                                                        type="date"
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
+                                                        value={formData.joining_date}
+                                                        onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-12 items-center gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">ID Proof</label>
+                                                <div className="col-span-9">
+                                                    <select
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800 cursor-pointer"
+                                                        value={formData.id_proof_type}
+                                                        onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
+                                                    >
+                                                        <option value="NONE">SELECT ID PROOF</option>
+                                                        <option value="ADHAR CARD">ADHAR CARD</option>
+                                                        <option value="VOTER ID">VOTER ID</option>
+                                                        <option value="DRIVING LICENSE">DRIVING LICENSE</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-12 items-start gap-4">
+                                                <label className="col-span-3 text-[14px] font-bold text-slate-800 pt-1.5">Residential Address</label>
+                                                <div className="col-span-9">
+                                                    <textarea
+                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800 min-h-[60px]"
+                                                        placeholder="Enter full residential address..."
+                                                        value={formData.address}
+                                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                                    ></textarea>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Cell No (Primary) *</label>
-                                            <div className="relative">
-                                                <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="input-premium !pl-12"
-                                                    placeholder="10-digit primary contact"
-                                                    value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Cell No 2 (Secondary)</label>
-                                            <div className="relative">
-                                                <Smartphone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    className="input-premium !pl-12"
-                                                    placeholder="Secondary contact"
-                                                    value={formData.cell_no_2}
-                                                    onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group-premium">
-                                        <label>Residential Address</label>
-                                        <div className="relative">
-                                            <MapPin size={20} className="absolute left-4 top-4 text-slate-300" />
-                                            <textarea
-                                                className="input-premium !pl-12 min-h-[100px] py-4"
-                                                placeholder="Enter full residential address..."
-                                                value={formData.address}
-                                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            ></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Joining Date</label>
-                                            <div className="relative">
-                                                <Calendar size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="date"
-                                                    className="input-premium !pl-12"
-                                                    value={formData.joining_date}
-                                                    onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>ID Proof Verification</label>
-                                            <div className="relative">
-                                                <CreditCard size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <select
-                                                    className="input-premium !pl-12 !appearance-none"
-                                                    value={formData.id_proof_type}
-                                                    onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
-                                                >
-                                                    <option value="NONE">SELECT ID PROOF</option>
-                                                    <option value="ADHAR CARD">ADHAR CARD</option>
-                                                    <option value="VOTER ID">VOTER ID</option>
-                                                    <option value="DRIVING LICENSE">DRIVING LICENSE</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div className="drawer-footer-premium">
-                                <button type="submit" form="staff-form" disabled={submitting} className="btn-action-save">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT PERSONNEL' : 'DEPLOY PERSONNEL')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
-                            </div>
+                                <div className="flex items-center justify-end bg-white pt-3 border-t border-slate-100">
+                                    <button type="submit" form="staff-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors">
+                                        {submitting ? <Loader2 className="animate-spin" size={16} /> : 'SAVE'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
+                    </div>
+                )}
                         <SaveConfirmationModal
                             isOpen={showSaveConfirm}
                             onConfirm={confirmSave}
                             onCancel={cancelSave}
                         />
-                    </>
-                )}
             </main>
         </div>
     );

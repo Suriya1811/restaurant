@@ -8,12 +8,14 @@ const {
     resetPassword,
     getProfile,
     checkPasswordStatus,
-    getCompanies
+    getCompanies,
+    checkCompanyStatus
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/register', register);
 router.post('/login', login);
+router.get('/company-status/:company_name', checkCompanyStatus);
 router.get('/companies', getCompanies);
 router.post('/check-status', checkPasswordStatus);
 router.post('/forgot-password', forgotPassword);

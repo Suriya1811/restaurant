@@ -161,7 +161,7 @@ const VoucherSeriesSettings = () => {
         }
     };
 
-    if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>;
+    if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-orange-600" size={32} /></div>;
 
     return (
         <div className="fade-in relative min-h-[500px]">
@@ -170,7 +170,7 @@ const VoucherSeriesSettings = () => {
                     <h3 className="text-base font-black text-slate-800 uppercase tracking-wider">Voucher Series</h3>
                     <p className="text-xs font-medium text-slate-400 mt-0.5">Configure all voucher series for the application.</p>
                 </div>
-                <button onClick={openAddModal} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm">
+                <button onClick={openAddModal} className="btn-action-add">
                     <Plus size={16} /> Add New Series
                 </button>
             </div>
@@ -220,7 +220,7 @@ const VoucherSeriesSettings = () => {
                                         <td className="py-4 px-6 text-center flex items-center justify-center gap-2">
                                             <button 
                                                 onClick={() => openEditModal(series)} 
-                                                className="px-3 py-1.5 border border-blue-100 hover:border-blue-200 text-blue-600 hover:bg-blue-50/40 rounded font-bold text-xs transition-all flex items-center gap-1"
+                                                className="px-3 py-1.5 border border-orange-100 hover:border-orange-200 text-orange-600 hover:bg-orange-50/40 rounded font-bold text-xs transition-all flex items-center gap-1"
                                             >
                                                 ✏️ Alter
                                             </button>
@@ -286,7 +286,7 @@ const VoucherSeriesSettings = () => {
                                         name="numbering_method"
                                         checked={selectedSeries.numbering_method === 'Automatic'}
                                         onChange={() => setSelectedSeries({...selectedSeries, numbering_method: 'Automatic'})}
-                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                                     />
                                     <span className="text-sm font-medium text-slate-700">Automatic</span>
                                 </label>
@@ -296,7 +296,7 @@ const VoucherSeriesSettings = () => {
                                         name="numbering_method"
                                         checked={selectedSeries.numbering_method === 'Manual'}
                                         onChange={() => setSelectedSeries({...selectedSeries, numbering_method: 'Manual'})}
-                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                                     />
                                     <span className="text-sm font-medium text-slate-700">Manual</span>
                                 </label>
@@ -361,7 +361,7 @@ const VoucherSeriesSettings = () => {
                                             alert("Please select a printer path first.");
                                         }
                                     }}
-                                    className="px-5 py-2 border border-blue-600 text-blue-600 rounded font-semibold text-xs uppercase tracking-wider hover:bg-blue-50 transition-colors whitespace-nowrap"
+                                    className="px-5 py-2 border border-orange-500 text-orange-600 rounded font-semibold text-xs uppercase tracking-wider hover:bg-orange-50 transition-colors whitespace-nowrap"
                                 >
                                     Browse
                                 </button>
@@ -373,7 +373,7 @@ const VoucherSeriesSettings = () => {
                             <button 
                                 onClick={handleSave} 
                                 disabled={saving} 
-                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-md"
+                                className="px-6 py-2.5 bg-[#f97316] hover:bg-[#ea580c] text-white rounded font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-md"
                             >
                                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
                             </button>

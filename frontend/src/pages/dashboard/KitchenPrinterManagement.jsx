@@ -85,20 +85,7 @@ function KitchenTab({ allCategories, navigate }) {
 
     return (
         <>
-            {/* Sub-header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                    <p style={{ color: '#7c6b8a', fontSize: '0.82rem', fontWeight: 600, margin: 0 }}>
-                        Create kitchen display stations and assign food categories to route orders correctly
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={openCreate}
-                        style={{ background: '#6c5fc7', color: '#fff', border: 'none', borderRadius: 10, padding: '0.6rem 1.2rem', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Plus size={15} /> ADD KITCHEN
-                    </button>
-                </div>
-            </div>
+            <button id="add-kitchen-btn" onClick={openCreate} className="hidden" />
 
             {/* Alerts */}
             {success && (
@@ -119,21 +106,20 @@ function KitchenTab({ allCategories, navigate }) {
                     <p style={{ marginTop: 12, fontWeight: 700 }}>Loading kitchens...</p>
                 </div>
             ) : kitchens.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: 16, border: '2px dashed #e8dff5' }}>
-                    <ChefHat size={64} color="#e8dff5" style={{ marginBottom: 16 }} />
+                <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: 16, border: '2px dashed #ffedd5' }}>
+                    <ChefHat size={64} color="#ffedd5" style={{ marginBottom: 16 }} />
                     <h3 style={{ color: '#1a1333', fontWeight: 800, fontSize: '1.2rem', marginBottom: 8 }}>No Kitchens Created Yet</h3>
                     <p style={{ color: '#7c6b8a', fontWeight: 600, marginBottom: '1.5rem' }}>Create kitchens and assign food categories to route orders correctly.</p>
-                    <button onClick={openCreate}
-                        style={{ background: '#6c5fc7', color: '#fff', border: 'none', borderRadius: 10, padding: '0.7rem 1.5rem', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto' }}>
+                    <button onClick={openCreate} className="btn-action-add" style={{ margin: '0 auto' }}>
                         <Plus size={16} /> CREATE FIRST KITCHEN
                     </button>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                     {kitchens.map(k => (
-                        <div key={k._id} style={{ background: '#fff', borderRadius: 16, border: '2px solid #f0ecff', padding: '1.5rem', boxShadow: '0 2px 12px rgba(108,95,199,0.07)' }}>
+                        <div key={k._id} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <div style={{ width: 44, height: 44, background: k.color || '#6c5fc7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <div style={{ width: 44, height: 44, background: k.color || '#f97316', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <ChefHat size={22} color="white" />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -142,13 +128,13 @@ function KitchenTab({ allCategories, navigate }) {
                                 </div>
                             </div>
                             <div style={{ marginBottom: '1.25rem' }}>
-                                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#9b86aa', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <Tag size={11} /> ASSIGNED CATEGORIES
                                 </div>
                                 {k.categories && k.categories.length > 0 ? (
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                                         {k.categories.map(cat => (
-                                            <span key={cat} style={{ background: '#f0ecff', color: '#6c5fc7', padding: '0.25rem 0.7rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700 }}>{cat}</span>
+                                            <span key={cat} style={{ background: '#fff7ed', color: '#ea580c', padding: '0.25rem 0.7rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700 }}>{cat}</span>
                                         ))}
                                     </div>
                                 ) : (
@@ -157,11 +143,11 @@ function KitchenTab({ allCategories, navigate }) {
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button onClick={() => navigate(`/dashboard/self-service/kitchen-display/${k._id}`)}
-                                    style={{ flex: 1, background: '#f0ecff', color: '#6c5fc7', border: 'none', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                    style={{ flex: 1, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                                     <Monitor size={14} /> DISPLAY
                                 </button>
                                 <button onClick={() => openEdit(k)}
-                                    style={{ flex: 1, background: '#f9f7ff', color: '#5a4a72', border: '1px solid #e8dff5', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                    style={{ flex: 1, background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                                     <Edit2 size={14} /> EDIT
                                 </button>
                                 <button onClick={() => setDeleteConfirmId(k._id)}
@@ -249,14 +235,14 @@ function KitchenTab({ allCategories, navigate }) {
                                         })}
                                     </div>
                                 )}
-                                {form.categories.length > 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#6c5fc7', fontWeight: 700 }}>✓ {form.categories.length} categories selected</div>}
-                                {form.categories.length === 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#b0a0c0', fontWeight: 600 }}>ℹ No categories selected — catch-all (shows all items)</div>}
+                                {form.categories.length > 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#ea580c', fontWeight: 700 }}>✓ {form.categories.length} categories selected</div>}
+                                {form.categories.length === 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>ℹ No categories selected — catch-all (shows all items)</div>}
                             </div>
                         </div>
-                        <div style={{ padding: '1.25rem 1.5rem', borderTop: '2px solid #f0ecff', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                            <button onClick={() => setDrawerOpen(false)} style={{ padding: '0.6rem 1.2rem', borderRadius: 10, border: '2px solid #e8dff5', background: '#fff', color: '#7c6b8a', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
+                        <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button onClick={() => setDrawerOpen(false)} style={{ padding: '0.6rem 1.2rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
                             <button onClick={handleSave} disabled={saving}
-                                style={{ padding: '0.6rem 1.5rem', borderRadius: 10, border: 'none', background: saving ? '#a097d6' : '#6c5fc7', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: 10, border: 'none', background: saving ? '#fdba74' : '#f97316', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {saving ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={14} /> {editingId ? 'Update Kitchen' : 'Create Kitchen'}</>}
                             </button>
                         </div>
@@ -347,24 +333,7 @@ function PrinterTab({ allCategories, navigate }) {
 
     return (
         <>
-            {/* Sub-header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                    <p style={{ color: '#7c6b8a', fontSize: '0.82rem', fontWeight: 600, margin: 0 }}>
-                        Configure network printers and assign food categories to route KOT tickets
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={() => navigate('/dashboard/self-service/printer-display')}
-                        style={{ background: '#eff6ff', color: '#3b82f6', border: 'none', borderRadius: 10, padding: '0.6rem 1.2rem', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Monitor size={15} /> VIEW FEEDS
-                    </button>
-                    <button onClick={openCreate}
-                        style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 10, padding: '0.6rem 1.2rem', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Plus size={15} /> ADD PRINTER
-                    </button>
-                </div>
-            </div>
+            <button id="add-printer-btn" onClick={openCreate} className="hidden" />
 
             {/* Alerts */}
             {success && (
@@ -385,21 +354,20 @@ function PrinterTab({ allCategories, navigate }) {
                     <p style={{ marginTop: 12, fontWeight: 700 }}>Loading printers...</p>
                 </div>
             ) : printers.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-                    <Printer size={64} color="#e2e8f0" style={{ marginBottom: 16 }} />
+                <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: 16, border: '2px dashed #ffedd5' }}>
+                    <Printer size={64} color="#ffedd5" style={{ marginBottom: 16 }} />
                     <h3 style={{ color: '#1a1333', fontWeight: 800, fontSize: '1.2rem', marginBottom: 8 }}>No Printers Configured</h3>
                     <p style={{ color: '#7c6b8a', fontWeight: 600, marginBottom: '1.5rem' }}>Configure network printers to route KOTs to specific stations.</p>
-                    <button onClick={openCreate}
-                        style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 10, padding: '0.7rem 1.5rem', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto' }}>
+                    <button onClick={openCreate} className="btn-action-add" style={{ margin: '0 auto' }}>
                         <Plus size={16} /> ADD FIRST PRINTER
                     </button>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                     {printers.map(p => (
-                        <div key={p._id} style={{ background: '#fff', borderRadius: 16, border: '2px solid #f1f5f9', padding: '1.5rem', boxShadow: '0 2px 12px rgba(59,130,246,0.07)' }}>
+                        <div key={p._id} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <div style={{ width: 44, height: 44, background: p.color || '#3b82f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <div style={{ width: 44, height: 44, background: p.color || '#f97316', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <Printer size={22} color="white" />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -410,13 +378,13 @@ function PrinterTab({ allCategories, navigate }) {
                                 </div>
                             </div>
                             <div style={{ marginBottom: '1.25rem' }}>
-                                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <Tag size={11} /> ROUTED CATEGORIES
                                 </div>
                                 {p.categories && p.categories.length > 0 ? (
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                                         {p.categories.map(cat => (
-                                            <span key={cat} style={{ background: '#f1f5f9', color: '#475569', padding: '0.25rem 0.7rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700 }}>{cat}</span>
+                                            <span key={cat} style={{ background: '#fff7ed', color: '#ea580c', padding: '0.25rem 0.7rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700 }}>{cat}</span>
                                         ))}
                                     </div>
                                 ) : (
@@ -425,7 +393,7 @@ function PrinterTab({ allCategories, navigate }) {
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button onClick={() => navigate(`/dashboard/self-service/printer-display/${p._id}`)}
-                                    style={{ flex: 1, background: '#eff6ff', color: '#3b82f6', border: 'none', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                    style={{ flex: 1, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: 8, padding: '0.5rem', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                                     <Monitor size={14} /> LIVE FEED
                                 </button>
                                 <button onClick={() => openEdit(p)}
@@ -520,14 +488,14 @@ function PrinterTab({ allCategories, navigate }) {
                                         })}
                                     </div>
                                 )}
-                                {form.categories.length > 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700 }}>✓ {form.categories.length} categories selected</div>}
-                                {form.categories.length === 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>ℹ No categories selected — catch-all (master terminal)</div>}
+                                {form.categories.length > 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#ea580c', fontWeight: 700 }}>✓ {form.categories.length} categories selected</div>}
+                                {form.categories.length === 0 && <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>ℹ No categories selected — catch-all (master terminal)</div>}
                             </div>
                         </div>
-                        <div style={{ padding: '1.25rem 1.5rem', borderTop: '2px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                            <button onClick={() => setDrawerOpen(false)} style={{ padding: '0.6rem 1.2rem', borderRadius: 10, border: '2px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
+                        <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button onClick={() => setDrawerOpen(false)} style={{ padding: '0.6rem 1.2rem', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
                             <button onClick={handleSave} disabled={saving}
-                                style={{ padding: '0.6rem 1.5rem', borderRadius: 10, border: 'none', background: saving ? '#93c5fd' : '#3b82f6', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: 10, border: 'none', background: saving ? '#fdba74' : '#f97316', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {saving ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={14} /> {editingId ? 'Update Printer' : 'Create Printer'}</>}
                             </button>
                         </div>
@@ -580,14 +548,11 @@ export default function KitchenPrinterManagement() {
     }, []);
 
     const tabs = [
-        { id: 'kitchen', label: 'Kitchen Displays', icon: ChefHat, color: '#6c5fc7', bg: '#f0ecff', count: null },
-        { id: 'printer', label: 'Printers',         icon: Printer,  color: '#3b82f6', bg: '#eff6ff', count: null },
+        { id: 'kitchen', label: 'Kitchen Displays', icon: ChefHat, color: '#f97316', bg: '#fff7ed', count: null },
+        { id: 'printer', label: 'Printers',         icon: Printer,  color: '#f97316', bg: '#fff7ed', count: null },
     ];
 
-    const activeColor = activeTab === 'kitchen' ? '#6c5fc7' : '#3b82f6';
-    const activeGrad  = activeTab === 'kitchen'
-        ? 'linear-gradient(135deg,#f59e0b,#d97706)'
-        : 'linear-gradient(135deg,#3b82f6,#2563eb)';
+    const activeColor = '#f97316';
     const ActiveIcon = activeTab === 'kitchen' ? ChefHat : Printer;
 
     return (
@@ -596,23 +561,33 @@ export default function KitchenPrinterManagement() {
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)} />
             )}
-            <main className="dashboard-main">
-                <Header toggleSidebar={toggleSidebar} />
-                <div style={{ padding: '2rem', maxWidth: '100%', margin: '0 auto', flex: 1, overflowY: 'auto', minHeight: 0 }}>
-
-                    {/* ─── Page Header ─── */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-                        <div style={{ width: 44, height: 44, background: activeGrad, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}>
-                            <ActiveIcon size={22} color="white" />
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#1a1333', margin: 0 }}>Kitchen & Printer Management</h1>
-                            <p style={{ color: '#7c6b8a', fontSize: '0.82rem', fontWeight: 600, margin: 0 }}>Manage KDS stations and printer gateways from one place</p>
-                        </div>
-                    </div>
+            <main className="dashboard-main flex-1 overflow-hidden font-sans flex flex-col bg-slate-50">
+                <Header 
+                    toggleSidebar={toggleSidebar} 
+                    title="Kitchen & Printer Management" 
+                    actions={
+                        activeTab === 'kitchen' ? (
+                            <button onClick={() => document.getElementById('add-kitchen-btn')?.click()} className="btn-action-add">
+                                <Plus size={15} /> Add Kitchen
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/dashboard/self-service/printer-display')}
+                                    className="px-3 py-1.5 border border-orange-500 bg-white text-orange-600 rounded-lg text-[10px] font-black uppercase flex items-center gap-1.5 hover:bg-orange-50 transition-colors shadow-sm cursor-pointer"
+                                >
+                                    <Monitor size={14} /> View Feeds
+                                </button>
+                                <button onClick={() => document.getElementById('add-printer-btn')?.click()} className="btn-action-add">
+                                    <Plus size={15} /> Add Printer
+                                </button>
+                            </div>
+                        )
+                    }
+                />
+                <div className="master-content-layout fade-in !p-6">
 
                     {/* ─── Tab Switcher ─── */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: '#f5f3ff', borderRadius: 14, padding: '0.35rem', width: 'fit-content' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: '#f1f5f9', borderRadius: 14, padding: '0.35rem', width: 'fit-content' }}>
                         {tabs.map(tab => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -626,7 +601,7 @@ export default function KitchenPrinterManagement() {
                                         fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer',
                                         transition: 'all 0.2s',
                                         background: isActive ? tab.color : 'transparent',
-                                        color: isActive ? '#fff' : '#7c6b8a',
+                                        color: isActive ? '#fff' : '#64748b',
                                         boxShadow: isActive ? `0 4px 14px ${tab.color}44` : 'none',
                                     }}
                                 >
@@ -638,12 +613,14 @@ export default function KitchenPrinterManagement() {
                     </div>
 
                     {/* ─── Tab Content ─── */}
-                    {activeTab === 'kitchen' && (
-                        <KitchenTab allCategories={allCategories} navigate={navigate} />
-                    )}
-                    {activeTab === 'printer' && (
-                        <PrinterTab allCategories={allCategories} navigate={navigate} />
-                    )}
+                    <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-8">
+                        {activeTab === 'kitchen' && (
+                            <KitchenTab allCategories={allCategories} navigate={navigate} />
+                        )}
+                        {activeTab === 'printer' && (
+                            <PrinterTab allCategories={allCategories} navigate={navigate} />
+                        )}
+                    </div>
 
                 </div>
             </main>

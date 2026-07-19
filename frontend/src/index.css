@@ -2560,8 +2560,8 @@ select.input-premium {
 
 .btn-action-save {
   padding: 0.5rem 1rem !important;
-  background-color: #22c55e !important;
-  /* green-500 */
+  background-color: #f97316 !important;
+  /* orange-500 */
   color: white !important;
   border-radius: var(--radius-md) !important;
   font-weight: 700 !important;
@@ -2577,8 +2577,8 @@ select.input-premium {
 }
 
 .btn-action-save:hover:not(:disabled) {
-  background-color: #16a34a !important;
-  /* green-600 */
+  background-color: #ea580c !important;
+  /* orange-600 */
 }
 
 /* --- Global Master Screen Layout & Scrolling Fixes --- */

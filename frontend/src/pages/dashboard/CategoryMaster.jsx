@@ -227,7 +227,7 @@ const CategoryMaster = () => {
                                         </td>
                                         <td>
                                             <span className={`badge-premium ${cat.is_active ? 'active' : 'disabled'}`}>
-                                                {cat.is_active ? 'Synchronized' : 'Offline'}
+                                                {cat.is_active ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
                                         <td>
@@ -275,20 +275,7 @@ const CategoryMaster = () => {
                                         />
                                     </div>
 
-                                    {/* Row 2: Sub Group */}
-                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
-                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">SUB GROUP *</label>
-                                        <select
-                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
-                                            value={formData.type}
-                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                        >
-                                            <option value="FOOD">Select Sub Group</option>
-                                            <option value="BEVERAGE">BEVERAGE</option>
-                                            <option value="LIQUOR">LIQUOR</option>
-                                            <option value="OTHER">OTHER</option>
-                                        </select>
-                                    </div>
+
 
                                     {/* Row 3: HSN Code */}
                                     <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">

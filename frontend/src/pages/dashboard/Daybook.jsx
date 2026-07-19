@@ -284,12 +284,12 @@ const Daybook = () => {
 
                     <div className="summary-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-4 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                                <FileText size={22} />
+                            <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
+                                <FileText size={24} />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Total Transactions</p>
-                                <p className="text-xl font-bold text-blue-600">{summary.totalTransactions}</p>
+                                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Transactions</h3>
+                                <p className="text-xl font-bold text-orange-600">{summary.totalTransactions}</p>
                             </div>
                         </div>
 

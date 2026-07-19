@@ -329,13 +329,13 @@ const LedgerStatement = () => {
                                 <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Opening Balance (Dr.)</span>
                                 <span className="text-lg font-black text-orange-600">₹ {fmt(openingBal)} {opType}</span>
                             </div>
-                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col justify-center items-center">
-                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Debit</span>
-                                <span className="text-lg font-black text-blue-600">₹ {fmt(totalDebit)}</span>
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Total Debit</span>
+                                <span className="text-lg font-black text-orange-600">₹ {fmt(totalDebit)}</span>
                             </div>
-                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col justify-center items-center">
-                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Credit</span>
-                                <span className="text-lg font-black text-blue-600">₹ {fmt(totalCredit)}</span>
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center">
+                                <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Total Credit</span>
+                                <span className="text-lg font-black text-orange-600">₹ {fmt(totalCredit)}</span>
                             </div>
                             <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center">
                                 <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Closing Balance (Cr.)</span>
@@ -350,13 +350,13 @@ const LedgerStatement = () => {
                                 <table className="w-full text-left min-w-[900px]">
                                     <thead className="bg-[#0f172a] text-white sticky top-0 z-10">
                                         <tr>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700">Date</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-center">Voucher No.</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700">Particulars</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-center">Vch Type</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Debit (₹)</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Credit (₹)</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 text-right border-r border-slate-700">Balance (₹)</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700">Date</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Voucher No.</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700">Particulars</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Vch Type</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Debit (₹)</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Credit (₹)</th>
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 text-right border-r border-slate-700">Balance (₹)</th>
                                             <th className="px-2 py-3 w-10 border-slate-700 no-print"></th>
                                         </tr>
                                     </thead>
@@ -390,12 +390,11 @@ const LedgerStatement = () => {
                                         ))}
                                     </tbody>
                                     <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t-2 border-orange-100">
-                                        <tr>
-                                            <td className="px-4 py-3 text-sm font-black text-slate-900" colSpan={4}>Total</td>
-                                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">₹ {fmt(totalDebit)}</td>
-                                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">₹ {fmt(totalCredit)}</td>
-                                            <td className="px-4 py-3"></td>
-                                            <td className="px-2 py-3 no-print"></td>
+                                        <tr className="bg-slate-50 border-t-2 border-slate-200">
+                                            <td colSpan="4" className="px-4 py-3 text-sm font-black text-slate-800 text-right uppercase tracking-wider">Total Transactions</td>
+                                            <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">₹ {fmt(totalDebit)}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">₹ {fmt(totalCredit)}</td>
+                                            <td colSpan="2"></td>
                                         </tr>
                                     </tfoot>
                                 </table>

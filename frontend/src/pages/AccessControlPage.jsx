@@ -339,7 +339,7 @@ const AccessControlPage = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [userForm, setUserForm] = useState({
         name: '', username: '', password: '', confirmPassword: '',
-        email: '', mobile: '', custom_role_id: ''
+        email: '', mobile: '', custom_role_id: '', password_enabled: true
     });
 
     // UI state
@@ -678,7 +678,8 @@ const AccessControlPage = () => {
             confirmPassword: '',
             email: u.email || '',
             mobile: u.mobile || '',
-            custom_role_id: u.custom_role_id?._id || u.custom_role_id || ''
+            custom_role_id: u.custom_role_id?._id || u.custom_role_id || '',
+            password_enabled: u.password_enabled !== false
         });
         setEditingUser(u);
         setShowUserModal(true);
@@ -692,17 +693,17 @@ const AccessControlPage = () => {
             return;
         }
 
-        if (!editingUser && !userForm.password) {
-            setError('Password is required for new user');
+        if (!editingUser && userForm.password_enabled && !userForm.password) {
+            setError('Password is required when password protection is enabled');
             return;
         }
 
-        if (userForm.password && userForm.password !== userForm.confirmPassword) {
+        if (userForm.password_enabled && userForm.password && userForm.password !== userForm.confirmPassword) {
             setError('Passwords do not match');
             return;
         }
 
-        if (userForm.password && userForm.password.length < 6) {
+        if (userForm.password_enabled && userForm.password && userForm.password.length < 6) {
             setError('Password must be at least 6 characters');
             return;
         }
@@ -716,10 +717,11 @@ const AccessControlPage = () => {
                 username: userForm.username,
                 email: userForm.email,
                 mobile: userForm.mobile,
-                custom_role_id: userForm.custom_role_id
+                custom_role_id: userForm.custom_role_id,
+                password_enabled: userForm.password_enabled
             };
 
-            if (userForm.password) {
+            if (userForm.password_enabled && userForm.password) {
                 payload.password = userForm.password;
             }
 
@@ -1413,35 +1415,57 @@ const AccessControlPage = () => {
                                 </div>
 
                                 <div className="ac-form-group">
-                                    <label><Lock size={14} /> Password {!editingUser && '*'}</label>
-                                    <div className="ac-password-input">
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            className="ac-input"
-                                            placeholder={editingUser ? 'Leave blank to keep current' : 'Min 6 characters'}
-                                            value={userForm.password}
-                                            onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="ac-password-toggle"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
+                                    <div className="flex items-center justify-between mb-4 mt-2">
+                                        <div>
+                                            <h4 className="font-bold text-slate-800 text-sm">Require Password on Login</h4>
+                                            <p className="text-xs text-slate-500 mt-0.5">If disabled, the user can login using only their username.</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={userForm.password_enabled} 
+                                                onChange={(e) => setUserForm({ ...userForm, password_enabled: e.target.checked })} 
+                                                className="sr-only peer" 
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                        </label>
                                     </div>
                                 </div>
 
-                                <div className="ac-form-group">
-                                    <label><Lock size={14} /> Confirm Password</label>
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        className="ac-input"
-                                        placeholder={editingUser ? 'Leave blank to keep current' : 'Confirm password'}
-                                        value={userForm.confirmPassword}
-                                        onChange={(e) => setUserForm({ ...userForm, confirmPassword: e.target.value })}
-                                    />
-                                </div>
+                                {userForm.password_enabled && (
+                                    <>
+                                        <div className="ac-form-group">
+                                            <label><Lock size={14} /> Password {!editingUser && '*'}</label>
+                                            <div className="ac-password-input">
+                                                <input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    className="ac-input"
+                                                    placeholder={editingUser ? 'Leave blank to keep current' : 'Min 6 characters'}
+                                                    value={userForm.password}
+                                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="ac-password-toggle"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="ac-form-group">
+                                            <label><Lock size={14} /> Confirm Password</label>
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                className="ac-input"
+                                                placeholder={editingUser ? 'Leave blank to keep current' : 'Confirm password'}
+                                                value={userForm.confirmPassword}
+                                                onChange={(e) => setUserForm({ ...userForm, confirmPassword: e.target.value })}
+                                            />
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="ac-form-group">
                                     <label>Email (Optional)</label>

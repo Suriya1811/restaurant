@@ -301,11 +301,11 @@ const CashAndBank = () => {
                         </div>
                         
                         {summary.snapshots.filter(s => s.name.toLowerCase().includes('bank')).map((bank, i) => (
-                            <div key={i} className="flex-1 bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col justify-center items-center shadow-sm min-w-[200px]">
-                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <div key={i} className="flex-1 bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center shadow-sm min-w-[200px]">
+                                <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                                     <Landmark size={12} /> {bank.name}
                                 </span>
-                                <span className="text-xl font-black text-blue-600">₹ {fmt(bank.balance)}</span>
+                                <span className="text-xl font-black text-orange-600">₹ {fmt(bank.balance)}</span>
                             </div>
                         ))}
 
@@ -322,15 +322,15 @@ const CashAndBank = () => {
                             <table className="w-full text-left min-w-[900px]">
                                 <thead className="bg-[#0f172a] text-white sticky top-0 z-10">
                                     <tr>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 whitespace-nowrap">Date</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-center">Ref</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700">Entity / Description</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-emerald-500 border-r border-slate-700 text-right">Inflow (₹)</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-rose-500 border-r border-slate-700 text-right">Outflow (₹)</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Cash Link</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 border-r border-slate-700 text-right">Bank Link</th>
-                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-orange-500 text-right border-r border-slate-700">Current Position</th>
-                                        <th className="px-2 py-3 w-10 border-slate-700 text-[10px] font-black uppercase tracking-wider text-orange-500 text-center no-print">Audit</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 whitespace-nowrap">Date</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Ref</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700">Entity / Description</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-emerald-500 border-r border-slate-700 text-right">Inflow (₹)</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-rose-500 border-r border-slate-700 text-right">Outflow (₹)</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Cash Link</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Bank Link</th>
+                                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 text-right border-r border-slate-700">Current Position</th>
+                                        <th className="px-2 py-3 w-10 border-slate-700 text-[10px] font-black uppercase tracking-wider !text-orange-500 text-center no-print">Audit</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">

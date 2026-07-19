@@ -404,19 +404,19 @@ exports.deleteRole = async (req, res) => {
 // @access  Protected (OWNER/ADMIN)
 exports.createSubUser = async (req, res) => {
     try {
-        const { name, username, password, role, permissions, custom_role_id, email, mobile } = req.body;
+        const { name, username, password, password_enabled = true, role, permissions, custom_role_id, email, mobile } = req.body;
         const restaurant_id = req.user.restaurant_id._id || req.user.restaurant_id;
 
-        if (!name || !username || !password || !role) {
+        const isPasswordEnabled = password_enabled !== false;
+
+        if (!name || !username || (isPasswordEnabled && !password)) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, username, password and User Type are required'
+                message: isPasswordEnabled ? 'Name, username, and password are required' : 'Name and username are required'
             });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
-        }
+
 
         // Check for duplicate username within same restaurant
         const existingUser = await User.findOne({ username: username.toLowerCase(), restaurant_id });
@@ -424,15 +424,47 @@ exports.createSubUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Username already exists for this restaurant' });
         }
 
+        // Determine the role dynamically if not explicitly provided
+        let finalRole = role;
+        const hasAdmin = await User.findOne({
+            restaurant_id,
+            role: { $in: ['ADMIN', 'OWNER'] },
+            password_enabled: true
+        });
+
+        if (!finalRole) {
+            finalRole = hasAdmin ? 'STAFF' : 'ADMIN';
+        }
+
+        // Enforce admin rule: Cannot create non-admin if no password-enabled admin exists
+        if (finalRole !== 'ADMIN') {
+            if (!hasAdmin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'An Admin account with a password must be created before adding regular users.'
+                });
+            }
+        }
+
+        // Ensure the first admin always has a password
+        if (finalRole === 'ADMIN' && !hasAdmin && !isPasswordEnabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'The first Admin account must have password protection enabled.'
+            });
+        }
+
         const user = await User.create({
             name,
             username: username.toLowerCase(),
             email: email || undefined,
             mobile: mobile || undefined,
-            password,
+            password: isPasswordEnabled ? password : '',
+            password_enabled: isPasswordEnabled,
+            password_initialized: isPasswordEnabled,
             restaurant_id,
-            role: role, // 'ADMIN' or 'STAFF'
-            permissions: role === 'ADMIN' ? [] : (permissions || []),
+            role: finalRole, // 'ADMIN' or 'STAFF'
+            permissions: finalRole === 'ADMIN' ? [] : (permissions || []),
             custom_role_id: custom_role_id || null,
             is_active: true
         });
@@ -464,8 +496,7 @@ exports.getSubUsers = async (req, res) => {
         const restaurant_id = req.user.restaurant_id._id || req.user.restaurant_id;
         const users = await User.find({
             restaurant_id,
-            role: { $in: ['STAFF', 'ADMIN'] },
-            _id: { $ne: req.user.id } // Don't return self in user management optionally? Let's just return all except owner
+            role: { $in: ['STAFF', 'ADMIN'] }
         }).select('-password').populate('custom_role_id', 'name');
 
         res.json({ success: true, data: users });
@@ -480,7 +511,7 @@ exports.getSubUsers = async (req, res) => {
 // @access  Protected (OWNER/ADMIN)
 exports.updateSubUser = async (req, res) => {
     try {
-        const { name, username, password, custom_role_id, role, permissions, email, mobile, is_active } = req.body;
+        const { name, username, password, password_enabled, custom_role_id, role, permissions, email, mobile, is_active } = req.body;
         const user = await User.findById(req.params.id).select('+password');
 
         if (!user) {
@@ -513,11 +544,26 @@ exports.updateSubUser = async (req, res) => {
             user.username = username.toLowerCase();
         }
 
-        if (password) {
-            if (password.length < 6) {
-                return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+        if (password_enabled !== undefined) {
+            // Prevent disabling password for the last admin
+            if (password_enabled === false && (user.role === 'ADMIN' || user.role === 'OWNER')) {
+                const otherAdmins = await User.countDocuments({
+                    restaurant_id: user.restaurant_id,
+                    role: { $in: ['ADMIN', 'OWNER'] },
+                    password_enabled: true,
+                    _id: { $ne: user._id }
+                });
+                if (otherAdmins === 0) {
+                    return res.status(400).json({ success: false, message: 'Cannot disable password. At least one Admin account must have password protection enabled.' });
+                }
             }
+            user.password_enabled = password_enabled;
+        }
+
+        if (password && user.password_enabled !== false) {
             user.password = password;
+        } else if (password_enabled === false) {
+            user.password = '';
         }
 
         await user.save();

@@ -101,6 +101,15 @@ const DayWisePurchase = ({ isEmbedded = false }) => {
 
     const chartOptions = {
         responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: {
+                bottom: 25,
+                left: 10,
+                right: 10,
+                top: 5
+            }
+        },
         plugins: {
             legend: { display: false },
             title: { display: false }
@@ -108,10 +117,20 @@ const DayWisePurchase = ({ isEmbedded = false }) => {
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: '#f1f5f9', drawBorder: false }
+                grid: { color: '#f1f5f9', drawBorder: false },
+                ticks: { color: '#94a3b8', font: { size: 10, weight: '700' } }
             },
             x: {
-                grid: { display: false, drawBorder: false }
+                grid: { display: false, drawBorder: false },
+                ticks: {
+                    color: '#94a3b8',
+                    font: { size: 10, weight: '700' },
+                    maxRotation: 45,
+                    minRotation: 45,
+                    padding: 8,
+                    autoSkip: true,
+                    maxTicksLimit: 15
+                }
             }
         },
         onClick: (event, elements) => {
@@ -185,7 +204,7 @@ const DayWisePurchase = ({ isEmbedded = false }) => {
             <div className="flex-1 flex flex-col md:flex-row gap-4 p-4 min-h-0 bg-slate-50">
                 <div className="md:w-2/3 bg-white rounded-lg border border-slate-200 shadow-sm p-4 flex flex-col min-h-[300px]">
                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Capital Outflow Trajectory</h3>
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative h-72 md:h-80">
                         {loading ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                                 <Loader2 className="animate-spin text-red-600 mb-2" size={32} />

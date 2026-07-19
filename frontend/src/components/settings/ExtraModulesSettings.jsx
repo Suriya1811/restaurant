@@ -90,12 +90,12 @@ const ExtraModulesSettings = () => {
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg border border-slate-200 shadow-sm max-w-md mx-auto mt-10">
-                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 flex items-center justify-center rounded-full mb-6">
+                <div className="w-16 h-16 bg-orange-50 text-orange-600 flex items-center justify-center rounded-full mb-6">
                     <Lock size={32} />
                 </div>
                 <h3 className="text-xl font-black text-slate-800 mb-2">Extra Modules</h3>
                 <p className="text-sm text-slate-500 text-center mb-8">
-                    This area is protected. Please enter the owner's login password to access these settings.
+                    This area is protected. Please contact Yugam software for this module.
                 </p>
                 <form onSubmit={verifyPassword} className="w-full space-y-4">
                     {authError && <div className="text-rose-600 text-sm font-semibold bg-rose-50 p-3 rounded">{authError}</div>}
@@ -144,7 +144,7 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.coupon_enabled} onChange={e => setModules({...modules, coupon_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>
 
@@ -155,7 +155,7 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.loyalty_enabled} onChange={e => setModules({...modules, loyalty_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>
 
@@ -166,7 +166,7 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.kot_enabled} onChange={e => setModules({...modules, kot_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>
 
@@ -177,7 +177,7 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.printer_enabled} onChange={e => setModules({...modules, printer_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>
 
@@ -188,7 +188,7 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.reports_enabled} onChange={e => setModules({...modules, reports_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>
 

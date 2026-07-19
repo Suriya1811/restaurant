@@ -21,7 +21,7 @@ const LandingPage = () => {
     const [checkingPassword, setCheckingPassword] = useState(false);
     
     const [formData, setFormData] = useState({
-        username: 'admin',
+        username: '',
         password: ''
     });
 
