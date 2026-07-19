@@ -289,6 +289,12 @@ function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
+
+            {/* Redirect /dashboard to the default module */}
+            <Route path="/dashboard" element={<Navigate to="/dashboard/self-service/home" replace />} />
+            
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }

@@ -34,7 +34,7 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
             {!title && (
                 <div className="header-center">
                     <span className="company-profile-name text-lg font-semibold text-slate-700 tracking-wide">
-                        {restaurantName || user?.businessName || user?.restaurant_name || 'Storefront'}
+                        {user?.businessName || user?.restaurant_name || restaurantName || 'Storefront'}
                     </span>
                 </div>
             )}
@@ -75,7 +75,7 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                                                 )}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-black text-slate-800 text-lg leading-tight">{restaurantName || user?.businessName || user?.restaurant_name || 'Storefront'}</span>
+                                                <span className="font-black text-slate-800 text-lg leading-tight">{user?.businessName || user?.restaurant_name || restaurantName || 'Storefront'}</span>
                                                 <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">{user?.role || 'Administrator'}</span>
                                             </div>
                                         </div>

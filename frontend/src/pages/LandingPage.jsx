@@ -163,7 +163,7 @@ const LandingPage = () => {
                 {/* Dashboard Interface Mockup at the bottom */}
                 <div className="w-full mt-auto flex justify-center overflow-hidden max-h-[45vh] rounded-t-3xl relative z-10 border border-slate-700/50 shadow-2xl">
                     <img
-                        src="/restaurant_pos_mockup.png"
+                        src="/login.png"
                         alt="Yugam Dashboard Mockup"
                         className="w-full object-cover object-top rounded-t-3xl"
                     />
