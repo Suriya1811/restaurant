@@ -251,10 +251,32 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
         return hasDirectAccess || anyChildVisible;
     };
 
+    const checkIsExactActive = (menuItem) => {
+        if (!menuItem.route) return false;
+        
+        const itemUrl = new URL(menuItem.route, window.location.origin);
+        const isPathMatch = location.pathname === itemUrl.pathname;
+        
+        if (isPathMatch) {
+            const itemParams = Array.from(itemUrl.searchParams.entries());
+            const queryParams = new URLSearchParams(location.search);
+            
+            if (itemParams.length > 0) {
+                return itemParams.every(([key, value]) => queryParams.get(key) === value);
+            } else {
+                if (queryParams.has('tab') || queryParams.has('category')) {
+                    return false;
+                }
+                return true;
+            }
+        }
+        return false;
+    };
+
     const renderMenuItem = (item, isSub = false) => {
         const hasSubItems = item.subItems && item.subItems.length > 0;
         const isExpanded = expandedMenus[item.label];
-        const isActive = checkIsActive(item);
+        const isExactActive = checkIsExactActive(item);
 
         if (!checkIsVisible(item)) return null;
 
@@ -262,7 +284,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             <div key={item.label} className="menu-group">
                 {hasSubItems ? (
                     <div
-                        className={`nav-item ${isActive ? 'active' : ''} ${isExpanded ? 'expanded' : ''} ${isSub ? 'sub-nav-item' : ''}`}
+                        className={`nav-item ${isExactActive ? 'active' : ''} ${isExpanded ? 'expanded' : ''} ${isSub ? 'sub-nav-item' : ''}`}
                         onClick={() => {
                             if (item.route) {
                                 const pathOnly = item.route.split('?')[0];
@@ -283,7 +305,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                 ) : (
                     <Link
                         to={item.route}
-                        className={`nav-item ${isActive ? 'active' : ''} ${isSub ? 'sub-nav-item' : ''}`}
+                        className={`nav-item ${isExactActive ? 'active' : ''} ${isSub ? 'sub-nav-item' : ''}`}
                     >
                         {!isSub && <span className="nav-icon">{item.icon}</span>}
                         {!isCollapsed && <span className="nav-label">{item.label}</span>}
