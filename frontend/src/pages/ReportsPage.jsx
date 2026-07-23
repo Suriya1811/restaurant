@@ -13,6 +13,8 @@ import ItemWiseSales from './dashboard/ItemWiseSales';
 import CategoryWiseSales from './dashboard/CategoryWiseSales';
 import TransactionWiseSales from './dashboard/TransactionWiseSales';
 import SalesProfit from './dashboard/SalesProfit';
+import SalesSummaryHub from './dashboard/SalesSummaryHub';
+import StockReportHub from './dashboard/StockReportHub';
 
 // Purchase Reports
 import DayWisePurchase from './dashboard/DayWisePurchase';
@@ -23,6 +25,8 @@ import SupplierOutstanding from './dashboard/SupplierOutstanding';
 import CustomerOutstanding from './dashboard/CustomerOutstanding';
 import AccountsReceivable from './dashboard/AccountsReceivable';
 import AccountsPayable from './dashboard/AccountsPayable';
+
+import OutstandingReportsHub from './dashboard/OutstandingReportsHub';
 
 import {
     PackageOpen, BarChart3, ShoppingCart, CreditCard,
@@ -146,22 +150,8 @@ const ReportsPage = () => {
 
         // ── SALES ─────────────────────────────────────────────────────────────
         if (category === 'sales') {
-            switch (filter) {
-                case 'day': return <DayWiseSales key={componentKey} isEmbedded={true} />;
-                case 'month': return <MonthWiseSales key={componentKey} isEmbedded={true} />;
-                case 'item': return <ItemWiseSales key={componentKey} isEmbedded={true} />;
-                case 'group': return <CategoryWiseSales key={componentKey} isEmbedded={true} />;
-                case 'transaction': return <TransactionWiseSales key={componentKey} isEmbedded={true} />;
-                case 'profit': return <SalesProfit key={componentKey} isEmbedded={true} />;
-                case 'brand':
-                    return <GenericSummaryReport key={componentKey} isEmbedded={true} title="Brand Wise Sales" endpoint="/reports/sales-by-brand" />;
-                case 'captain':
-                    return <GenericSummaryReport key={componentKey} isEmbedded={true} title="Captain Wise Sales" endpoint="/reports/sales-by-captain" />;
-                case 'agent':
-                    return <GenericSummaryReport key={componentKey} isEmbedded={true} title="Personnel Sales" endpoint="/reports/sales/summary" groupBy="WAITER" />;
-                default:
-                    return <DayWiseSales key={componentKey} isEmbedded={true} />;
-            }
+            // Handled at the top level to render SalesSummaryHub standalone
+            return null;
         }
 
         // ── PURCHASE ──────────────────────────────────────────────────────────
@@ -202,9 +192,15 @@ const ReportsPage = () => {
 
     return (
         <div className="dashboard-layout bg-slate-50">
-            {/* If GSTR-1 is selected, completely bypass the wrapper and render the standalone component */}
-            {category === 'gst' && filter === 'gstr1' ? (
+            {/* If GST or Sales is selected, completely bypass the wrapper and render the standalone component */}
+            {category === 'gst' ? (
                 <Gstr1Report />
+            ) : category === 'sales' ? (
+                <SalesSummaryHub />
+            ) : category === 'stock' ? (
+                <StockReportHub />
+            ) : category === 'outstanding' ? (
+                <OutstandingReportsHub />
             ) : (
                 <>
                     <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />

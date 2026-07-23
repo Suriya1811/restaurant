@@ -1,3 +1,3 @@
 !macro customInit
-  StrCpy $INSTDIR "C:\Restaurant POS"
+  StrCpy $INSTDIR "C:\Yugam Software"
 !macroend

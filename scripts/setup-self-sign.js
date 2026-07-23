@@ -21,7 +21,7 @@ async function setup() {
       // 1. Generate self-signed certificate and export to PFX using PowerShell
       const psScript = `
         $ErrorActionPreference = 'Stop';
-        $cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=Restaurant POS Dev' -KeyUsage DigitalSignature -FriendlyName 'Restaurant POS Dev Publisher' -CertStoreLocation 'Cert:\\CurrentUser\\My' -NotAfter (Get-Date).AddYears(5);
+        $cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=Yugam Software Dev' -KeyUsage DigitalSignature -FriendlyName 'Yugam Software Dev Publisher' -CertStoreLocation 'Cert:\\CurrentUser\\My' -NotAfter (Get-Date).AddYears(5);
         $pwd = ConvertTo-SecureString -String '${PASSWORD}' -Force -AsPlainText;
         Export-PfxCertificate -Cert $cert -FilePath '${CERT_PATH.replace(/\\/g, '/')}' -Password $pwd;
         Write-Host "CERT_GENERATED";

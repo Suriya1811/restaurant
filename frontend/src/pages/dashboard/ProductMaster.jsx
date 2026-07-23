@@ -864,8 +864,7 @@ const ProductMaster = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    className="px-3 py-1.5 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md"
-                                    style={{ backgroundColor: '#0f172a' }}
+                                    className="btn-column-settings"
                                     onClick={() => {
                                         setTempVisibleColumns(visibleColumns);
                                         setShowColumnSettings(true);

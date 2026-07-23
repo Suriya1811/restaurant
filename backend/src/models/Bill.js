@@ -65,6 +65,8 @@ const billSchema = new mongoose.Schema({
         default: 'SELF_SERVICE'
     },
     function_type: String,
+    hall: String,
+    packs: String,
     party_status: {
         type: String,
         enum: ['PREPARING', 'READY_TO_DISPATCH', 'DELIVERED'],

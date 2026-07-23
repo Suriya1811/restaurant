@@ -32,6 +32,7 @@ const BillingPage = lazy(() => import('./pages/dashboard/BillingPage.jsx'));
 const TableSelectionPage = lazy(() => import('./pages/dashboard/TableSelectionPage.jsx'));
 const HoldBillsPage = lazy(() => import('./pages/dashboard/HoldBillsPage.jsx'));
 const BillsAndSalesPage = lazy(() => import('./pages/dashboard/BillsAndSalesPage.jsx'));
+const PartyMasterHub = lazy(() => import('./pages/dashboard/PartyMasterHub.jsx'));
 const DisplayPage = lazy(() => import('./pages/dashboard/DisplayPage.jsx'));
 const StockPage = lazy(() => import('./pages/StockPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
@@ -203,7 +204,7 @@ function AppRoutes() {
                                 <PermissionRoute pageKey="sales_bill"><HoldBillsPage /></PermissionRoute>
                             } />
                             <Route path="bills-sales" element={
-                                <PermissionRoute pageKey="party_master"><BillsAndSalesPage /></PermissionRoute>
+                                <PermissionRoute pageKey="party_master"><PartyMasterHub /></PermissionRoute>
                             } />
                             <Route path="display" element={
                                 <PermissionRoute pageKey="display"><DisplayPage /></PermissionRoute>

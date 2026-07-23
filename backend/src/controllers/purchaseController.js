@@ -88,8 +88,6 @@ exports.getPurchaseById = async (req, res) => {
 
 // POST /api/purchases — create purchase bill
 exports.createPurchase = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const {
             supplier_id, invoice_number, invoice_date, payment_type,
@@ -116,21 +114,54 @@ exports.createPurchase = async (req, res) => {
         if (paidAmt >= grandTotal && grandTotal > 0) payStatus = 'PAID';
         else if (paidAmt > 0) payStatus = 'PARTIAL';
 
-        // Get supplier for balance display
-        const supplierDoc = await Supplier.findOne({ _id: supplier_id, company_id }).session(session);
+        // Support supplier selection via Supplier ID, Ledger ID, or Supplier Name
+        let supplierDoc = null;
+        if (mongoose.Types.ObjectId.isValid(supplier_id)) {
+            supplierDoc = await Supplier.findOne({ _id: supplier_id, company_id });
+        }
         if (!supplierDoc) {
-            await session.abortTransaction();
+            supplierDoc = await Supplier.findOne({ name: supplier_id, company_id });
+        }
+        if (!supplierDoc && mongoose.Types.ObjectId.isValid(supplier_id)) {
+            const Ledger = require('../models/Ledger');
+            const ledger = await Ledger.findOne({ _id: supplier_id, company_id });
+            if (ledger) {
+                const sName = ledger.name.replace(/\(Supplier\)/gi, '').trim();
+                supplierDoc = await Supplier.findOne({ name: new RegExp(`^${sName}$`, 'i'), company_id });
+                if (!supplierDoc) {
+                    supplierDoc = await Supplier.create({
+                        company_id,
+                        name: sName,
+                        contact_number: ledger.phone || '',
+                        opening_balance: ledger.opening_balance || 0
+                    });
+                }
+            }
+        }
+
+        if (!supplierDoc) {
             return res.status(400).json({ success: false, error: 'Supplier not found' });
         }
 
-        const [purchase] = await Purchase.create([{
-            company_id, supplier_id, invoice_number,
+        // Sanitize product_id in items
+        const sanitizedItems = (items || []).map(item => {
+            const copy = { ...item };
+            if (!copy.product_id || !mongoose.Types.ObjectId.isValid(copy.product_id)) {
+                delete copy.product_id;
+            }
+            return copy;
+        });
+
+        const purchase = await Purchase.create({
+            company_id,
+            supplier_id: supplierDoc._id,
+            invoice_number,
             invoice_date: invoice_date || new Date(),
             purchase_date: invoice_date || new Date(),
             payment_type: payment_type || 'CREDIT',
             due_days: parseInt(due_days) || 0,
             due_date,
-            items,
+            items: sanitizedItems,
             sub_total: parseFloat(sub_total) || 0,
             discount_amount: parseFloat(discount_amount) || 0,
             tax_amount: parseFloat(tax_amount) || 0,
@@ -145,13 +176,13 @@ exports.createPurchase = async (req, res) => {
             payment_status: payStatus,
             remarks: remarks || '',
             notes: notes || ''
-        }], { session });
+        });
 
         // Update stock for each product
         const StockTransaction = require('../models/StockTransaction');
-        for (const item of items) {
+        for (const item of sanitizedItems) {
             if (!item.product_id) continue;
-            const product = await Product.findOne({ _id: item.product_id, company_id }).session(session);
+            const product = await Product.findOne({ _id: item.product_id, company_id });
             if (product) {
                 const prev = product.current_stock;
                 product.current_stock += parseFloat(item.quantity) || 0;
@@ -161,66 +192,65 @@ exports.createPurchase = async (req, res) => {
                 if (item.sales_rate) product.selling_price = parseFloat(item.sales_rate);
                 if (item.mrp) product.mrp = parseFloat(item.mrp);
                 if (item.hsn_code) product.hsn_code = item.hsn_code;
-                await product.save({ session });
+                await product.save();
 
-                await StockTransaction.create([{
+                await StockTransaction.create({
                     company_id, product_id: product._id, type: 'IN',
                     quantity: parseFloat(item.quantity),
                     previous_stock: prev, new_stock: product.current_stock,
                     reference_type: 'PURCHASE', reference_id: purchase._id,
                     remark: `Purchase Inv ${invoice_number}`
-                }], { session });
+                });
             }
         }
 
-        // Update supplier balance (amount we owe them = due amount)
+        // Update supplier balance
         if (dueAmt > 0) {
             await Supplier.findOneAndUpdate(
-                { _id: supplier_id, company_id },
-                { $inc: { opening_balance: dueAmt } },
-                { session }
+                { _id: supplierDoc._id, company_id },
+                { $inc: { opening_balance: dueAmt } }
             );
         }
 
-        // Accounting integration
+        // Accounting Integration
         try {
             const Ledger = require('../models/Ledger');
             const AccountTransaction = require('../models/AccountTransaction');
 
-            const purchaseLedger = await Ledger.findOne({ company_id, name: 'Purchase Account' }).session(session);
-            const supplierLedger = await Ledger.findOne({ company_id, name: `${supplierDoc.name} (Supplier)` }).session(session);
+            const purchaseLedger = await Ledger.findOne({ company_id, name: 'Purchase Account' });
+            const supplierLedger = await Ledger.findOne({ company_id, name: `${supplierDoc.name} (Supplier)` });
 
             if (purchaseLedger && supplierLedger) {
-                await AccountTransaction.create([{
+                await AccountTransaction.create({
                     company_id, ledger_id: purchaseLedger._id, type: 'DEBIT', amount: grandTotal,
                     voucher_type: 'PURCHASE', voucher_number: invoice_number, reference_id: purchase._id,
                     narration: `Purchase - Inv ${invoice_number}`, date: invoice_date || new Date()
-                }], { session });
-                await Ledger.findByIdAndUpdate(purchaseLedger._id, { $inc: { opening_balance: grandTotal } }, { session });
+                });
+                await Ledger.findByIdAndUpdate(purchaseLedger._id, { $inc: { opening_balance: grandTotal } });
 
-                await AccountTransaction.create([{
+                await AccountTransaction.create({
                     company_id, ledger_id: supplierLedger._id, type: 'CREDIT', amount: grandTotal,
                     voucher_type: 'PURCHASE', voucher_number: invoice_number, reference_id: purchase._id,
                     narration: `Purchase - Inv ${invoice_number}`, date: invoice_date || new Date()
-                }], { session });
-                await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: -grandTotal } }, { session });
+                });
+                await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: -grandTotal } });
 
                 if (paidAmt > 0) {
-                    const cashLedger = await Ledger.findOne({ company_id, name: 'Cash in Hand' }).session(session);
+                    const cashLedger = await Ledger.findOne({ company_id, name: 'Cash in Hand' });
                     if (cashLedger) {
-                        await AccountTransaction.create([{
+                        await AccountTransaction.create({
                             company_id, ledger_id: supplierLedger._id, type: 'DEBIT', amount: paidAmt,
                             voucher_type: 'PAYMENT', voucher_number: `PAY-${invoice_number}`, reference_id: purchase._id,
                             narration: `Payment for Inv ${invoice_number}`, date: invoice_date || new Date()
-                        }], { session });
-                        await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: paidAmt } }, { session });
+                        });
+                        await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: paidAmt } });
 
-                        await AccountTransaction.create([{
+                        await AccountTransaction.create({
                             company_id, ledger_id: cashLedger._id, type: 'CREDIT', amount: paidAmt,
                             voucher_type: 'PAYMENT', voucher_number: `PAY-${invoice_number}`, reference_id: purchase._id,
                             narration: `Payment for Inv ${invoice_number}`, date: invoice_date || new Date()
-                        }], { session });
-                        await Ledger.findByIdAndUpdate(cashLedger._id, { $inc: { opening_balance: -paidAmt } }, { session });
+                        });
+                        await Ledger.findByIdAndUpdate(cashLedger._id, { $inc: { opening_balance: -paidAmt } });
                     }
                 }
             }
@@ -228,16 +258,12 @@ exports.createPurchase = async (req, res) => {
             console.error('Accounting integration error (non-fatal):', accErr.message);
         }
 
-        await session.commitTransaction();
         const populated = await Purchase.findById(purchase._id)
             .populate('supplier_id', 'name contact_person contact_number address gst_number opening_balance');
         res.status(201).json({ success: true, data: populated });
     } catch (error) {
-        await session.abortTransaction();
         console.error('createPurchase error:', error);
         res.status(500).json({ success: false, error: error.message });
-    } finally {
-        session.endSession();
     }
 };
 
@@ -266,41 +292,41 @@ exports.updatePurchase = async (req, res) => {
         await purchase.save();
         res.status(200).json({ success: true, data: purchase });
     } catch (error) {
-        console.error('updatePurchase error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
 // DELETE /api/purchases/:id — delete and reverse stock
 exports.deletePurchase = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const purchase = await Purchase.findOne({
             _id: req.params.id,
             company_id: req.user.restaurant_id,
             is_deleted: { $ne: true }
         });
-        if (!purchase) return res.status(404).json({ success: false, error: 'Purchase not found' });
+
+        if (!purchase) {
+            return res.status(404).json({ success: false, error: 'Purchase not found' });
+        }
 
         const StockTransaction = require('../models/StockTransaction');
         const company_id = req.user.restaurant_id;
 
         for (const item of purchase.items) {
             if (!item.product_id) continue;
-            const product = await Product.findOne({ _id: item.product_id, company_id }).session(session);
+            const product = await Product.findOne({ _id: item.product_id, company_id });
             if (product) {
                 const prev = product.current_stock;
                 product.current_stock = Math.max(0, product.current_stock - parseFloat(item.quantity));
-                await product.save({ session });
+                await product.save();
 
-                await StockTransaction.create([{
+                await StockTransaction.create({
                     company_id, product_id: product._id, type: 'OUT',
                     quantity: parseFloat(item.quantity),
                     previous_stock: prev, new_stock: product.current_stock,
                     reference_type: 'PURCHASE',
                     remark: `Purchase Cancelled: ${purchase.invoice_number}`
-                }], { session });
+                });
             }
         }
 
@@ -309,20 +335,14 @@ exports.deletePurchase = async (req, res) => {
         if (balanceToSubtract > 0) {
             await Supplier.findOneAndUpdate(
                 { _id: purchase.supplier_id, company_id },
-                { $inc: { opening_balance: -balanceToSubtract } },
-                { session }
+                { $inc: { opening_balance: -balanceToSubtract } }
             );
         }
 
-        await Purchase.findByIdAndDelete(req.params.id).session(session);
-
-        await session.commitTransaction();
+        await Purchase.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Purchase deleted and stock reverted' });
     } catch (error) {
-        await session.abortTransaction();
         console.error('deletePurchase error:', error);
         res.status(500).json({ success: false, error: error.message });
-    } finally {
-        session.endSession();
     }
 };

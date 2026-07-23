@@ -1,9 +1,9 @@
 {
   "name": "restaurant-pos",
   "version": "1.0.0",
-  "description": "Restaurant POS Desktop Application",
+  "description": "Yugam Software Desktop Application",
   "main": "electron/main.js",
-  "author": "Restaurant POS",
+  "author": "Yugam Software",
   "license": "ISC",
   "scripts": {
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
@@ -22,7 +22,7 @@
   },
   "build": {
     "appId": "com.restaurant.pos",
-    "productName": "Restaurant POS",
+    "productName": "Yugam Software",
     "directories": {
       "output": "dist-electron",
       "buildResources": "resources"
@@ -61,10 +61,11 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Restaurant POS",
+      "shortcutName": "Yugam Software",
       "license": "resources/license.txt",
       "include": "resources/installer.nsh"
     },

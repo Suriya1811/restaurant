@@ -164,7 +164,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 768,
     show: false,
-    title: 'Restaurant POS',
+    title: 'Yugam Software',
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

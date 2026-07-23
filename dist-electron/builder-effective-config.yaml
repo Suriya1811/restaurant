@@ -2,7 +2,7 @@ directories:
   output: dist-electron
   buildResources: resources
 appId: com.restaurant.pos
-productName: Restaurant POS
+productName: Yugam Software
 files:
   - filter:
       - electron/**/*
@@ -24,10 +24,11 @@ win:
         - x64
 nsis:
   oneClick: false
+  perMachine: true
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Restaurant POS
+  shortcutName: Yugam Software
   license: resources/license.txt
   include: resources/installer.nsh
 asar: true

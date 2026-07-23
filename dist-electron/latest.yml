@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
-  - url: Restaurant-POS-Setup-1.0.0.exe
-    sha512: wQS2PB8Y1zlUyjsjlUkOL4I4ho8zMBToy7eN1QTG9+xwgPxDJyeKoMbNhUbTotrE8p8MAG3uXYzxrVKcKiqfBg==
-    size: 128381481
-path: Restaurant-POS-Setup-1.0.0.exe
-sha512: wQS2PB8Y1zlUyjsjlUkOL4I4ho8zMBToy7eN1QTG9+xwgPxDJyeKoMbNhUbTotrE8p8MAG3uXYzxrVKcKiqfBg==
-releaseDate: '2026-07-19T11:16:39.506Z'
+  - url: Yugam-Software-Setup-1.0.0.exe
+    sha512: 6v4TcDDtNB3Om2fIJfLPaiC7cXA7SEyMk0EqDOijSMwq6U0PBT36GzXD0/tG+ncHYaU14xnsQrhNKDX6NSmP4w==
+    size: 128367787
+path: Yugam-Software-Setup-1.0.0.exe
+sha512: 6v4TcDDtNB3Om2fIJfLPaiC7cXA7SEyMk0EqDOijSMwq6U0PBT36GzXD0/tG+ncHYaU14xnsQrhNKDX6NSmP4w==
+releaseDate: '2026-07-19T13:15:22.026Z'

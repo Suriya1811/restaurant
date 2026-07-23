@@ -550,12 +550,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
                         </button>
                         <button
-                            type="button"
                             onClick={() => {
                                 setTempVisibleColumns(visibleColumns);
                                 setShowColumnDropdown(true);
                             }}
-                            className="px-4 py-2 bg-[#0b1727] hover:bg-slate-800 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm"
+                            className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer"
                         >
                             <Settings size={14} /> COLUMN SETTINGS
                         </button>

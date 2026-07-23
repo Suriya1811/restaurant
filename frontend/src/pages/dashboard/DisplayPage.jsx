@@ -2,31 +2,30 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { 
+import ActionDropdown from '@/components/dashboard/ActionDropdown';
+import {
     CalendarDays, FileText, ClipboardList, DollarSign, Landmark,
     RefreshCw, FileSpreadsheet, FileIcon, Printer, XCircle, ChevronDown, CheckSquare,
-    ChevronLeft, ChevronRight, Edit, Trash2, Settings
+    ChevronLeft, ChevronRight, Edit, Trash2, Settings, Eye, Download
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Dashboard.css';
 
 const ALL_COLUMNS = [
-    { id: 'sno', label: 'S.No' },
-    { id: 'type', label: 'Type' },
-    { id: 'kot_bill_no', label: 'KOT / Bill No.' },
-    { id: 'date', label: 'Date' },
-    { id: 'time', label: 'Time' },
-    { id: 'customer_name', label: 'Customer Name' },
-    { id: 'mobile_no', label: 'Mobile Number' },
-    { id: 'captain', label: 'Captain' },
-    { id: 'waiter', label: 'Waiter' },
-    { id: 'table', label: 'Table No.' },
-    { id: 'amount', label: 'Amount' },
-    { id: 'cash_amount', label: 'Cash Amount' },
-    { id: 'card_amount', label: 'Card Amount' },
-    { id: 'upi_amount', label: 'UPI Amount' },
-    { id: 'action', label: 'Action' }
+    { id: 'sno', label: 'S.NO' },
+    { id: 'type', label: 'TYPE' },
+    { id: 'kot_bill_no', label: 'KOT/BILL NUMBER' },
+    { id: 'date', label: 'DATE' },
+    { id: 'time', label: 'TIME' },
+    { id: 'customer_name', label: 'CUSTOMER NAME' },
+    { id: 'mobile_no', label: 'MOBILE NUMBER' },
+    { id: 'table', label: 'TABLE NO.' },
+    { id: 'amount', label: 'AMOUNT' },
+    { id: 'cash_amount', label: 'CASH' },
+    { id: 'card_amount', label: 'CARD' },
+    { id: 'upi_amount', label: 'UPI' },
+    { id: 'action', label: 'ACTION' }
 ];
 
 const DisplayPage = () => {
@@ -50,18 +49,28 @@ const DisplayPage = () => {
     const [loading, setLoading] = useState(false);
 
     // Filter State
-    const [salesType, setSalesType] = useState('ALL'); 
-    const [filterBy, setFilterBy] = useState('ALL'); 
+    const [salesType, setSalesType] = useState('ALL');
+    const [filterBy, setFilterBy] = useState('ALL');
     const [selectedCaptain, setSelectedCaptain] = useState('ALL');
     const [selectedWaiter, setSelectedWaiter] = useState('ALL');
     const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0]);
     const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
-    
+
     // Action Filter State
     const [showColumnFilter, setShowColumnFilter] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState(() => {
         const saved = localStorage.getItem('displayPageColumns');
-        return saved ? JSON.parse(saved) : ALL_COLUMNS.map(c => c.id);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                const validIds = ALL_COLUMNS.map(c => c.id);
+                const filtered = parsed.filter(id => validIds.includes(id));
+                if (filtered.length > 0) return filtered;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        return ALL_COLUMNS.map(c => c.id);
     });
 
     // Action Dropdown State
@@ -133,16 +142,16 @@ const DisplayPage = () => {
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
-            
+
             const res = await fetch(`${import.meta.env.VITE_API_URL}/bills`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 const fetchedRecords = data.data.map((bill, index) => {
                     const isStrictKot = bill.status === 'DRAFT' || bill.type === 'KOT';
-                    
+
                     let cashAmt = 0, cardAmt = 0, upiAmt = 0;
                     if (bill.payment_modes && Array.isArray(bill.payment_modes)) {
                         bill.payment_modes.forEach(pm => {
@@ -194,7 +203,7 @@ const DisplayPage = () => {
                         canDelete
                     };
                 });
-                
+
                 // Sort newest first
                 fetchedRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
                 setRecords(fetchedRecords);
@@ -229,7 +238,7 @@ const DisplayPage = () => {
             if (recordDate < fromDate || recordDate > toDate) return false;
 
             if (salesType !== 'ALL' && record.type !== salesType) return false;
-            
+
             if (filterBy === 'CAPTAIN') {
                 if (selectedCaptain !== 'ALL' && record.captain !== selectedCaptain) return false;
             } else if (filterBy === 'WAITER') {
@@ -250,28 +259,30 @@ const DisplayPage = () => {
     // Date Range Summary (uses filteredRecords)
     const rangeKotCount = filteredRecords.filter(r => r.type === 'KOT' || r.type === 'KOT_BILL').length;
     const rangeBillCount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').length;
-    const rangePendingKotCount = filteredRecords.filter(r => r.type === 'KOT' && r.status === 'Saved').length; 
-    
+    const rangePendingKotCount = filteredRecords.filter(r => r.type === 'KOT' && r.status === 'Saved').length;
+
     const rangeSalesAmount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
     const rangeCashAmount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((acc, r) => acc + (parseFloat(r.cashAmt) || 0), 0);
     const rangeBankAmount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((acc, r) => acc + (parseFloat(r.cardAmt) || 0) + (parseFloat(r.upiAmt) || 0), 0);
+    const rangeCardAmount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((acc, r) => acc + (parseFloat(r.cardAmt) || 0), 0);
+    const rangeUpiAmount = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((acc, r) => acc + (parseFloat(r.upiAmt) || 0), 0);
 
     const exportToCSV = () => {
         if (!filteredRecords.length) {
             alert('No records to export');
             return;
         }
-        
+
         const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.id));
         const headers = activeColumns.map(c => c.label);
-        
+
         const rows = filteredRecords.map((record, i) => {
             const formattedType = record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'Sales Bill';
             const formattedNumber = formatDisplayNumber(record.type, record.type === 'KOT' ? record.kot_no : record.bill_no);
             const dateStr = new Date(record.date).toLocaleDateString('en-GB');
-            
+
             return activeColumns.map(col => {
-                switch(col.id) {
+                switch (col.id) {
                     case 'sno': return i + 1;
                     case 'type': return formattedType;
                     case 'kot_bill_no': return formattedNumber;
@@ -290,7 +301,7 @@ const DisplayPage = () => {
                 }
             }).map(cell => `"${cell}"`).join(',');
         });
-        
+
         const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
@@ -308,24 +319,24 @@ const DisplayPage = () => {
         }
 
         const doc = new jsPDF('landscape');
-        
+
         doc.setFontSize(18);
         doc.text('Sales Display Report', 14, 22);
-        
+
         doc.setFontSize(11);
         doc.setTextColor(100);
         doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 30);
-        
+
         const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.id));
         const head = [activeColumns.map(c => c.label)];
-        
+
         const body = filteredRecords.map((record, i) => {
             const formattedType = record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'Sales Bill';
             const formattedNumber = formatDisplayNumber(record.type, record.type === 'KOT' ? record.kot_no : record.bill_no);
             const dateStr = new Date(record.date).toLocaleDateString('en-GB');
-            
+
             return activeColumns.map(col => {
-                switch(col.id) {
+                switch (col.id) {
                     case 'sno': return i + 1;
                     case 'type': return formattedType;
                     case 'kot_bill_no': return formattedNumber;
@@ -360,14 +371,14 @@ const DisplayPage = () => {
     const handlePrint = () => {
         const activeColumns = ALL_COLUMNS.filter(c => visibleColumns.includes(c.id));
         const printWindow = window.open('', '_blank', 'width=1200,height=800');
-        
+
         const rows = filteredRecords.map((record, i) => {
             const formattedType = record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'Sales Bill';
             const formattedNumber = formatDisplayNumber(record.type, record.type === 'KOT' ? record.kot_no : record.bill_no);
             const dateStr = new Date(record.date).toLocaleDateString('en-GB');
             return `<tr>${activeColumns.map(col => {
                 let val = '-';
-                switch(col.id) {
+                switch (col.id) {
                     case 'sno': val = i + 1; break;
                     case 'type': val = formattedType; break;
                     case 'kot_bill_no': val = formattedNumber; break;
@@ -378,17 +389,17 @@ const DisplayPage = () => {
                     case 'captain': val = record.captain || 'N/A'; break;
                     case 'waiter': val = record.waiter || 'N/A'; break;
                     case 'table': val = record.table || 'N/A'; break;
-                    case 'amount': val = record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.amount||0).toFixed(2)}`; break;
-                    case 'cash_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cashAmt||0).toFixed(2)}`) : '-'; break;
-                    case 'card_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cardAmt||0).toFixed(2)}`) : '-'; break;
-                    case 'upi_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.upiAmt||0).toFixed(2)}`) : '-'; break;
+                    case 'amount': val = record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.amount || 0).toFixed(2)}`; break;
+                    case 'cash_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cashAmt || 0).toFixed(2)}`) : '-'; break;
+                    case 'card_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.cardAmt || 0).toFixed(2)}`) : '-'; break;
+                    case 'upi_amount': val = (record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `Rs.${parseFloat(record.upiAmt || 0).toFixed(2)}`) : '-'; break;
                     default: val = '-';
                 }
                 return `<td>${val}</td>`;
             }).join('')}</tr>`;
         }).join('');
 
-        const totalSales = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((a,r) => a + parseFloat(r.amount||0), 0);
+        const totalSales = filteredRecords.filter(r => r.type === 'SALES_BILL' || r.type === 'KOT_BILL').reduce((a, r) => a + parseFloat(r.amount || 0), 0);
 
         printWindow.document.write(`
             <!DOCTYPE html>
@@ -441,20 +452,35 @@ const DisplayPage = () => {
 
     const headerActions = (
         <div className="flex items-center gap-2">
-            <button 
+            <button
+                type="button"
+                className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm cursor-pointer"
                 onClick={exportToCSV}
-                className="btn-export excel">
-                <FileSpreadsheet size={16} /> Excel
+                title="Export to Excel"
+            >
+                <Download size={14} className="text-emerald-500" />
+                <span>Excel</span>
             </button>
-            <button 
+            <button
+                type="button"
+                className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm cursor-pointer"
                 onClick={exportToPDF}
-                className="btn-export pdf">
-                <FileIcon size={16} /> PDF
+                title="Export to PDF"
+            >
+                <Download size={14} className="text-rose-500" />
+                <span>PDF</span>
             </button>
-            <button 
+            <button
+                type="button"
+                className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm cursor-pointer"
                 onClick={handlePrint}
-                className="btn-export print">
-                <Printer size={16} /> Print
+                title="Print"
+            >
+                <Printer size={14} className="text-indigo-500" />
+                <span>Print</span>
+            </button>
+            <button onClick={() => setShowColumnFilter(true)} className="btn-column-settings">
+                <Settings size={14} /> <span>Column Settings</span>
             </button>
         </div>
     );
@@ -464,27 +490,27 @@ const DisplayPage = () => {
             <div className="print:hidden">
                 <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             </div>
-            
+
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay print:hidden" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
-            
+
             <main className="dashboard-main flex flex-col h-screen overflow-hidden relative print:h-auto print:overflow-visible print:block">
                 <div className="print:hidden">
                     <Header toggleSidebar={toggleSidebar} title="SALES DISPLAY" actions={headerActions} />
                 </div>
-                
+
                 <div className="flex flex-col h-full bg-slate-50 relative flex-1 overflow-y-auto print:overflow-visible print:h-auto print:bg-white print:block">
-                    
+
                     <div className="p-6 space-y-4 flex-1 w-full mx-auto max-w-[1400px] print:p-0 print:max-w-none">
-                        
+
                         {/* Filters Row */}
                         <div className="flex flex-wrap items-end gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100 print:hidden">
                             {/* Type Filter */}
                             <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                                 <label className="text-[12px] font-bold text-slate-700">Sales Type</label>
-                                <select 
-                                    value={salesType} 
+                                <select
+                                    value={salesType}
                                     onChange={(e) => { setSalesType(e.target.value); setCurrentPage(1); }}
                                     className="w-full px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                 >
@@ -499,13 +525,13 @@ const DisplayPage = () => {
                             <div className="flex flex-col gap-1.5 flex-[1.5] min-w-[240px]">
                                 <label className="text-[12px] font-bold text-slate-700">Filter By</label>
                                 <div className="flex gap-2">
-                                    <select 
-                                        value={filterBy} 
-                                        onChange={(e) => { 
-                                            setFilterBy(e.target.value); 
+                                    <select
+                                        value={filterBy}
+                                        onChange={(e) => {
+                                            setFilterBy(e.target.value);
                                             setSelectedCaptain('ALL');
                                             setSelectedWaiter('ALL');
-                                            setCurrentPage(1); 
+                                            setCurrentPage(1);
                                         }}
                                         className="w-[120px] px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                     >
@@ -513,10 +539,10 @@ const DisplayPage = () => {
                                         <option value="CAPTAIN">Captain</option>
                                         <option value="WAITER">Waiter</option>
                                     </select>
-                                    
+
                                     {filterBy === 'CAPTAIN' && (
-                                        <select 
-                                            value={selectedCaptain} 
+                                        <select
+                                            value={selectedCaptain}
                                             onChange={(e) => { setSelectedCaptain(e.target.value); setCurrentPage(1); }}
                                             className="flex-1 px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                         >
@@ -524,10 +550,10 @@ const DisplayPage = () => {
                                             {captains.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     )}
-                                    
+
                                     {filterBy === 'WAITER' && (
-                                        <select 
-                                            value={selectedWaiter} 
+                                        <select
+                                            value={selectedWaiter}
                                             onChange={(e) => { setSelectedWaiter(e.target.value); setCurrentPage(1); }}
                                             className="flex-1 px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                         >
@@ -547,7 +573,7 @@ const DisplayPage = () => {
                             {/* Date Range */}
                             <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                                 <label className="text-[12px] font-bold text-slate-700">From Date</label>
-                                <input 
+                                <input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }}
@@ -556,7 +582,7 @@ const DisplayPage = () => {
                             </div>
                             <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                                 <label className="text-[12px] font-bold text-slate-700">To Date</label>
-                                <input 
+                                <input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
@@ -568,94 +594,24 @@ const DisplayPage = () => {
                             <div className="flex flex-col gap-1.5 ml-auto">
                                 <label className="text-[12px] font-bold text-transparent select-none pointer-events-none">Actions</label>
                                 <div className="flex items-center gap-3 relative">
-                                    <button onClick={handleReset} className="flex items-center gap-2 px-4 h-[42px] border border-slate-200 bg-white text-slate-700 rounded-lg text-[13px] font-bold hover:bg-slate-50 transition-colors shadow-sm">
+                                    <button onClick={handleReset} className="flex items-center gap-2 px-6 h-[42px] bg-[#ff6b00] text-white rounded-[4px] text-[13px] font-bold hover:bg-[#e66000] transition-colors shadow-sm uppercase tracking-wide">
                                         <RefreshCw size={15} /> Refresh
                                     </button>
-                                    
-                                    <div className="relative column-filter-container">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                setShowColumnFilter(!showColumnFilter);
-                                            }} 
-                                            className="flex items-center gap-2 px-4 h-[42px] border border-slate-200 bg-white text-slate-700 rounded-lg text-[13px] font-bold hover:bg-slate-50 transition-colors shadow-sm"
-                                        >
-                                            <Settings size={15} /> Action <ChevronDown size={15} />
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 print:hidden">
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
-                                    <CalendarDays size={30} />
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Total KOT</span>
-                                    <span className="text-3xl font-black text-slate-800 leading-none mt-2">{rangeKotCount}</span>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
-                                    <FileText size={30} />
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Total Bills</span>
-                                    <span className="text-3xl font-black text-slate-800 leading-none mt-2">{rangeBillCount}</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 shrink-0">
-                                    <ClipboardList size={30} />
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Pending KOT</span>
-                                    <span className="text-3xl font-black text-slate-800 leading-none mt-2">{rangePendingKotCount}</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center text-green-500 shrink-0">
-                                    <DollarSign size={30} />
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Today Sales</span>
-                                    <span className="text-2xl font-black text-green-600 leading-none mt-2">₹ {rangeSalesAmount.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-                                    <Landmark size={30} />
-                                </div>
-                                <div className="flex flex-col gap-2 w-full max-w-[120px]">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">CASH</span>
-                                        <span className="text-[15px] font-black text-green-600">₹ {rangeCashAmount.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">BANK</span>
-                                        <span className="text-[15px] font-black text-purple-600">₹ {rangeBankAmount.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* Data Table */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col pb-4 flex-1 print:border-none print:shadow-none print:overflow-visible print:block">
                             <div className="overflow-x-auto custom-scrollbar flex-1 print:overflow-visible print:block">
                                 <table className="w-full text-left border-collapse min-w-[1500px] print:min-w-full print:text-[10px]">
-                                    <thead className="sticky top-0 bg-white z-10 shadow-sm print:static">
+                                    <thead className="sticky top-0 bg-[#0b1727] z-10 shadow-sm print:static">
 
                                         <tr className="border-b border-slate-200">
                                             {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
-                                                <th key={col.id} className="py-4 px-5 text-[12px] font-bold text-slate-800 uppercase tracking-wide bg-slate-50/50">
+                                                <th key={col.id} className="py-4 px-4 text-[12px] font-bold text-[#ff6b00] uppercase tracking-wide text-center border-r border-slate-700/50 last:border-0 whitespace-nowrap">
                                                     {col.label}
                                                 </th>
                                             ))}
@@ -678,106 +634,78 @@ const DisplayPage = () => {
                                             </tr>
                                         ) : (
                                             paginatedRecords.map((record, index) => (
-                                                <tr key={record.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group">
+                                                <tr key={record.id} className="border-b border-slate-200 bg-white hover:bg-slate-50/80 transition-colors group">
                                                     {visibleColumns.includes('sno') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-600">
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
                                                             {String((currentPage - 1) * recordsPerPage + index + 1)}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('type') && (
-                                                        <td className="py-3.5 px-5">
-                                                            <span className={`px-2.5 py-1 rounded-[6px] text-[11px] font-bold uppercase tracking-wide ${record.type === 'KOT' ? 'bg-orange-50 text-orange-600 border border-orange-200/50' : record.type === 'KOT_BILL' ? 'bg-purple-50 text-purple-600 border border-purple-200/50' : 'bg-green-50 text-green-600 border border-green-200/50'}`}>
-                                                                {record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'Sales Bill'}
+                                                        <td className="py-3 px-4 text-center border-r border-slate-200 last:border-0">
+                                                            <span className="text-[13px] font-bold text-slate-800 uppercase tracking-wide">
+                                                                {record.type === 'KOT' ? 'KOT' : record.type === 'KOT_BILL' ? 'KOT Bill' : 'BILL'}
                                                             </span>
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('kot_bill_no') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-800 whitespace-nowrap">
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center whitespace-nowrap border-r border-slate-200 last:border-0">
                                                             {formatDisplayNumber(record.type, record.type === 'KOT' ? record.kot_no : record.bill_no)}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('date') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-600 whitespace-nowrap">
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center whitespace-nowrap border-r border-slate-200 last:border-0">
                                                             {new Date(record.date).toLocaleDateString('en-GB')}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('time') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-600 whitespace-nowrap">
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center whitespace-nowrap border-r border-slate-200 last:border-0">
                                                             {record.time}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('customer_name') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-700">{record.customer_name}</td>
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">{record.customer_name}</td>
                                                     )}
                                                     {visibleColumns.includes('mobile_no') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-700">{record.mobile_no}</td>
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">{record.mobile_no}</td>
                                                     )}
                                                     {visibleColumns.includes('captain') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-700">{record.captain}</td>
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">{record.captain}</td>
                                                     )}
                                                     {visibleColumns.includes('waiter') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-700">{record.waiter}</td>
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">{record.waiter}</td>
                                                     )}
                                                     {visibleColumns.includes('table') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-slate-700">{record.table}</td>
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">{record.table}</td>
                                                     )}
                                                     {visibleColumns.includes('amount') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-black text-slate-800">
-                                                            {record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
+                                                            {record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('cash_amount') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-green-600">
-                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.cashAmt).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`) : '-'}
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
+                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.cashAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : '-'}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('card_amount') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-blue-600">
-                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.cardAmt).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`) : '-'}
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
+                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.cardAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : '-'}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('upi_amount') && (
-                                                        <td className="py-3.5 px-5 text-[13px] font-bold text-purple-600">
-                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.upiAmt).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`) : '-'}
+                                                        <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
+                                                            {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.upiAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : '-'}
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('action') && (
-                                                        <td className="py-3.5 px-5 relative">
-                                                            {(record.canAlter || record.canCancel || record.canDelete) ? (
-                                                                <div className="inline-block action-dropdown-container">
-                                                                    <button 
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setOpenActionId(openActionId === record.id ? null : record.id);
-                                                                        }}
-                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700 rounded-lg text-[12px] font-bold border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
-                                                                    >
-                                                                        Action <ChevronDown size={14} className={`transform transition-transform ${openActionId === record.id ? 'rotate-180' : ''}`} />
-                                                                    </button>
-
-                                                                    {openActionId === record.id && (
-                                                                        <div className="absolute right-5 top-full mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
-                                                                            {record.canAlter && (
-                                                                                <button className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors">
-                                                                                    <Edit size={15} /> Alter
-                                                                                </button>
-                                                                            )}
-                                                                            {record.canCancel && (
-                                                                                <button className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 transition-colors">
-                                                                                    <XCircle size={15} /> Cancel
-                                                                                </button>
-                                                                            )}
-                                                                            {record.canDelete && (
-                                                                                <button className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] font-bold text-red-600 hover:bg-red-50 transition-colors">
-                                                                                    <Trash2 size={15} /> Delete
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-[12px] font-medium text-slate-400 italic">No Action</span>
-                                                            )}
+                                                        <td className="py-3 px-4 relative text-center border-r border-slate-200 last:border-0">
+                                                            <ActionDropdown
+                                                                item={record}
+                                                                onView={(r) => alert(`Viewing details for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}`)}
+                                                                onAlter={record.canAlter ? (r) => alert(`Alter functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
+                                                                onCancel={record.canCancel ? (r) => alert(`Cancel functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
+                                                                onDelete={record.canDelete ? (r) => { if(window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) alert('Delete functionality is coming soon.'); } : null}
+                                                            />
                                                         </td>
                                                     )}
                                                 </tr>
@@ -787,50 +715,63 @@ const DisplayPage = () => {
                                 </table>
                             </div>
 
-                            {/* Pagination */}
-                            <div className="pt-4 px-6 mt-auto flex items-center justify-between border-t border-slate-100">
-                                <span className="text-[13px] font-bold text-slate-500">
-                                    Showing {filteredRecords.length > 0 ? (currentPage - 1) * recordsPerPage + 1 : 0} to {Math.min(currentPage * recordsPerPage, filteredRecords.length)} of {filteredRecords.length} entries
+                            {/* Table Footer and Pagination */}
+                            <div className="pt-4 pb-2 px-6 flex items-center justify-between border-t border-slate-100">
+                                <span className="text-[13px] font-bold text-[#ff6b00]">
+                                    TOTAL RECORDS : {filteredRecords.length}
                                 </span>
-                                
-                                <div className="flex items-center gap-1.5">
-                                    <button 
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    
-                                    {Array.from({ length: totalPages }).map((_, idx) => {
-                                        const page = idx + 1;
-                                        if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
-                                            return (
-                                                <button 
-                                                    key={page}
-                                                    onClick={() => setCurrentPage(page)}
-                                                    className={`w-9 h-9 flex items-center justify-center rounded-lg text-[13px] font-bold transition-all shadow-sm ${currentPage === page ? 'bg-orange-500 text-white border-orange-500 hover:shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow'}`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            );
-                                        } else if (page === currentPage - 2 || page === currentPage + 2) {
-                                            return <span key={page} className="text-slate-400 px-2 text-sm font-bold">...</span>;
-                                        }
-                                        return null;
-                                    })}
-                                    
-                                    <button 
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages || totalPages === 0}
-                                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
+
+                                <div className="flex items-center gap-8 text-[13px] font-bold text-[#ff6b00]">
+                                    <span>₹ {rangeSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span>₹ {rangeCashAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span>₹ {rangeCardAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span>₹ {rangeUpiAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    {/* Empty span for action column width alignment if needed, or adjust spacing */}
                                 </div>
                             </div>
+
+                            {/* Original Pagination (Hidden for now to match UI exactly, or placed underneath) */}
+                            {filteredRecords.length > recordsPerPage && (
+                                <div className="pt-2 px-6 mt-auto flex items-center justify-end border-t border-slate-100">
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+
+                                        {Array.from({ length: totalPages }).map((_, idx) => {
+                                            const page = idx + 1;
+                                            if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                                                return (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => setCurrentPage(page)}
+                                                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-[13px] font-bold transition-all shadow-sm ${currentPage === page ? 'bg-orange-500 text-white border-orange-500 hover:shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow'}`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            } else if (page === currentPage - 2 || page === currentPage + 2) {
+                                                return <span key={page} className="text-slate-400 px-2 text-sm font-bold">...</span>;
+                                            }
+                                            return null;
+                                        })}
+
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages || totalPages === 0}
+                                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        
+
                     </div>
                 </div>
             </main>
@@ -841,7 +782,7 @@ const DisplayPage = () => {
                     <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200 column-filter-container">
                         <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
                             <h3 className="text-[15px] font-bold text-slate-800">Select Columns</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowColumnFilter(false)}
                                 className="text-slate-400 hover:text-red-500 transition-colors"
                             >
@@ -850,10 +791,10 @@ const DisplayPage = () => {
                         </div>
                         <div className="p-4 flex flex-col gap-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {ALL_COLUMNS.map(col => (
-                                <div 
-                                    key={col.id} 
-                                    onClick={() => setVisibleColumns(prev => 
-                                        prev.includes(col.id) 
+                                <div
+                                    key={col.id}
+                                    onClick={() => setVisibleColumns(prev =>
+                                        prev.includes(col.id)
                                             ? prev.filter(id => id !== col.id)
                                             : [...prev, col.id]
                                     )}
@@ -867,13 +808,13 @@ const DisplayPage = () => {
                             ))}
                         </div>
                         <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
-                            <button 
+                            <button
                                 onClick={() => setVisibleColumns(ALL_COLUMNS.map(c => c.id))}
                                 className="flex-1 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-[14px] font-bold hover:bg-slate-100 hover:border-slate-300 transition-all"
                             >
                                 Reset
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowColumnFilter(false)}
                                 className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-[14px] font-bold hover:bg-orange-600 shadow-md shadow-orange-500/20 transition-all"
                             >

@@ -6,7 +6,7 @@ import './Dashboard.css';
 import './PurchaseEntryForm.css';
 import {
     Settings, ChevronDown, Plus, Trash2, Loader2,
-    Upload, FileText, BarChart2, Printer, Save, XCircle, MoreHorizontal
+    Upload, FileText, BarChart2, Printer, Save, XCircle, X, MoreHorizontal
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
@@ -96,12 +96,14 @@ export default function PurchaseEntryForm() {
     const [paymentType, setPaymentType] = useState('CREDIT');
     const [supplierId, setSupplierId] = useState('');
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
     const [dueDays, setDueDays] = useState(0);
-    const [dueDate, setDueDate] = useState('');
+    const [dueDate, setDueDate] = useState(getTodayStr);
     const [remarks, setRemarks] = useState('');
     const [otherCharges, setOtherCharges] = useState(0);
     const [roundOff, setRoundOff] = useState(0);
     const [showRemarksModal, setShowRemarksModal] = useState(false);
+    const [showGstModal, setShowGstModal] = useState(false);
     const [showPayMode, setShowPayMode] = useState(false);
     const [paidAmount, setPaidAmount] = useState(0);
 
@@ -122,6 +124,8 @@ export default function PurchaseEntryForm() {
         "CD%": true, "DC_AMT": true, "TOTAL": true, "PUR_RATE": true, "COST": true, 
         "SALES_RATE": true, "MRP": true, "TOTAL_AMT": true, "HSN_CODE": true
     });
+    const [showColSettings, setShowColSettings] = useState(false);
+    const [tempColConfig, setTempColConfig] = useState(null);
 
     const [showMoreDrawer, setShowMoreDrawer] = useState(false);
     const supplierRef = useRef(null);
@@ -140,16 +144,42 @@ export default function PurchaseEntryForm() {
         const fetchData = async () => {
             try {
                 const token = getToken();
-                const [supRes, prodRes] = await Promise.all([
+                const [supRes, prodRes, ledgRes] = await Promise.all([
                     fetch(`${API}/suppliers`, { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch(`${API}/products`, { headers: { Authorization: `Bearer ${token}` } })
+                    fetch(`${API}/products`, { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch(`${API}/ledgers`, { headers: { Authorization: `Bearer ${token}` } })
                 ]);
                 const supData = await supRes.json();
                 const prodData = await prodRes.json();
-                if (supData.success) {
-                    // Filter only active suppliers
-                    setSuppliers(supData.data.filter(s => s.is_active !== false));
+                const ledgData = await ledgRes.json();
+
+                let combinedSuppliers = [];
+                if (supData.success && Array.isArray(supData.data)) {
+                    combinedSuppliers = [...supData.data.filter(s => s.is_active !== false)];
                 }
+                if (ledgData.success && Array.isArray(ledgData.data)) {
+                    const ledgerSuppliers = ledgData.data
+                        .filter(l => l.is_active !== false)
+                        .map(l => ({
+                            _id: l._id,
+                            name: l.name,
+                            contact_person: l.contact_person || l.name,
+                            contact_number: l.contact_number || l.mobile_no_1 || '',
+                            gst_number: l.gst_number || l.gstin_no || '',
+                            address: l.address || l.address_line_1 || '',
+                            opening_balance: l.opening_balance || 0,
+                            registration_type: l.registration_type || 'Regular',
+                            state: l.state || ''
+                        }));
+
+                    ledgerSuppliers.forEach(ls => {
+                        if (!combinedSuppliers.some(s => s._id === ls._id || s.name.toLowerCase() === ls.name.toLowerCase())) {
+                            combinedSuppliers.push(ls);
+                        }
+                    });
+                }
+
+                setSuppliers(combinedSuppliers);
                 if (prodData.success) setProducts(prodData.data);
             } catch (err) {
                 console.error(err);
@@ -405,8 +435,6 @@ export default function PurchaseEntryForm() {
         }
     };
 
-    const [showColSettings, setShowColSettings] = useState(false);
-
     const totalItems = items.filter(it => it.quantity > 0).length;
     const totalQty = items.reduce((s, it) => s + (parseFloat(it.quantity) || 0), 0);
 
@@ -423,39 +451,80 @@ export default function PurchaseEntryForm() {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main">
-                <div className="flex items-center justify-between pb-3 border-b-2 border-slate-700 mb-6 mt-4 mx-2">
-                    <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight ml-2">PURCHASE ENTRY</h1>
-                    <div className="flex gap-4 items-center">
-                        <div className="relative">
-                            <button className="flex items-center gap-2 bg-[#f97316] text-white px-5 py-2.5 rounded-lg font-bold text-sm outline-none transition-opacity hover:opacity-90 shadow-sm" onClick={() => setShowColSettings(true)}>
-                                <Settings size={16} /> COLUMN SETTINGS
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title="PURCHASE ENTRY"
+                    onClose={() => navigate('/dashboard/self-service/home')}
+                    actions={
+                        <div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTempColConfig({ ...colConfig });
+                                    setShowColSettings(true);
+                                }}
+                                className="btn-column-settings"
+                            >
+                                <Settings size={14} /> <span>Column Settings</span>
                             </button>
+
+                            {/* Column Settings Slide-Over Drawer Panel */}
                             {showColSettings && (
-                                <div className="absolute right-0 top-[110%] w-[350px] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200 z-[2000] animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                        <h3 className="font-bold text-slate-800">Display Columns</h3>
-                                        <button onClick={() => setShowColSettings(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
-                                            <XCircle size={18} />
-                                        </button>
+                                <>
+                                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColSettings(false)} />
+                                    <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl border-l border-slate-200 z-[10000] flex flex-col animate-in slide-in-from-right duration-300">
+                                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                            <div>
+                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">COLUMN SETTINGS</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">SELECT COLUMNS TO DISPLAY</p>
+                                            </div>
+                                            <button onClick={() => setShowColSettings(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800 cursor-pointer">
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                            {Object.keys(colConfig).map(k => (
+                                                <label key={k} className="flex items-center gap-3 cursor-pointer group py-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={tempColConfig ? !!tempColConfig[k] : !!colConfig[k]}
+                                                        onChange={(e) => setTempColConfig(prev => ({ ...(prev || colConfig), [k]: e.target.checked }))}
+                                                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                                                        style={{ accentColor: '#ff6b00' }}
+                                                    />
+                                                    <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">{k.replace(/_/g, ' ')}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const resetMap = {};
+                                                    Object.keys(colConfig).forEach(k => resetMap[k] = true);
+                                                    setTempColConfig(resetMap);
+                                                }}
+                                                className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer"
+                                            >
+                                                RESET
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (tempColConfig) setColConfig(tempColConfig);
+                                                    setShowColSettings(false);
+                                                }}
+                                                className="flex-1 py-2 text-xs font-bold text-white bg-[#ff6b00] rounded hover:bg-[#e66000] transition-colors cursor-pointer"
+                                            >
+                                                APPLY
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="p-4 grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
-                                        {Object.keys(colConfig).map(k => (
-                                            <label key={k} className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={colConfig[k]} 
-                                                    onChange={() => setColConfig(prev => ({...prev, [k]: !prev[k]})) }
-                                                    className="w-4 h-4 rounded text-[#f97316] focus:ring-[#f97316]" />
-                                                <span className="text-xs font-bold text-slate-700">{k.replace('_', ' ')}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
+                                </>
                             )}
                         </div>
-                        <button className="flex items-center gap-2 bg-white text-[#ef4444] border border-[#ef4444] px-5 py-2.5 rounded-lg font-bold text-sm outline-none transition-colors hover:bg-red-50 shadow-sm" onClick={() => navigate(-1)}>
-                            <XCircle size={16} /> CLOSE
-                        </button>
-                    </div>
-                </div>
+                    }
+                />
                 <div className="pef-container fade-in-up" style={{ animationDuration: '0.4s' }}>
 
                     {/* ─── Bill Header (Neat Unified Form) ─── */}
@@ -557,7 +626,9 @@ export default function PurchaseEntryForm() {
                                                         </div>
                                                     </div>
                                                 ))}
-                                                <div className="pef-dropdown-footer">List End</div>
+                                                <div className="pef-dropdown-footer">
+                                                    {suppliers.length === 0 ? 'No suppliers registered. Click + to add.' : 'List End'}
+                                                </div>
                                             </div>
                                         )}
                                         <button className="flex items-center justify-center w-10 border border-[#f97316] rounded-md text-[#f97316] hover:bg-orange-50 transition-colors" title="Add Supplier" onClick={() => navigate('/dashboard/self-service/ledgers/create')}>
@@ -569,34 +640,29 @@ export default function PurchaseEntryForm() {
                                     <label className="pef-f-label">GSTIN</label>
                                     <input className="pef-f-input pef-f-readonly" readOnly value={selectedSupplier?.gst_number || ''} />
                                 </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">Balance</label>
-                                    <div className="relative w-full">
-                                        <input className="pef-f-input pef-f-readonly font-bold !text-left" 
-                                            readOnly value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : ''} />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 font-bold text-xs bg-orange-100 px-1 rounded">CR</span>
+                                <div className="flex gap-2 w-full">
+                                    <div className="pef-f-group w-1/2">
+                                        <label className="pef-f-label">Balance</label>
+                                        <div className="relative w-full">
+                                            <input className="pef-f-input pef-f-readonly font-bold !text-left" 
+                                                readOnly value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : ''} />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 font-bold text-xs bg-orange-100 px-1 rounded">CR</span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">Address</label>
-                                    <div className="relative w-full">
-                                        <textarea className="pef-f-textarea w-full" readOnly value={selectedSupplier?.address || ''}></textarea>
+                                    <div className="pef-f-group w-1/2">
+                                        <label className="pef-f-label">Address</label>
+                                        <input className="pef-f-input pef-f-readonly" 
+                                            readOnly value={selectedSupplier?.address || ''} placeholder="Address..." />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Column 3 */}
                             <div className="pef-form-col">
-                                <div className="flex gap-2 w-full mt-2">
-                                    <div className="pef-f-group w-1/2">
-                                        <label className="pef-f-label">Days</label>
-                                        <input id="due-days-field" type="number" className="pef-f-input !font-bold text-center" min="0"
-                                            value={dueDays} onChange={e => handleDueDaysChange(e.target.value)} />
-                                    </div>
-                                    <div className="pef-f-group w-1/2">
-                                        <label className="pef-f-label">Date</label>
-                                        <input className="pef-f-input !font-bold" type="date" value={dueDate} readOnly />
-                                    </div>
+                                <div className="pef-f-group">
+                                    <label className="pef-f-label">Days</label>
+                                    <input id="due-days-field" type="number" className="pef-f-input !font-bold text-center" min="0"
+                                        value={dueDays} onChange={e => handleDueDaysChange(e.target.value)} />
                                 </div>
                                 <div className="pef-f-group">
                                     <label className="pef-f-label">DUE DATE</label>
@@ -837,37 +903,58 @@ export default function PurchaseEntryForm() {
                     </div>
 
                     {/* ─── Footer ─── */}
-                    <div className="flex items-center justify-between w-full pt-4 mt-2">
-                        <textarea className="w-1/4 border border-[#ea580c] rounded-md p-3 h-[52px] resize-none text-sm outline-none focus:ring-1 focus:ring-orange-500" 
-                            placeholder="Remarks" 
+                    <div className="flex items-center justify-between w-full pt-3 mt-2 border-t border-slate-200">
+                        <input 
+                            type="text"
+                            className="w-1/4 border border-orange-400 rounded px-3 py-2 h-10 text-xs font-semibold outline-none focus:ring-1 focus:ring-orange-500 bg-white" 
+                            placeholder="Remarks..." 
                             value={remarks}
                             onChange={e => setRemarks(e.target.value)}
                         />
                         
-                        <div className="flex items-center gap-4">
-                            <button className="flex items-center gap-2 bg-[#ea580c] text-white px-5 h-[52px] rounded-md font-bold text-sm uppercase shadow-sm hover:bg-orange-600 transition-colors">
-                                <FileText size={16} /> GST DETAILS
+                        <div className="flex items-center gap-3">
+                            <button 
+                                type="button"
+                                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 h-10 rounded text-xs font-bold uppercase transition-colors shadow-sm cursor-pointer"
+                                onClick={() => setShowGstModal(true)}
+                            >
+                                <FileText size={14} /> GST Details
                             </button>
-                            <button className="flex items-center gap-2 bg-[#ea580c] text-white px-5 h-[52px] rounded-md font-bold text-sm uppercase shadow-sm hover:bg-orange-600 transition-colors" onClick={() => setShowMoreDrawer(true)}>
-                                <MoreHorizontal size={16} /> MORE
+                            <button 
+                                type="button"
+                                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 h-10 rounded text-xs font-bold uppercase transition-colors shadow-sm cursor-pointer"
+                                onClick={() => setShowMoreDrawer(true)}
+                            >
+                                <MoreHorizontal size={14} /> More
                             </button>
                             
-                            <div className="bg-[#0f172a] text-white flex items-center px-6 rounded-md h-[52px] shadow-sm">
-                                <div className="flex flex-col items-center justify-center pr-6 border-r border-white/20 h-full">
-                                    <span className="text-[9px] font-bold tracking-widest text-slate-300">ROUND OFF</span>
-                                    <span className="text-base font-bold">₹{parseFloat(roundOff || 0).toFixed(2)}</span>
+                            <div className="bg-[#0f172a] text-white flex items-center px-4 rounded h-10 shadow-sm gap-4 text-xs font-bold">
+                                <div className="flex items-center gap-1.5 border-r border-slate-700 pr-4">
+                                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Round Off:</span>
+                                    <span className="font-extrabold text-white">₹{parseFloat(roundOff || 0).toFixed(2)}</span>
                                 </div>
-                                <div className="flex flex-col items-center justify-center pl-6 h-full">
-                                    <span className="text-[9px] font-bold tracking-widest text-slate-300">NET AMOUNT</span>
-                                    <span className="text-lg font-black text-[#ea580c]">₹{totals.grand_total.toFixed(2)}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Net Amount:</span>
+                                    <span className="font-extrabold text-orange-400 text-sm">₹{totals.grand_total.toFixed(2)}</span>
                                 </div>
                             </div>
 
-                            <button className="flex items-center gap-3 bg-[#ea580c] text-white px-8 h-[52px] rounded-md font-black text-xl uppercase shadow-md hover:bg-orange-600 transition-colors"
+                            <button 
+                                type="button"
+                                onClick={() => navigate('/dashboard/self-service/home')} 
+                                className="px-5 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded shadow-sm uppercase transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+
+                            <button 
+                                type="button"
+                                className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e66000] text-white px-6 h-10 rounded text-xs font-black uppercase shadow-md transition-colors cursor-pointer"
                                 disabled={saving}
-                                onClick={() => handleSave(false)}>
-                                {saving ? <Loader2 size={24} className="animate-spin" /> : <Save size={24} />} 
-                                SAVE
+                                onClick={() => handleSave(false)}
+                            >
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+                                Save
                             </button>
                         </div>
                     </div>
@@ -931,6 +1018,54 @@ export default function PurchaseEntryForm() {
                         <div className="pef-modal-btns">
                             <button className="pi-modal-cancel" onClick={() => setShowRemarksModal(false)}>Close</button>
                             <button className="pi-modal-confirm" onClick={() => setShowRemarksModal(false)}>Save Remarks</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── GST Tax Summary Modal ─── */}
+            {showGstModal && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={() => setShowGstModal(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <FileText size={18} className="text-orange-500" />
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">GST Tax Summary</h3>
+                            </div>
+                            <button onClick={() => setShowGstModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center transition-all text-slate-500">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-3 text-xs font-semibold text-slate-700">
+                            <div className="flex justify-between py-1.5 border-b border-slate-100">
+                                <span className="text-slate-500">Sub Total (Taxable)</span>
+                                <span className="font-bold text-slate-900">₹{totals.sub_total.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100">
+                                <span className="text-slate-500">Total Discount</span>
+                                <span className="font-bold text-rose-600">- ₹{totals.discount_amount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100">
+                                <span className="text-slate-500">CGST Amount</span>
+                                <span className="font-bold text-slate-900">₹{totals.cgst_amount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100">
+                                <span className="text-slate-500">SGST Amount</span>
+                                <span className="font-bold text-slate-900">₹{totals.sgst_amount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-slate-100">
+                                <span className="text-slate-500">Total Tax Amount</span>
+                                <span className="font-bold text-emerald-600">₹{totals.tax_amount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between py-2 text-sm font-black bg-orange-50 p-3 rounded-lg text-orange-900 mt-2">
+                                <span>Grand Total</span>
+                                <span>₹{totals.grand_total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button onClick={() => setShowGstModal(false)} className="px-5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase rounded shadow-sm">
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>

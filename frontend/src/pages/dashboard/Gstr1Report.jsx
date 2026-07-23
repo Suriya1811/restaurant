@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { Menu, FileSpreadsheet, FileText, Printer, Code, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
@@ -8,6 +8,15 @@ import autoTable from 'jspdf-autotable';
 
 const Gstr1Report = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const filterParam = (searchParams.get('filter') || 'gstr1').toLowerCase();
+
+    const getReportTitle = () => {
+        if (filterParam === 'gstr2') return 'GSTR-2 Reports';
+        if (filterParam === 'gstr3b') return 'GSTR-3B Reports';
+        return 'GSTR-1 Reports';
+    };
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('B2B');
@@ -569,11 +578,8 @@ const Gstr1Report = () => {
             <main className="dashboard-main flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
                 {/* Custom Header */}
                 <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4 ml-auto">
-                        <button onClick={toggleSidebar} className="text-slate-500 hover:text-slate-800 transition-colors">
-                            <Menu size={20} />
-                        </button>
-                        <h1 className="text-lg font-black text-slate-900 tracking-tight">GSTR-1 Reports</h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-lg font-black text-slate-900 tracking-tight">{getReportTitle()}</h1>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -588,6 +594,13 @@ const Gstr1Report = () => {
                         </button>
                         <button onClick={exportToJSON} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold transition-colors">
                             <Code size={14} /> JSON
+                        </button>
+                        <button
+                            onClick={() => navigate('/dashboard/self-service/home')}
+                            className="btn-action-close ml-2"
+                            title="Close and Return to Home"
+                        >
+                            <X size={16} /> <span className="text-[10px] uppercase font-black">CLOSE</span>
                         </button>
                     </div>
                 </header>

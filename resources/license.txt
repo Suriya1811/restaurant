@@ -1,6 +1,6 @@
-Restaurant POS - Desktop Application
+Yugam Software - Desktop Application
 
-Copyright (c) 2025 Restaurant POS
+Copyright (c) 2025 Yugam Software
 
 All rights reserved.
 

@@ -22,8 +22,9 @@ const VouchersPage = () => {
     const [loading, setLoading] = useState(true);
     
     const [searchTerm, setSearchTerm] = useState('');
-    const [fromDate, setFromDate] = useState('');
-    const [toDate, setToDate] = useState('');
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
+    const [fromDate, setFromDate] = useState(getTodayStr);
+    const [toDate, setToDate] = useState(getTodayStr);
     const [filterType, setFilterType] = useState('ALL');
     const [cancelFilter, setCancelFilter] = useState('ALL');
     
@@ -334,17 +335,17 @@ const VouchersPage = () => {
                                     <Printer size={14} />
                                     <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                                 </button>
-                                <button className="btn-export" style={{borderColor: '#f97316', color: '#f97316'}} title="Column Settings">
-                                    <span className="text-[10px] uppercase font-black text-[#f97316]">Column Settings</span>
-                                    <ChevronDown size={14} />
+                                <button className="btn-column-settings" title="Column Settings">
+                                    <Settings size={14} />
+                                    <span>Column Settings</span>
                                 </button>
                                 <button onClick={handleCreateClick} className="btn-action-add">
                                     <PlusCircle size={18} />
                                     <span className="text-[10px] uppercase font-black">Create Voucher</span>
                                 </button>
-                                <button onClick={() => navigate(-1)} className="btn-export" style={{borderColor: '#e11d48', color: '#e11d48'}} title="Close">
+                                <button onClick={() => navigate('/dashboard/self-service/home')} className="btn-action-close" title="Close">
                                     <X size={14} />
-                                    <span className="text-[10px] uppercase font-black text-rose-600">Close</span>
+                                    <span className="text-[10px] uppercase font-black">Close</span>
                                 </button>
                             </div>
                         </div>

@@ -189,10 +189,14 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                 const queryParams = new URLSearchParams(location.search);
 
                 if (itemParams.length > 0) {
-                    return itemParams.every(([key, value]) => queryParams.get(key) === value);
+                    return itemParams.every(([key, value]) => {
+                        const currentVal = queryParams.get(key);
+                        if (key === 'filter' && itemUrl.searchParams.get('category') !== 'gst') {
+                            return true;
+                        }
+                        return currentVal === value;
+                    });
                 } else {
-                    // If menu item has no parameters, but URL has distinguishing parameters (tab/category),
-                    // it means a DIFFERENT sub-item (which specifies those params) is actually active.
                     if (queryParams.has('tab') || queryParams.has('category')) {
                         return false;
                     }
@@ -262,7 +266,13 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             const queryParams = new URLSearchParams(location.search);
             
             if (itemParams.length > 0) {
-                return itemParams.every(([key, value]) => queryParams.get(key) === value);
+                return itemParams.every(([key, value]) => {
+                    const currentVal = queryParams.get(key);
+                    if (key === 'filter' && itemUrl.searchParams.get('category') !== 'gst') {
+                        return true;
+                    }
+                    return currentVal === value;
+                });
             } else {
                 if (queryParams.has('tab') || queryParams.has('category')) {
                     return false;

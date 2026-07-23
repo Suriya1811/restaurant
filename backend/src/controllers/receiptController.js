@@ -9,8 +9,8 @@ const mongoose = require('mongoose');
 exports.getReceipts = async (req, res) => {
     try {
         const { startDate, endDate, search } = req.query;
-        let query = { 
-            company_id: req.user.restaurant_id, 
+        let query = {
+            company_id: req.user.restaurant_id,
             is_deleted: { $ne: true },
             voucher_type: 'RECEIPT',
             party_id: { $exists: true } // Ensuring it is a party receipt
@@ -45,13 +45,13 @@ exports.getUnpaidBills = async (req, res) => {
     try {
         const { partyId } = req.params;
         const bills = await Bill.aggregate([
-            { 
-                $match: { 
+            {
+                $match: {
                     company_id: req.user.restaurant_id,
                     customer_id: new mongoose.Types.ObjectId(partyId),
                     is_deleted: { $ne: true },
                     $expr: { $gt: ["$grand_total", "$total_paid"] }
-                } 
+                }
             },
             {
                 $project: {
@@ -84,13 +84,13 @@ exports.getReceiptStats = async (req, res) => {
 
         // 2. Paid / Unpaid calculations with Breakdown
         const [receiptAgg] = await Voucher.aggregate([
-            { 
-                $match: { 
-                    company_id, 
-                    is_deleted: { $ne: true }, 
-                    voucher_type: 'RECEIPT', 
-                    party_id: { $exists: true } 
-                } 
+            {
+                $match: {
+                    company_id,
+                    is_deleted: { $ne: true },
+                    voucher_type: 'RECEIPT',
+                    party_id: { $exists: true }
+                }
             },
             {
                 $group: {
@@ -152,11 +152,11 @@ exports.createReceipt = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { 
-            party_id, receipt_no, date, amount, received_amount, paymode_ledger_id, 
+        const {
+            party_id, receipt_no, date, amount, received_amount, paymode_ledger_id,
             narration, settled_bills, payment_modes // [{ mode, amount, ledger_id }]
         } = req.body;
-        
+
         const company_id = req.user.restaurant_id;
         const totalAmt = parseFloat(received_amount || amount) || 0;
 
@@ -185,7 +185,7 @@ exports.createReceipt = async (req, res) => {
         if (settled_bills && settled_bills.length > 0) {
             for (let b of settled_bills) {
                 if (!b.amount_settled || b.amount_settled <= 0) continue;
-                
+
                 const bill = await Bill.findOne({ _id: b.bill_id, company_id }).session(session);
                 if (bill) {
                     bill.total_paid = (bill.total_paid || 0) + parseFloat(b.amount_settled);

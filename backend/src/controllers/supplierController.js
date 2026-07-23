@@ -1,13 +1,40 @@
 const Supplier = require('../models/Supplier');
+const Ledger = require('../models/Ledger');
 
 // @desc    Get all suppliers for a restaurant
 // @route   GET /api/suppliers
 // @access  Public
 exports.getSuppliers = async (req, res) => {
     try {
-        const suppliers = await Supplier.find({ company_id: req.user.restaurant_id })
-            .sort({ is_active: -1, name: 1 });
-        res.status(200).json({ success: true, count: suppliers.length, data: suppliers });
+        const [suppliers, creditorsLedgers] = await Promise.all([
+            Supplier.find({ company_id: req.user.restaurant_id }).sort({ is_active: -1, name: 1 }),
+            Ledger.find({ company_id: req.user.restaurant_id, $or: [{ group: 'Sundry Creditors' }, { party_type: 'SUPPLIER' }] })
+        ]);
+
+        const supplierMap = {};
+
+        suppliers.forEach(s => {
+            supplierMap[s.name.trim().toLowerCase()] = s;
+        });
+
+        creditorsLedgers.forEach(l => {
+            const cleanName = l.name.replace(/\(Supplier\)/gi, '').trim();
+            const key = cleanName.toLowerCase();
+            if (!supplierMap[key]) {
+                supplierMap[key] = {
+                    _id: l._id,
+                    name: cleanName,
+                    contact_number: l.phone || l.mobile2 || l.contact_person || '',
+                    address: l.billing_address || '',
+                    gst_number: l.gstin || '',
+                    opening_balance: l.opening_balance || 0,
+                    is_ledger: true
+                };
+            }
+        });
+
+        const dataList = Object.values(supplierMap);
+        res.status(200).json({ success: true, count: dataList.length, data: dataList });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Server Error' });
     }
@@ -15,9 +42,6 @@ exports.getSuppliers = async (req, res) => {
 
 // @desc    Create new supplier and its ledger
 exports.createSupplier = async (req, res) => {
-    const mongoose = require('mongoose');
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const { name, contact_person, contact_number, email, gst_number, address, opening_balance } = req.body;
         const company_id = req.user.restaurant_id;
@@ -31,7 +55,7 @@ exports.createSupplier = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Supplier already exists' });
         }
 
-        const supplier = await Supplier.create([{
+        const supplier = await Supplier.create({
             name,
             contact_person,
             contact_number,
@@ -40,29 +64,23 @@ exports.createSupplier = async (req, res) => {
             address,
             opening_balance,
             company_id
-        }], { session });
+        });
 
         // CREATE A CORRESPONDING LEDGER
-        const Ledger = require('../models/Ledger');
-        await Ledger.create([{
+        await Ledger.create({
             company_id,
             name: `${name} (Supplier)`,
             group: 'Sundry Creditors',
             opening_balance: opening_balance || 0,
             balance_type: (opening_balance || 0) >= 0 ? 'CR' : 'DR',
             description: `Auto-generated ledger for supplier ${name}`
-        }], { session });
+        });
 
-        await session.commitTransaction();
-        res.status(201).json({ success: true, data: supplier[0] });
+        res.status(201).json({ success: true, data: supplier });
     } catch (error) {
-        await session.abortTransaction();
         res.status(500).json({ success: false, error: error.message });
-    } finally {
-        session.endSession();
     }
 };
-
 
 // @desc    Update supplier
 // @route   PUT /api/suppliers/:id
@@ -124,9 +142,6 @@ exports.deleteSupplier = async (req, res) => {
         if (!supplier) {
             return res.status(404).json({ success: false, error: 'Supplier not found' });
         }
-
-        // Future check: ensure supplier doesn't have active purchase bills or ledgers before deleting 
-        // For now, allow soft delete / status toggle or hard delete.
 
         await Supplier.deleteOne({ _id: req.params.id, company_id: req.user.restaurant_id });
 

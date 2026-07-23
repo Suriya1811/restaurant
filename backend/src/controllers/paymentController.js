@@ -308,7 +308,7 @@ exports.deletePayment = async (req, res) => {
 
         // Revert party ledger (liability increase)
         if (voucher.debit_ledger) await Ledger.findByIdAndUpdate(voucher.debit_ledger, { $inc: { opening_balance: voucher.amount } }, { session });
-        
+
         // Revert paymode ledgers (asset increase)
         if (voucher.payment_modes && voucher.payment_modes.length > 0) {
             for (const pm of voucher.payment_modes) {

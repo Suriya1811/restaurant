@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import BillPreviewModal from './BillPreviewModal';
-import { ClipboardList, Calendar, Search, CreditCard, Clock, MapPin, Truck, CheckCircle2, Phone, Loader2, XCircle, Package, Trash2 } from 'lucide-react';
+import { ClipboardList, Calendar, Search, CreditCard, Clock, MapPin, Truck, CheckCircle2, Phone, Loader2, XCircle, Package, Trash2, Save } from 'lucide-react';
 import './Dashboard.css';
 
 const BillsAndSalesPage = () => {
@@ -326,28 +326,30 @@ const BillsAndSalesPage = () => {
             )}
             
             <main className="dashboard-main flex flex-col h-screen overflow-hidden relative">
-                <Header toggleSidebar={toggleSidebar} title="Party Management" />
+                <Header 
+                    toggleSidebar={toggleSidebar} 
+                    title="PARTY MANAGEMENT" 
+                />
                 
                 <div className="flex flex-col h-full bg-slate-50 relative flex-1 overflow-hidden">
                     {/* Header/Filters */}
-                    <div className="bg-white px-8 py-5 border-b border-slate-100 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
-                        <div className="flex items-center gap-6">
-                            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-                                <ClipboardList size={20} />
+                    <div className="bg-white px-6 py-4 border-b border-slate-100 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2 bg-orange-50 text-[#ff6b00] rounded-lg">
+                                <ClipboardList size={22} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-slate-800 tracking-tighter">Party Orders Dashboard</h2>
-                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5">Manage bulk orders & catering</p>
+                                <h2 className="text-lg font-bold text-slate-800 tracking-tight">Party Orders Dashboard</h2>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Manage bulk orders & catering</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4 ml-auto">
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="btn-action-add"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] hover:bg-[#e66000] text-white text-xs font-bold rounded-md shadow-sm transition-colors cursor-pointer uppercase"
                             >
-                                <ClipboardList size={14} />
-                                Create Party
+                                <ClipboardList size={16} /> Create Party
                             </button>
 
                             <div className="relative">
@@ -813,70 +815,149 @@ const BillsAndSalesPage = () => {
             {/* Create Party Modal */}
             {showCreateModal && (
                 <div 
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[3000] flex items-center justify-center p-4 overflow-y-auto"
+                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 overflow-y-auto"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setShowCreateModal(false);
                         }
                     }}
                 >
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-100 relative animate-in zoom-in duration-300">
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tighter mb-6 pr-8">Create New Party</h3>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 border border-slate-200 relative animate-in zoom-in duration-200">
+                        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Party Order Creation</h3>
+                            <button
+                                onClick={() => setShowCreateModal(false)}
+                                className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-red-500 border border-red-200 hover:bg-red-50 rounded transition-colors"
+                            >
+                                <XCircle size={14} /> Close
+                            </button>
+                        </div>
                         
                         <form onSubmit={handleCreateParty} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date *</label>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">Date</label>
                                     <input 
                                         type="date" 
                                         required 
                                         min={new Date().toISOString().split('T')[0]}
                                         value={newPartyData.delivery_date} 
                                         onChange={e => setNewPartyData({...newPartyData, delivery_date: e.target.value})} 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500" 
+                                        className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors" 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time *</label>
-                                    <input type="time" required value={newPartyData.delivery_time} onChange={e => setNewPartyData({...newPartyData, delivery_time: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500" />
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">Time</label>
+                                    <input 
+                                        type="time" 
+                                        required 
+                                        value={newPartyData.delivery_time} 
+                                        onChange={e => setNewPartyData({...newPartyData, delivery_time: e.target.value})} 
+                                        className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors" 
+                                    />
                                 </div>
                             </div>
+
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Function Type *</label>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Customer Name</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={newPartyData.customer_name} 
+                                    onChange={e => setNewPartyData({...newPartyData, customer_name: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors" 
+                                    placeholder="Enter customer name" 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Address</label>
+                                <textarea 
+                                    required 
+                                    value={newPartyData.delivery_address} 
+                                    onChange={e => setNewPartyData({...newPartyData, delivery_address: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] resize-none h-20 transition-colors" 
+                                    placeholder="Enter address"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Cell Number</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={newPartyData.customer_phone} 
+                                    onChange={e => setNewPartyData({...newPartyData, customer_phone: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors" 
+                                    placeholder="Enter cell number" 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Cell Number 1</label>
+                                <input 
+                                    type="text" 
+                                    value={newPartyData.alternate_phone} 
+                                    onChange={e => setNewPartyData({...newPartyData, alternate_phone: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors" 
+                                    placeholder="Enter cell number 1" 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Hall</label>
+                                <select 
+                                    value={newPartyData.hall || ''} 
+                                    onChange={e => setNewPartyData({...newPartyData, hall: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors cursor-pointer"
+                                >
+                                    <option value="">Select Hall</option>
+                                    <option value="Main Hall">Main Hall</option>
+                                    <option value="Banquet Hall">Banquet Hall</option>
+                                    <option value="VIP Lounge">VIP Lounge</option>
+                                    <option value="Outdoor Terrace">Outdoor Terrace</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Function</label>
                                 <select 
                                     required
                                     value={newPartyData.function_type} 
                                     onChange={e => setNewPartyData({...newPartyData, function_type: e.target.value})} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500 appearance-none"
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors cursor-pointer"
                                 >
-                                    <option value="">Select Function Type...</option>
+                                    <option value="">Select Function</option>
                                     {functionTypes.map(ft => (
                                         <option key={ft._id} value={ft.name}>{ft.name}</option>
                                     ))}
                                 </select>
                             </div>
+
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer Name *</label>
-                                <input type="text" required value={newPartyData.customer_name} onChange={e => setNewPartyData({...newPartyData, customer_name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500" placeholder="e.g. John Doe" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Primary Phone *</label>
-                                    <input type="text" required value={newPartyData.customer_phone} onChange={e => setNewPartyData({...newPartyData, customer_phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500" placeholder="e.g. 9876543210" />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alternate Phone</label>
-                                    <input type="text" value={newPartyData.alternate_phone} onChange={e => setNewPartyData({...newPartyData, alternate_phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500" placeholder="Optional" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address *</label>
-                                <textarea required value={newPartyData.delivery_address} onChange={e => setNewPartyData({...newPartyData, delivery_address: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-orange-500 resize-none h-20" placeholder="Enter delivery address"></textarea>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Packs</label>
+                                <select 
+                                    value={newPartyData.packs || ''} 
+                                    onChange={e => setNewPartyData({...newPartyData, packs: e.target.value})} 
+                                    className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#ff6b00] hover:border-[#ff6b00] transition-colors cursor-pointer"
+                                >
+                                    <option value="">Select Packs</option>
+                                    <option value="50 Packs">50 Packs</option>
+                                    <option value="100 Packs">100 Packs</option>
+                                    <option value="200 Packs">200 Packs</option>
+                                    <option value="500 Packs">500 Packs</option>
+                                    <option value="Custom Packs">Custom Packs</option>
+                                </select>
                             </div>
 
-                            <button type="submit" className="btn-action-save">
-                                Save Party Details
-                            </button>
+                            <div className="flex justify-end pt-3 border-t border-slate-100">
+                                <button 
+                                    type="submit" 
+                                    className="px-8 py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white text-sm font-bold rounded-md shadow-sm transition-colors cursor-pointer flex items-center gap-2"
+                                >
+                                    <Save size={16} /> SAVE
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
