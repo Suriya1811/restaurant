@@ -19,6 +19,7 @@ import StockReportHub from './dashboard/StockReportHub';
 // Purchase Reports
 import DayWisePurchase from './dashboard/DayWisePurchase';
 import SupplierWisePurchase from './dashboard/SupplierWisePurchase';
+import PurchaseSummaryHub from './dashboard/PurchaseSummaryHub';
 
 // Outstanding Reports
 import SupplierOutstanding from './dashboard/SupplierOutstanding';
@@ -201,6 +202,8 @@ const ReportsPage = () => {
                 <StockReportHub />
             ) : category === 'outstanding' ? (
                 <OutstandingReportsHub />
+            ) : category === 'purchase' ? (
+                <PurchaseSummaryHub />
             ) : (
                 <>
                     <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />

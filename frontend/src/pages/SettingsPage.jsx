@@ -12,13 +12,26 @@ import {
     User, Key, Printer, FileText, Eye, EyeOff,
     Save, CheckCircle, Palette, AlertCircle, Loader2,
     Building2, Phone, Mail, Lock, Settings, TestTube,
-    LayoutTemplate, Shield, ChevronRight, Sliders, Hash, List, CalendarDays, Search, Wallet, ShieldCheck
+    LayoutTemplate, Shield, ChevronRight, Sliders, Hash, List, CalendarDays, Search, Wallet, ShieldCheck,
+    Database, Folder, Clock, Download, HardDrive, RefreshCw, Paperclip, UploadCloud
 } from 'lucide-react';
 
 const SYSTEM_MODULES_CONFIG = [
     { key: 'pay_mode_enabled', title: 'Pay Mode', subtitle: 'Show Popup on Save' },
     { key: 'dashboard_enabled', title: 'Dashboard', subtitle: 'Analytics & Stats' },
     { key: 'stock_level_enabled', title: 'Stock Level', subtitle: 'Inventory Options' }
+];
+
+const GENERAL_SETTINGS_ITEMS = [
+    { key: 'pay_mode_enabled', label: 'Show Pay Mode', type: 'module' },
+    { key: 'show_salesman_enabled', label: 'Show Salesman in Sales', type: 'module' },
+    { key: 'show_discount_enabled', label: 'Show Discount in Sales', type: 'module' },
+    { key: 'show_item_code_enabled', label: 'Show Item Code', type: 'module' },
+    { key: 'confirm_delete_enabled', label: 'Confirm Before Delete', type: 'module' },
+    { key: 'allow_edit_after_save_enabled', label: 'Allow Edit After Save', type: 'module' },
+    { key: 'direct_quantity_edit_enabled', label: 'Direct Quantity Edit', type: 'module' },
+    { key: 'on_exit', label: 'Auto Backup (On Exit)', type: 'backup' },
+    { key: 'on_startup', label: 'Auto Backup (On Startup)', type: 'backup' }
 ];
 
 const SettingsPage = () => {
@@ -45,8 +58,26 @@ const SettingsPage = () => {
     });
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [passwordEnabled, setPasswordEnabled] = useState(true);
-    const [printerForm, setPrinterForm] = useState({ enabled: false, width: '58mm' });
+    const [printerForm, setPrinterForm] = useState({ 
+        enabled: true, 
+        width: '80mm',
+        sales_bill_printer: 'Sales Bill Printer (POS-80)',
+        kot_printer: 'KOT Kitchen Printer (KOT-80)',
+        delivery_printer: 'Delivery Counter Printer (DEL-80)',
+        print_format: 'NORMAL_3_INCH'
+    });
     const [billForm, setBillForm] = useState({ header: '', footer: '', gstNo: '', autoPrint: false });
+    const [backupForm, setBackupForm] = useState({
+        backup_dir: '',
+        on_startup: false,
+        on_exit: false,
+        auto_interval: 0
+    });
+    const [backupHistory, setBackupHistory] = useState([]);
+    const [defaultDir, setDefaultDir] = useState('');
+    const [restoreMode, setRestoreMode] = useState('RESTORE');
+    const [selectedBackupFile, setSelectedBackupFile] = useState('');
+    const [uploadedBackupData, setUploadedBackupData] = useState(null);
 
     const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
     const [saving, setSaving] = useState({});
@@ -102,6 +133,18 @@ const SettingsPage = () => {
                 }
                 if (result.data.billSeries) setBillSeriesForm(result.data.billSeries);
             }
+
+            try {
+                const backupRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const backupResult = await backupRes.json();
+                if (backupResult.success && backupResult.data) {
+                    setBackupForm(backupResult.data.settings || {});
+                    setBackupHistory(backupResult.data.history || []);
+                    setDefaultDir(backupResult.data.default_directory || '');
+                }
+            } catch (backupErr) { console.error("Backup settings fetch failed", backupErr); }
         } catch (err) { console.error("Failed to fetch settings", err); }
         finally { setLoading(false); }
     };
@@ -266,10 +309,105 @@ const SettingsPage = () => {
                 body: JSON.stringify(printerForm)
             });
             const result = await response.json();
-            if (result.success) { setSuccess(prev => ({ ...prev, printer: true })); setTimeout(() => setSuccess(prev => ({ ...prev, printer: false })), 3000); }
+            if (result.success) { 
+                localStorage.setItem('pos_printer_settings', JSON.stringify(printerForm));
+                setSuccess(prev => ({ ...prev, printer: true })); 
+                setTimeout(() => setSuccess(prev => ({ ...prev, printer: false })), 3000); 
+            }
             else { setErrors(prev => ({ ...prev, printer: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, printer: 'Failed to update printer settings' })); }
         finally { setSaving(prev => ({ ...prev, printer: false })); }
+    };
+
+    const saveBackupSettings = async () => {
+        setSaving(prev => ({ ...prev, backup: true })); clearError('backup');
+        try {
+            const savedUser = localStorage.getItem('user');
+            const { token } = JSON.parse(savedUser);
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(backupForm)
+            });
+            const result = await response.json();
+            if (result.success) { 
+                setSuccess(prev => ({ ...prev, backup: true })); 
+                setTimeout(() => setSuccess(prev => ({ ...prev, backup: false })), 3000); 
+            }
+            else { setErrors(prev => ({ ...prev, backup: result.message })); }
+        } catch (err) { setErrors(prev => ({ ...prev, backup: 'Failed to update backup settings' })); }
+        finally { setSaving(prev => ({ ...prev, backup: false })); }
+    };
+
+    const handleCreateBackupNow = async () => {
+        setSaving(prev => ({ ...prev, createBackup: true })); clearError('backup');
+        try {
+            const savedUser = localStorage.getItem('user');
+            const { token } = JSON.parse(savedUser);
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/backup`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ backupPath: backupForm.backup_dir })
+            });
+            const result = await response.json();
+            if (result.success) {
+                setSuccess(prev => ({ ...prev, backup: true }));
+                fetchSettings();
+                setTimeout(() => setSuccess(prev => ({ ...prev, backup: false })), 3000);
+            } else {
+                setErrors(prev => ({ ...prev, backup: result.message }));
+            }
+        } catch (err) { setErrors(prev => ({ ...prev, backup: 'Failed to create backup' })); }
+        finally { setSaving(prev => ({ ...prev, createBackup: false })); }
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const parsed = JSON.parse(event.target.result);
+                setUploadedBackupData(parsed);
+                setSelectedBackupFile(file.name);
+            } catch (err) {
+                setErrors(prev => ({ ...prev, restore: 'Invalid JSON backup file format' }));
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handlePerformRestoreOrAttach = async () => {
+        if (!selectedBackupFile && !uploadedBackupData) {
+            setErrors(prev => ({ ...prev, restore: 'Please select a backup file or browse a JSON data file.' }));
+            return;
+        }
+        setSaving(prev => ({ ...prev, restore: true })); clearError('restore');
+        try {
+            const savedUser = localStorage.getItem('user');
+            const { token } = JSON.parse(savedUser);
+            
+            const payload = {
+                mode: restoreMode,
+                filename: selectedBackupFile,
+                backupData: uploadedBackupData
+            };
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                setSuccess(prev => ({ ...prev, restore: result.message }));
+                setTimeout(() => setSuccess(prev => ({ ...prev, restore: false })), 4000);
+            } else {
+                setErrors(prev => ({ ...prev, restore: result.message }));
+            }
+        } catch (err) {
+            setErrors(prev => ({ ...prev, restore: 'Failed to process database restore / attach' }));
+        } finally {
+            setSaving(prev => ({ ...prev, restore: false }));
+        }
     };
 
     const saveBillSettings = async () => {
@@ -331,6 +469,7 @@ const SettingsPage = () => {
         { id: 'general', icon: <Sliders size={18} />, label: 'General', sub: 'Enable modules' },
         { id: 'voucher_series', icon: <Wallet size={18} />, label: 'Voucher Series', sub: 'Dynamic vouchers' },
         { id: 'user_rights', icon: <Lock size={18} />, label: 'User Rights', sub: 'Roles & permissions' },
+        { id: 'backup', icon: <Database size={18} />, label: 'Backup Settings', sub: 'Location & Auto Interval' },
         { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' }
     ];
 
@@ -374,17 +513,93 @@ const SettingsPage = () => {
 
                         <div>
                             
+                            {/* General Settings */}
+                            {activeTab === 'general' && (
+                                <div className="fade-in max-w-4xl">
+                                    <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">
+                                        <h2 className="text-xl font-bold text-slate-900">General Settings</h2>
+                                    </div>
+
+                                    {errors.general && <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-xs mb-4"><AlertCircle size={16} /> {errors.general}</div>}
+                                    {success.general && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-xs mb-4"><CheckCircle size={16} /> General Settings updated successfully!</div>}
+
+                                    <div className="bg-white rounded-lg border border-slate-200/80 p-6 shadow-sm">
+                                        <div className="divide-y divide-slate-100">
+                                            {GENERAL_SETTINGS_ITEMS.map((setting) => {
+                                                const isEnabled = setting.type === 'backup'
+                                                    ? !!backupForm[setting.key]
+                                                    : (moduleForm[setting.key] !== false);
+
+                                                const handleToggle = async () => {
+                                                    if (setting.type === 'backup') {
+                                                        const updated = { ...backupForm, [setting.key]: !isEnabled };
+                                                        setBackupForm(updated);
+                                                        try {
+                                                            const savedUser = localStorage.getItem('user');
+                                                            const { token } = JSON.parse(savedUser);
+                                                            await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                body: JSON.stringify(updated)
+                                                            });
+                                                            setSuccess(prev => ({ ...prev, general: true }));
+                                                            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+                                                        } catch (err) { console.error(err); }
+                                                    } else {
+                                                        const updated = { ...moduleForm, [setting.key]: !isEnabled };
+                                                        setModuleForm(updated);
+                                                        setModuleSettings(updated);
+                                                        localStorage.setItem('moduleSettings', JSON.stringify(updated));
+                                                        try {
+                                                            const savedUser = localStorage.getItem('user');
+                                                            const { token } = JSON.parse(savedUser);
+                                                            await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                body: JSON.stringify(updated)
+                                                            });
+                                                            setSuccess(prev => ({ ...prev, general: true }));
+                                                            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+                                                        } catch (err) { console.error(err); }
+                                                    }
+                                                };
+
+                                                return (
+                                                    <div key={setting.key} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
+                                                        <span className="font-semibold text-slate-800 text-sm">{setting.label}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={isEnabled} 
+                                                                    onChange={handleToggle} 
+                                                                    className="sr-only peer" 
+                                                                />
+                                                                <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
+                                                            </label>
+                                                            <span className={`text-sm font-semibold min-w-[50px] ${isEnabled ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                                                {isEnabled ? 'Enable' : 'Disable'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Printer Settings */}
                             {activeTab === 'printer' && (
                                 <div className="fade-in">
                                     <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
                                         <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Printer Config</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Thermal setup and specifications</p>
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Printer Config & Format Settings</h3>
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Configure destination printers and thermal receipt formats</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {printerForm.enabled && (
-                                                <button onClick={() => alert('Test print feature')} className="btn-premium-outline !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
+                                                <button onClick={() => alert('Test print sent to selected Sales Bill Printer!')} className="btn-premium-outline !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
                                                     <TestTube size={13} /> TEST PRINT
                                                 </button>
                                             )}
@@ -395,35 +610,95 @@ const SettingsPage = () => {
                                     </div>
                                     
                                     {errors.printer && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.printer}</div>}
-                                    {success.printer && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Printer settings updated!</div>}
+                                    {success.printer && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Printer settings & formats saved successfully!</div>}
                                     
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        <div className="space-y-6">
-                                            <div className="flex items-center justify-between p-6 bg-slate-50 rounded border border-slate-100">
-                                                <div>
-                                                    <p className="font-black text-slate-800 uppercase tracking-tight text-sm">Enable Thermal Printer</p>
-                                                    <p className="text-xs font-bold text-slate-400 mt-1">Activate direct thermal receipt printing</p>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" name="enabled" checked={printerForm.enabled} onChange={handlePrinterChange} className="sr-only peer" />
-                                                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-orange-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
-                                                </label>
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+                                        <div className="flex items-center justify-between p-5 bg-slate-50 rounded border border-slate-100">
+                                            <div>
+                                                <p className="font-black text-slate-800 uppercase tracking-tight text-sm">Enable Thermal Printer Module</p>
+                                                <p className="text-xs font-bold text-slate-400 mt-1">Activate direct printing for POS billing, kitchen KOTs, and delivery notes</p>
                                             </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" name="enabled" checked={printerForm.enabled} onChange={handlePrinterChange} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-orange-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                            </label>
+                                        </div>
 
-                                            {printerForm.enabled && (
-                                                <div className="form-group-premium">
-                                                    <label>Paper Roll Width</label>
-                                                    <div className="flex gap-3">
-                                                        {['58mm', '80mm'].map(w => (
-                                                            <button key={w} type="button" onClick={() => setPrinterForm(prev => ({ ...prev, width: w }))}
-                                                                className={`flex-1 p-5 rounded border-2 font-black text-sm uppercase tracking-widest transition-all ${printerForm.width === w ? 'border-orange-600 bg-orange-50 text-orange-900' : 'border-slate-100 text-slate-400'}`}>
-                                                                {w} {w === '58mm' ? '— Compact' : '— Standard'}
-                                                            </button>
-                                                        ))}
+                                        {printerForm.enabled && (
+                                            <>
+                                                {/* Separate Printer Selection */}
+                                                <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                                                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Printer Destination Assignments</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        <div className="form-group-premium">
+                                                            <label className="text-[11px] font-bold text-slate-600 uppercase">Sales Bill Printer</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="pef-f-input !h-10 font-bold"
+                                                                placeholder="e.g. POS-80 Sales Printer"
+                                                                value={printerForm.sales_bill_printer || ''}
+                                                                onChange={e => setPrinterForm({ ...printerForm, sales_bill_printer: e.target.value })}
+                                                            />
+                                                            <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for customer billing receipts</p>
+                                                        </div>
+                                                        <div className="form-group-premium">
+                                                            <label className="text-[11px] font-bold text-slate-600 uppercase">KOT Printer</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="pef-f-input !h-10 font-bold"
+                                                                placeholder="e.g. KOT Kitchen Printer"
+                                                                value={printerForm.kot_printer || ''}
+                                                                onChange={e => setPrinterForm({ ...printerForm, kot_printer: e.target.value })}
+                                                            />
+                                                            <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for kitchen order tickets</p>
+                                                        </div>
+                                                        <div className="form-group-premium">
+                                                            <label className="text-[11px] font-bold text-slate-600 uppercase">Delivery Printer</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="pef-f-input !h-10 font-bold"
+                                                                placeholder="e.g. Delivery Counter Printer"
+                                                                value={printerForm.delivery_printer || ''}
+                                                                onChange={e => setPrinterForm({ ...printerForm, delivery_printer: e.target.value })}
+                                                            />
+                                                            <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for parcel & delivery notes</p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
+
+                                                {/* Thermal Print Format Selection */}
+                                                <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                                                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Thermal Receipt Format</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div 
+                                                            onClick={() => setPrinterForm({ ...printerForm, print_format: 'NORMAL_3_INCH' })}
+                                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${printerForm.print_format === 'NORMAL_3_INCH' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="font-extrabold text-xs uppercase text-slate-800">Normal 3-Inch</span>
+                                                                {printerForm.print_format === 'NORMAL_3_INCH' && <span className="w-3 h-3 rounded-full bg-orange-500"></span>}
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                                Standard 80mm receipt with Company Details, Bill No, Date, Time, Item details, Quantities, Amounts, and Grand Total.
+                                                            </p>
+                                                        </div>
+
+                                                        <div 
+                                                            onClick={() => setPrinterForm({ ...printerForm, print_format: 'NORMAL_3_INCH_WITH_TOKEN' })}
+                                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${printerForm.print_format === 'NORMAL_3_INCH_WITH_TOKEN' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="font-extrabold text-xs uppercase text-slate-800">Normal 3-Inch with Token</span>
+                                                                {printerForm.print_format === 'NORMAL_3_INCH_WITH_TOKEN' && <span className="w-3 h-3 rounded-full bg-orange-500"></span>}
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                                Prints standard 3-inch bill along with category-wise detachable tokens (e.g., Tea/Coffee, Biryani) below the receipt.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -472,6 +747,270 @@ const SettingsPage = () => {
                                                     </label>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Backup Settings */}
+                            {activeTab === 'backup' && (
+                                <div className="fade-in">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+                                        <div>
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Backup Settings & Automation</h3>
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Configure software installation directory backups, schedules, and automatic triggers</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={handleCreateBackupNow} disabled={saving.createBackup} className="btn-premium-outline !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
+                                                {saving.createBackup ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} CREATE BACKUP NOW
+                                            </button>
+                                            <button onClick={saveBackupSettings} disabled={saving.backup} className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
+                                                {saving.backup ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} SAVE SETTINGS
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {errors.backup && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.backup}</div>}
+                                    {success.backup && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Backup created / settings updated successfully!</div>}
+                                    
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+                                        {/* Storage Directory Selection */}
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                <Folder size={16} className="text-orange-600" /> Backup Storage Directory
+                                            </h4>
+                                            <div className="flex gap-2 items-center">
+                                                <input 
+                                                    type="text" 
+                                                    className="pef-f-input !h-10 font-mono font-bold flex-1"
+                                                    value={backupForm.backup_dir || defaultDir || ''}
+                                                    placeholder={defaultDir || 'Software Installation Directory/Backup'}
+                                                    onChange={e => setBackupForm({ ...backupForm, backup_dir: e.target.value })}
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const customPath = prompt("Enter or select backup directory path (e.g., D:\\RestaurantBackup):", backupForm.backup_dir || defaultDir || '');
+                                                        if (customPath && customPath.trim() !== '') {
+                                                            setBackupForm({ ...backupForm, backup_dir: customPath.trim() });
+                                                        }
+                                                    }} 
+                                                    className="px-4 h-10 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 shrink-0"
+                                                >
+                                                    <Folder size={14} /> BROWSE...
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setBackupForm({ ...backupForm, backup_dir: defaultDir })}
+                                                    className="px-4 h-10 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-md transition-colors shrink-0"
+                                                >
+                                                    RESET DEFAULT
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium">
+                                                ★ Default location stores backups in a dedicated <code className="bg-slate-200 px-1 py-0.5 rounded text-orange-700 font-bold">Backup</code> folder inside the software installation directory (not directly in C: root).
+                                            </p>
+                                        </div>
+
+                                        {/* Timestamped Filename Format Preview */}
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-2">
+                                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                <Clock size={16} className="text-orange-600" /> Date & Time Timestamped Naming
+                                            </h4>
+                                            <p className="text-xs text-slate-600 font-medium">
+                                                Each backup file is automatically generated with current Date & Time in filename:
+                                            </p>
+                                            <div className="bg-slate-900 text-orange-400 p-3 rounded-lg font-mono text-xs font-bold">
+                                                resfin_backup_{new Date().toISOString().slice(0,10)}_{new Date().toTimeString().slice(0,8).replace(/:/g,'-')}.json
+                                            </div>
+                                        </div>
+
+                                        {/* Automatic Backup Triggers & Intervals */}
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                <HardDrive size={16} className="text-orange-600" /> Automatic Backup Triggers & Silent Intervals
+                                            </h4>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <label className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-orange-300 transition-all">
+                                                    <div>
+                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">On Startup Backup Prompt</span>
+                                                        <span className="text-[11px] font-bold text-slate-400">Ask to take backup before login on startup</span>
+                                                    </div>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!backupForm.on_startup}
+                                                        onChange={e => setBackupForm({ ...backupForm, on_startup: e.target.checked })}
+                                                        className="w-4 h-4 text-orange-600 rounded accent-orange-600 cursor-pointer"
+                                                    />
+                                                </label>
+
+                                                <label className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-orange-300 transition-all">
+                                                    <div>
+                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">On Exit Backup Prompt</span>
+                                                        <span className="text-[11px] font-bold text-slate-400">Ask to take backup before closing software on exit</span>
+                                                    </div>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!backupForm.on_exit}
+                                                        onChange={e => setBackupForm({ ...backupForm, on_exit: e.target.checked })}
+                                                        className="w-4 h-4 text-orange-600 rounded accent-orange-600 cursor-pointer"
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            <div className="form-group-premium pt-2">
+                                                <label className="text-[11px] font-bold text-slate-600 uppercase">Silent Auto Backup Interval</label>
+                                                <select 
+                                                    className="pef-f-input !h-10 font-bold"
+                                                    value={backupForm.auto_interval || 0}
+                                                    onChange={e => setBackupForm({ ...backupForm, auto_interval: parseInt(e.target.value, 10) || 0 })}
+                                                >
+                                                    <option value={0}>Disabled (Manual / Prompt Backup Only)</option>
+                                                    <option value={1}>Every 1 Hour (Silent Background Backup)</option>
+                                                    <option value={2}>Every 2 Hours (Silent Background Backup)</option>
+                                                    <option value={4}>Every 4 Hours (Silent Background Backup)</option>
+                                                    <option value={8}>Every 8 Hours (Silent Background Backup)</option>
+                                                    <option value={12}>Every 12 Hours (Silent Background Backup)</option>
+                                                    <option value={24}>Daily / Every 24 Hours (Silent Background Backup)</option>
+                                                </select>
+                                                <p className="text-[10px] text-slate-400 mt-1 font-semibold">Automatic backups run silently in the background without interrupting cashier billing or operations.</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Restore Backup & Attach Data Options */}
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-5">
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                    <RefreshCw size={16} className="text-orange-600" /> Database Restore & Attach Data
+                                                </h4>
+                                                <p className="text-xs text-slate-500 font-medium mt-1">
+                                                    By default, the software looks in the installation directory and its Backup folder. Select an option below to proceed.
+                                                </p>
+                                            </div>
+
+                                            {errors.restore && <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-xs"><AlertCircle size={16} /> {errors.restore}</div>}
+                                            {success.restore && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-xs"><CheckCircle size={16} /> {success.restore}</div>}
+
+                                            {/* Restore Options Selector */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div 
+                                                    onClick={() => setRestoreMode('RESTORE')}
+                                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreMode === 'RESTORE' ? 'border-orange-600 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                                >
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-extrabold text-xs uppercase text-slate-800 flex items-center gap-1.5">
+                                                            <RefreshCw size={15} className="text-orange-600" /> Restore Backup
+                                                        </span>
+                                                        {restoreMode === 'RESTORE' && <span className="w-3 h-3 rounded-full bg-orange-600"></span>}
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                        Restore full database state from an existing backup JSON file. (Replaces current records).
+                                                    </p>
+                                                </div>
+
+                                                <div 
+                                                    onClick={() => setRestoreMode('ATTACH')}
+                                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreMode === 'ATTACH' ? 'border-orange-600 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                                >
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-extrabold text-xs uppercase text-slate-800 flex items-center gap-1.5">
+                                                            <Paperclip size={15} className="text-orange-600" /> Attach Data
+                                                        </span>
+                                                        {restoreMode === 'ATTACH' && <span className="w-3 h-3 rounded-full bg-orange-600"></span>}
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                        Attach external database/data file if a backup is unavailable. Merges data seamlessly without purging existing system records.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* File Selection & Direct Browse */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                                <div className="space-y-1">
+                                                    <label className="text-[11px] font-bold text-slate-600 uppercase">Select From Installation Backup Folder</label>
+                                                    <select 
+                                                        className="pef-f-input !h-10 font-mono font-bold"
+                                                        value={selectedBackupFile}
+                                                        onChange={e => {
+                                                            setSelectedBackupFile(e.target.value);
+                                                            setUploadedBackupData(null);
+                                                        }}
+                                                    >
+                                                        <option value="">-- Choose file from Installation Directory Backup --</option>
+                                                        {backupHistory.map((item, idx) => (
+                                                            <option key={idx} value={item.filename}>{item.filename} ({(item.size/1024).toFixed(1)} KB)</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div className="space-y-1">
+                                                    <label className="text-[11px] font-bold text-slate-600 uppercase">Or Browse Custom Local File</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="px-4 h-10 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-md flex items-center gap-2 cursor-pointer transition-colors">
+                                                            <UploadCloud size={15} /> BROWSE FILE
+                                                            <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                                                        </label>
+                                                        <span className="text-xs font-mono font-bold text-slate-600 truncate max-w-[200px]">
+                                                            {selectedBackupFile || 'No file selected'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 flex justify-end">
+                                                <button 
+                                                    type="button"
+                                                    onClick={handlePerformRestoreOrAttach}
+                                                    disabled={saving.restore}
+                                                    className="btn-premium-primary !py-2.5 !px-6 !text-xs font-black uppercase flex items-center gap-2 shadow-lg shadow-orange-100"
+                                                >
+                                                    {saving.restore ? <Loader2 size={15} className="animate-spin" /> : (restoreMode === 'ATTACH' ? <Paperclip size={15} /> : <RefreshCw size={15} />)}
+                                                    {restoreMode === 'ATTACH' ? 'ATTACH & MERGE DATA NOW' : 'RESTORE SYSTEM BACKUP NOW'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Backup History Table */}
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-3">
+                                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recent Software Backups History</h4>
+                                            {backupHistory.length === 0 ? (
+                                                <p className="text-xs text-slate-400 font-bold py-2">No backup files created yet. Click "CREATE BACKUP NOW" above to create your first backup.</p>
+                                            ) : (
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left text-xs border-collapse">
+                                                        <thead>
+                                                            <tr className="border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase">
+                                                                <th className="py-2">FILE NAME</th>
+                                                                <th className="py-2">DATE & TIME</th>
+                                                                <th className="py-2 text-right">SIZE</th>
+                                                                <th className="py-2 text-right">ACTION</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-200">
+                                                            {backupHistory.map((item, idx) => (
+                                                                <tr key={idx} className="hover:bg-slate-100/50">
+                                                                    <td className="py-2 font-mono font-bold text-slate-800">{item.filename}</td>
+                                                                    <td className="py-2 font-bold text-slate-600">{new Date(item.mtime).toLocaleString()}</td>
+                                                                    <td className="py-2 text-right font-mono font-bold text-slate-500">{(item.size / 1024).toFixed(1)} KB</td>
+                                                                    <td className="py-2 text-right">
+                                                                        <button 
+                                                                            type="button" 
+                                                                            onClick={() => {
+                                                                                setSelectedBackupFile(item.filename);
+                                                                                setUploadedBackupData(null);
+                                                                            }}
+                                                                            className="text-[10px] font-black uppercase px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                                                                        >
+                                                                            SELECT
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

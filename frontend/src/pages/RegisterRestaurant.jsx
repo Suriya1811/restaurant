@@ -7,6 +7,7 @@ import {
     ShieldCheck, Star, Layers, CheckCircle, FolderOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import logoSidebar from '../assets/logo_sidebar.png';
 import { useFormNavigation } from '../hooks/useFormNavigation';
 import SaveConfirmationModal from '../components/common/SaveConfirmationModal';
 import './RegisterRestaurant.css';
@@ -114,7 +115,7 @@ const RegisterRestaurant = () => {
                     <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
                         <Link to="/" className="no-underline">
                             <img 
-                                src="/Logo_new_bg.png" 
+                                src={logoSidebar} 
                                 alt="Yugam Software" 
                                 style={{ width: '280px', maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }} 
                             />

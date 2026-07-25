@@ -131,51 +131,62 @@
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-/* ── Unified Form Header (3-Column) ── */
+/* ── Purchase Entry Form Container ── */
+.pef-container {
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+    padding: 0.75rem 1.25rem;
+    gap: 0.65rem;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ── 3-Column Top Form Card ── */
 .pef-bill-header-unified {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    padding: 0.75rem 1.25rem;
-    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
-    margin-bottom: 0.5rem;
 }
 
 .pef-form-grid {
     display: grid;
-    grid-template-columns: 1fr 1.5fr 1fr;
-    gap: 1.25rem;
+    grid-template-columns: 1fr 1.6fr 1fr;
+    gap: 1rem;
+    align-items: start;
 }
 
 .pef-form-col {
     display: flex;
     flex-direction: column;
+    gap: 0.45rem;
+}
+
+.pef-f-group-horizontal {
+    display: flex;
+    align-items: center;
     gap: 0.5rem;
 }
 
-.pef-f-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.pef-f-label {
-    font-size: 0.6rem;
-    font-weight: 800;
-    color: #94a3b8;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding-left: 0.1rem;
+.pef-f-label-left {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #334155;
+    width: 85px;
+    flex-shrink: 0;
 }
 
 .pef-f-input, .pef-f-select {
     width: 100%;
-    height: 34px;
-    padding: 0 0.75rem;
-    border: 1.5px solid #f1f5f9;
-    border-radius: 0.5rem;
-    background: #fbfcfd;
+    height: 32px;
+    padding: 0 0.65rem;
+    border: 1.5px solid #FFAB91;
+    border-radius: 6px;
+    background: #FFFBFB;
     font-size: 0.8rem;
     font-weight: 700;
     color: #1e293b;
@@ -184,121 +195,51 @@
 }
 
 .pef-f-input:focus, .pef-f-select:focus {
-    border-color: #6366f1;
+    border-color: #FF5722;
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.06);
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.12);
 }
 
-.pef-f-readonly {
-    background: #f1f5f9;
-    color: #64748b;
-    border-color: transparent;
-    cursor: default;
-}
-
-.pef-f-select-wrap {
-    position: relative;
+.pef-address-box {
     width: 100%;
-}
-
-.pef-f-chevron {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-    pointer-events: none;
-}
-
-.pef-f-select {
-    appearance: none;
-    padding-right: 2.25rem;
-    cursor: pointer;
-}
-
-/* ── Autocomplete Dropdown ── */
-.pef-dropdown-container {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
+    height: 76px;
+    border: 1.5px solid #FFAB91;
+    border-radius: 6px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    z-index: 1000;
-    max-height: 250px;
-    overflow-y: auto;
-    margin-top: 0.5rem;
-    animation: pef-dropdown-in 0.2s ease-out;
+    background-image: repeating-linear-gradient(#ffffff, #ffffff 18px, #FFE0B2 19px);
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 19px;
+    outline: none;
+    resize: none;
 }
 
-@keyframes pef-dropdown-in {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+.pef-address-box:focus {
+    border-color: #FF5722;
+    box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.12);
 }
 
-.pef-dropdown-item {
-    padding: 0.6rem 1rem;
-    cursor: pointer;
-    border-bottom: 1px solid #f1f5f9;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-}
-
-.pef-dropdown-item:last-child {
-    border-bottom: none;
-}
-
-.pef-dropdown-item.active,
-.pef-dropdown-item:hover {
-    background: #f1f5f9;
-}
-
-.pef-dropdown-item.active .font-bold,
-.pef-dropdown-item:hover .font-bold {
-    color: #4f46e5;
-}
-
-.pef-dropdown-footer {
-    padding: 0.4rem;
-    text-align: center;
-    font-size: 0.6rem;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    background: #f8fafc;
-    border-top: 1px solid #f1f5f9;
-}
-
-/* ── Items Section ── */
+/* ── Items Section & Table Grid ── */
 .pef-items-section {
     flex: 1;
     display: flex;
     flex-direction: column;
     background: #fff;
-    border: 1px solid #f1f5f9;
-    border-radius: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
     overflow: hidden;
-    min-height: 0; /* CRITICAL for flex child to scroll */
+    min-height: 340px; /* Ensures at least 10 rows fit comfortably without scrolling */
 }
 
 .pef-table-wrap {
     flex: 1;
     overflow-x: auto;
     overflow-y: auto;
-    min-height: 0;
+    max-height: calc(100vh - 300px);
 }
-
-/* Clean Scrollbar */
-.pef-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
-.pef-table-wrap::-webkit-scrollbar-track { background: transparent; }
-.pef-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.pef-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .pef-table {
     width: max-content;
@@ -310,70 +251,55 @@
 .pef-table thead th {
     position: sticky;
     top: 0;
-    background: #0a1128 !important;
-    color: #ff6b00 !important;
+    background: #0A1128 !important;
+    color: #FF9100 !important;
     z-index: 10;
     text-align: center;
     font-size: 0.7rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    padding: 0.75rem 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 0.45rem 0.4rem;
     border-bottom: 1px solid #1e293b;
+    border-right: 1px solid #1e293b;
     text-transform: uppercase;
-    border-right: 1px solid #f1f5f9;
     white-space: nowrap;
 }
 
 .pef-table td {
     border-bottom: 1px solid #f1f5f9;
-    border-right: 1px solid #f8fafc;
-    padding: 0.35rem 0.5rem;
+    border-right: 1px solid #f1f5f9;
+    padding: 0.15rem 0.3rem;
+    height: 31px;
     vertical-align: middle;
 }
 
 .pef-item-row:hover td {
-    background: #f8fafc;
+    background: #fff7ed;
 }
-
-/* Column widths */
-.pef-th-sno, .pef-td-sno { width: 44px; text-align: center; }
-.pef-th-barcode { width: 120px; }
-.pef-th-code { width: 80px; }
-.pef-th-name { width: 180px; }
-.pef-th-unit { width: 64px; }
-.pef-th-qty { width: 80px; }
-.pef-th-rate { width: 90px; }
-.pef-th-amount { width: 96px; }
-.pef-th-dis { width: 72px; }
-.pef-th-gst { width: 76px; }
-.pef-th-tax { width: 76px; }
-.pef-th-total { width: 96px; }
-.pef-th-hsn { width: 96px; }
-.pef-th-del { width: 40px; }
 
 .pef-cell-input, .pef-cell-select {
     width: 100%;
-    padding: 0.4rem 0.5rem;
+    height: 27px;
+    padding: 0 0.4rem;
     border: 1px solid transparent;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #0f172a;
-    background: #f1f5f9;
+    background: #f8fafc;
     outline: none;
-    transition: all 0.2s;
+    transition: all 0.15s;
 }
 
-.pef-item-row:hover .pef-cell-input, 
-.pef-item-row:hover .pef-cell-select {
-    background: #fff;
-    border-color: #cbd5e1;
+.pef-item-row:hover .pef-cell-input {
+    background: #ffffff;
+    border-color: #ffd8a8;
 }
 
-.pef-cell-input:focus, .pef-cell-select:focus {
-    border-color: #4f46e5 !important;
-    background: #fff !important;
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+.pef-cell-input:focus {
+    border-color: #ff5722 !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.15);
 }
 
 .pef-cell-select { appearance: none; cursor: pointer; }

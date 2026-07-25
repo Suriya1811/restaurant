@@ -125,8 +125,8 @@ const UserRightsSettings = () => {
     const saveUser = async () => {
         setError('');
         setSuccess('');
-        if (!userForm.name || !userForm.username || !userForm.role) {
-            setError('Name, Username, and User Type are required');
+        if (!userForm.username || !userForm.role) {
+            setError('User Name and User Type are required');
             return;
         }
         if (!selectedUserId && userForm.password_enabled && !userForm.password) {
@@ -269,16 +269,10 @@ const UserRightsSettings = () => {
                             </select>
                         </div>
                         <div className="form-group-premium">
-                            <label>Name</label>
-                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Full Name" 
+                            <label>User Name</label>
+                            <input type="text" className="input-premium !rounded !bg-white" placeholder="User Name (login ID)" 
                                 autoComplete="off"
-                                value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} />
-                        </div>
-                        <div className="form-group-premium">
-                            <label>Username</label>
-                            <input type="text" className="input-premium !rounded !bg-white" placeholder="Username (login ID)" 
-                                autoComplete="off"
-                                value={userForm.username} onChange={e => setUserForm({...userForm, username: e.target.value.toLowerCase()})} />
+                                value={userForm.username} onChange={e => setUserForm({...userForm, username: e.target.value.toLowerCase(), name: e.target.value.toLowerCase()})} />
                         </div>
                         <div className="form-group-premium">
                             <div className="flex items-center justify-between mb-2">

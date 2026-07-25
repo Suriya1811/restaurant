@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import '../../pages/dashboard/Dashboard.css';
+import logoSidebar from '../../assets/logo_sidebar.png';
 
 const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
     const location = useLocation();
@@ -159,12 +160,8 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
         {
             label: "Settings",
             icon: <Settings size={18} />,
-            subItems: [
-                { label: "General", route: "/dashboard/self-service/settings", icon: <Settings size={16} />, pageKey: "settings_general" },
-                { label: "Voucher Series", route: "/dashboard/self-service/settings?tab=voucher_series", icon: <Wallet size={16} />, pageKey: "settings_general" },
-                { label: "User Rights", route: "/dashboard/self-service/settings?tab=user_rights", icon: <Lock size={16} />, pageKey: "user_rights" },
-                { label: "Extra Modules", route: "/dashboard/self-service/settings?tab=extra_modules", icon: <Layers size={16} />, pageKey: "system_modules" }
-            ]
+            route: "/dashboard/self-service/settings",
+            pageKey: "settings_general"
         },
         {
             label: "Profile",
@@ -185,6 +182,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             const isPathMatch = location.pathname === itemUrl.pathname;
 
             if (isPathMatch) {
+                if (itemUrl.pathname === '/dashboard/self-service/settings') return true;
                 const itemParams = Array.from(itemUrl.searchParams.entries());
                 const queryParams = new URLSearchParams(location.search);
 
@@ -256,28 +254,29 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
     };
 
     const checkIsExactActive = (menuItem) => {
-        if (!menuItem.route) return false;
-        
-        const itemUrl = new URL(menuItem.route, window.location.origin);
-        const isPathMatch = location.pathname === itemUrl.pathname;
-        
-        if (isPathMatch) {
-            const itemParams = Array.from(itemUrl.searchParams.entries());
-            const queryParams = new URLSearchParams(location.search);
-            
-            if (itemParams.length > 0) {
-                return itemParams.every(([key, value]) => {
-                    const currentVal = queryParams.get(key);
-                    if (key === 'filter' && itemUrl.searchParams.get('category') !== 'gst') {
-                        return true;
+        if (menuItem.route) {
+            const itemUrl = new URL(menuItem.route, window.location.origin);
+            const isPathMatch = location.pathname === itemUrl.pathname;
+
+            if (isPathMatch) {
+                if (itemUrl.pathname === '/dashboard/self-service/settings') return true;
+                const itemParams = Array.from(itemUrl.searchParams.entries());
+                const queryParams = new URLSearchParams(location.search);
+
+                if (itemParams.length > 0) {
+                    return itemParams.every(([key, value]) => {
+                        const currentVal = queryParams.get(key);
+                        if (key === 'filter' && itemUrl.searchParams.get('category') !== 'gst') {
+                            return true;
+                        }
+                        return currentVal === value;
+                    });
+                } else {
+                    if (queryParams.has('tab') || queryParams.has('category')) {
+                        return false;
                     }
-                    return currentVal === value;
-                });
-            } else {
-                if (queryParams.has('tab') || queryParams.has('category')) {
-                    return false;
+                    return true;
                 }
-                return true;
             }
         }
         return false;
@@ -337,8 +336,8 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
 
     return (
         <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'show' : ''}`}>
-            <div className="sidebar-brand" style={{ padding: isCollapsed ? '0 0' : '0 1rem', height: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <img src="/Logo_new_bg.png" alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '40px' : '155px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease', margin: '-10px 0' }} />
+            <div className="sidebar-brand" style={{ padding: isCollapsed ? '0.5rem 0' : '0.75rem 1rem', height: '65px', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <img src={logoSidebar} alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '38px' : '175px', maxHeight: '48px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease' }} />
             </div>
 
             <nav className="sidebar-nav">

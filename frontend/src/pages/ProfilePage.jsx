@@ -4,10 +4,9 @@ import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import './SettingsPage.css';
-import './ProfilePage.css';
 import {
     User, Key, Save, CheckCircle, AlertCircle, Loader2,
-    Building2, Phone, Mail, Database,
+    Building2, Phone, Mail, Database, Edit2, Edit,
     FileJson, HardDrive, Clock, ShieldCheck, ArrowLeft, Sliders, X,
     Plus, Folder, RefreshCw, Download, Upload, Trash2
 } from 'lucide-react';
@@ -44,7 +43,7 @@ const ProfilePage = () => {
     });
 
     // Backup State
-    const [backupPath, setBackupPath] = useState(() => localStorage.getItem('backup_path') || 'C:/RestoBoard/Backups');
+    const [backupPath, setBackupPath] = useState(() => localStorage.getItem('backup_path') || '');
     const [autoBackupOnClose, setAutoBackupOnClose] = useState(() => localStorage.getItem('auto_backup_on_close') === 'true');
     const [lastBackup, setLastBackup] = useState(null);
     const [diskSpaceWarning, setDiskSpaceWarning] = useState(false);
@@ -119,8 +118,18 @@ const ProfilePage = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await response.json();
-            if (result.success && result.data.lastBackup) {
-                setLastBackup(new Date(result.data.lastBackup.timestamp).toLocaleString());
+            if (result.success && result.data) {
+                if (result.data.lastBackup) {
+                    setLastBackup(new Date(result.data.lastBackup.timestamp).toLocaleString());
+                }
+                const dir = result.data.backup_directory || result.data.default_directory;
+                if (dir) {
+                    setBackupPath(dir);
+                    localStorage.setItem('backup_path', dir);
+                }
+                if (result.data.settings) {
+                    setAutoBackupOnClose(!!result.data.settings.on_exit);
+                }
             }
         } catch (err) { console.error("Failed to fetch backup status", err); }
     };
@@ -133,7 +142,6 @@ const ProfilePage = () => {
     useEffect(() => {
         const tab = new URLSearchParams(location.search).get('tab');
         setActiveTab(tab || 'view');
-        // Reset view sub-states when navigating away from profile info
         if (tab && tab !== 'view') {
             setIsNewProfile(false);
             setIsEditing(false);
@@ -199,12 +207,10 @@ const ProfilePage = () => {
                 setSuccess(prev => ({ ...prev, profile: true }));
                 setIsNewProfile(false);
                 setIsEditing(false);
-                if (wasNew) {
-                    alert("New profile created! Application will refresh.");
-                    window.location.reload();
-                }
                 setTimeout(() => setSuccess(prev => ({ ...prev, profile: false })), 3000);
-            } else { setErrors(prev => ({ ...prev, profile: result.message })); }
+            } else {
+                setErrors(prev => ({ ...prev, profile: result.message || 'Validation failed' }));
+            }
         } catch (err) { setErrors(prev => ({ ...prev, profile: 'Failed to update profile' })); }
         finally { setSaving(prev => ({ ...prev, profile: false })); }
     };
@@ -220,6 +226,7 @@ const ProfilePage = () => {
 
     const handleBackup = async () => {
         setSaving(prev => ({ ...prev, backup: true }));
+        setDiskSpaceWarning(false);
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
@@ -244,14 +251,66 @@ const ProfilePage = () => {
         finally { setSaving(prev => ({ ...prev, backup: false })); }
     };
 
-    const handleBackupPathChange = (val) => {
+    const handleBackupPathChange = async (val) => {
         setBackupPath(val);
         localStorage.setItem('backup_path', val);
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+            await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ backup_dir: val })
+            });
+        } catch (err) { console.error("Failed to save backup path", err); }
     };
 
-    const handleAutoBackupToggle = (val) => {
+    const handleAutoBackupToggle = async (val) => {
         setAutoBackupOnClose(val);
         localStorage.setItem('auto_backup_on_close', val);
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+            await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ on_exit: val })
+            });
+        } catch (err) { console.error("Failed to save auto backup settings", err); }
+    };
+
+    const handleDeleteProfile = async () => {
+        const confirmed = window.confirm("Are you sure you want to delete this profile completely?");
+        if (!confirmed) return;
+
+        setSaving(prev => ({ ...prev, delete: true }));
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/profile`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Profile deleted successfully.');
+                localStorage.clear();
+                if (logout) logout();
+                window.location.href = '/login';
+            } else {
+                alert('Failed to delete profile: ' + (result.message || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error('Delete profile error:', err);
+            alert('Failed to delete profile. Please try again.');
+        } finally {
+            setSaving(prev => ({ ...prev, delete: false }));
+        }
     };
 
     const handleFileSelect = (e) => {
@@ -292,16 +351,17 @@ const ProfilePage = () => {
         finally { setSaving(prev => ({ ...prev, restore: false })); }
     };
 
-    const getInitials = () => {
-        const name = profileForm.store_name || profileForm.businessName || user?.email || 'POS';
-        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    };
+    const TABS = [
+        { id: 'view', icon: <User size={18} />, label: 'Profile Details' },
+        { id: 'backup', icon: <Database size={18} />, label: 'Backup Settings' },
+        { id: 'restore', icon: <RefreshCw size={18} />, label: 'Restore Data' }
+    ];
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50">
             <div className="text-center">
-                <User className="animate-pulse text-indigo-600 mx-auto mb-4" size={56} />
-                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Loading profile...</p>
+                <User className="animate-spin text-orange-600 mx-auto mb-4" size={56} />
+                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Loading Profile...</p>
             </div>
         </div>
     );
@@ -312,35 +372,50 @@ const ProfilePage = () => {
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
-            <main className="dashboard-main">
+            <main className="dashboard-main flex flex-col h-screen overflow-hidden">
                 <Header toggleSidebar={toggleSidebar} title="Profile" restaurantName={profileForm.businessName || profileForm.store_name} />
-                <div className="profile-spacious-layout fade-in">
+                
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        
+                        {/* Top Navigation Tabs */}
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {TABS.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-2 px-6 py-3 rounded-md font-bold text-sm transition-all shadow-sm
+                                        ${activeTab === tab.id 
+                                            ? 'bg-orange-600 text-white shadow-orange-200' 
+                                            : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                                        }`}
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
-
-
-                    {/* Content Section Split */}
-                    <div className="profile-main-grid">
-
-                        {/* Left Side Content Area */}
-                        <div className="profile-content-area">
+                        <div>
+                            {/* PROFILE TAB */}
                             {activeTab === 'view' && (
                                 (isNewProfile || isEditing) ? (
                                     /* EDIT FORM */
-                                    <div className="profile-detail-card fade-in">
-                                        <div className="mb-6 pb-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="fade-in">
+                                        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
                                             <div>
-                                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
                                                     {isNewProfile ? 'Create New Store Profile' : 'Edit Store Details'}
                                                 </h3>
-                                                <p className="text-[11px] text-slate-500 uppercase tracking-[0.24em] mt-1">
-                                                    Update profile parameters below
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">
+                                                    Update store identity and tax configuration
                                                 </p>
                                             </div>
                                             <button
                                                 onClick={() => { setIsNewProfile(false); setIsEditing(false); }}
-                                                className="btn-premium-primary !bg-slate-100 !text-slate-700 !border-slate-200 !py-2 !px-4 !text-xs !rounded-[1.2rem] hover:!bg-slate-200"
+                                                className="btn-premium-outline !py-1.5 !px-4 !text-xs flex items-center gap-1.5"
                                             >
-                                                <ArrowLeft size={14} className="mr-1.5 inline" /> CANCEL
+                                                <ArrowLeft size={13} /> CANCEL
                                             </button>
                                         </div>
 
@@ -350,39 +425,39 @@ const ProfilePage = () => {
                                             </div>
                                         )}
 
-                                        <form ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="w-full mb-10">
+                                        <form ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="w-full">
                                             <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
 
                                                     {/* LEFT COLUMN */}
                                                     <div className="flex flex-col gap-3">
-                                                        <h4 className="text-xs font-bold text-[#0F172A] mb-1 uppercase tracking-wider">Business Information</h4>
+                                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2">Business Information</h4>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Company Name <span className="text-[#0F172A]">*</span></label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Company Name <span className="text-orange-600">*</span></label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="businessName" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.businessName} onChange={handleProfileChange} placeholder="Company Legal Name" />
+                                                                <input type="text" name="businessName" className="input-premium !rounded" value={profileForm.businessName} onChange={handleProfileChange} placeholder="Company Legal Name" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Store Name <span className="text-[#0F172A]">*</span></label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Store Name <span className="text-orange-600">*</span></label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="store_name" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.store_name} onChange={handleProfileChange} placeholder="Operating Store Name" />
+                                                                <input type="text" name="store_name" className="input-premium !rounded" value={profileForm.store_name} onChange={handleProfileChange} placeholder="Operating Store Name" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Print Name <span className="text-[#0F172A]">*</span></label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Print Name <span className="text-orange-600">*</span></label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="print_name" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.print_name} onChange={handleProfileChange} placeholder="Name on Bills" />
+                                                                <input type="text" name="print_name" className="input-premium !rounded" value={profileForm.print_name} onChange={handleProfileChange} placeholder="Name on Bills" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Business Type</label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Business Type</label>
                                                             <div className="w-2/3">
-                                                                <select name="restaurantType" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.restaurantType} onChange={handleProfileChange}>
+                                                                <select name="restaurantType" className="input-premium !rounded" value={profileForm.restaurantType} onChange={handleProfileChange}>
                                                                     <option value="SMART">SMART POS</option>
                                                                     <option value="EFFICIENT">EFFICIENT POS</option>
                                                                     <option value="ENTERPRISE">ENTERPRISE POS</option>
@@ -390,96 +465,71 @@ const ProfilePage = () => {
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Owner Name <span className="text-[#0F172A]">*</span></label>
+                                                        <div className="flex items-start mt-1">
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700 pt-2">Address</label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="ownerName" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.ownerName} onChange={handleProfileChange} />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Email ID</label>
-                                                            <div className="w-2/3">
-                                                                <input type="email" name="email" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.email} onChange={handleProfileChange} />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Mobile Number</label>
-                                                            <div className="w-2/3">
-                                                                <input type="tel" name="mobile" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.mobile} onChange={handleProfileChange} />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Company Logo</label>
-                                                            <div className="w-2/3">
-                                                                <input type="file" name="logo_url" accept=".jpg,.jpeg,.pdf" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" onChange={handleProfileChange} />
-                                                                {profileForm.logo_url && (
-                                                                    <div className="mt-2 flex items-center gap-3">
-                                                                        <img src={profileForm.logo_url} alt="Logo Preview" style={{ maxWidth: '80px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
-                                                                        <button 
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setProfileForm(prev => ({ ...prev, logo_url: '' }));
-                                                                                const input = document.getElementsByName('logo_url')[0];
-                                                                                if (input) input.value = '';
-                                                                            }}
-                                                                            className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 rounded font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer bg-white flex items-center gap-1.5"
-                                                                        >
-                                                                            <Trash2 size={13} /> Remove Logo
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-start">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A] pt-1">Full Address</label>
-                                                            <div className="w-2/3">
-                                                                <textarea name="address" rows={3} className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors resize-none" value={profileForm.address} onChange={handleProfileChange} placeholder="Registered Business Address" />
+                                                                <textarea name="address" className="input-premium !h-20 !rounded" value={profileForm.address} onChange={handleProfileChange} placeholder="Full Store Address..." />
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     {/* RIGHT COLUMN */}
                                                     <div className="flex flex-col gap-3">
-                                                        <h4 className="text-xs font-bold text-[#0F172A] mb-1 uppercase tracking-wider">Tax & Compliance</h4>
+                                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2">Tax & Contact Details</h4>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">GSTIN / Tax No</label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Contact Person</label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="gstin" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors uppercase" value={profileForm.gstin} onChange={handleProfileChange} placeholder="Tax Identifier" />
+                                                                <input type="text" name="ownerName" className="input-premium !rounded" value={profileForm.ownerName} onChange={handleProfileChange} placeholder="Owner / Manager Name" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">FSSAI License No</label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Email</label>
                                                             <div className="w-2/3">
-                                                                <input type="text" name="fssai_no" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.fssai_no} onChange={handleProfileChange} placeholder="Food License No" />
-                                                            </div>
-                                                        </div>
-
-                                                        <h4 className="text-xs font-bold text-[#0F172A] mt-2 mb-1 uppercase tracking-wider">Financial Year</h4>
-
-                                                        <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Year Start</label>
-                                                            <div className="w-2/3">
-                                                                <input type="date" name="financial_year_start" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.financial_year_start} onChange={handleProfileChange} />
+                                                                <input type="email" name="email" className="input-premium !rounded" value={profileForm.email} onChange={handleProfileChange} placeholder="store@example.com" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Year End</label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Mobile</label>
                                                             <div className="w-2/3">
-                                                                <input type="date" name="financial_year_end" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.financial_year_end} onChange={handleProfileChange} />
+                                                                <input type="text" name="mobile" className="input-premium !rounded" value={profileForm.mobile} onChange={handleProfileChange} placeholder="+91 98765 43210" />
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center">
-                                                            <label className="w-1/3 text-sm font-semibold text-[#0F172A]">Books Commencing</label>
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">GSTIN No</label>
                                                             <div className="w-2/3">
-                                                                <input type="date" name="books_from" className="w-full px-2 py-1.5 bg-white border-2 border-slate-300 rounded-sm text-sm text-[#0F172A] outline-none hover:border-[#0F172A] focus:border-[#0F172A] transition-colors" value={profileForm.books_from} onChange={handleProfileChange} />
+                                                                <input type="text" name="gstin" className="input-premium uppercase !rounded" value={profileForm.gstin} onChange={handleProfileChange} placeholder="27AAAAA0000A1Z5" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center">
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">FSSAI License</label>
+                                                            <div className="w-2/3">
+                                                                <input type="text" name="fssai_no" className="input-premium !rounded" value={profileForm.fssai_no} onChange={handleProfileChange} placeholder="10000000000000" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center">
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Year Start</label>
+                                                            <div className="w-2/3">
+                                                                <input type="date" name="financial_year_start" className="input-premium !rounded" value={profileForm.financial_year_start} onChange={handleProfileChange} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center">
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Year End</label>
+                                                            <div className="w-2/3">
+                                                                <input type="date" name="financial_year_end" className="input-premium !rounded" value={profileForm.financial_year_end} onChange={handleProfileChange} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center">
+                                                            <label className="w-1/3 text-sm font-semibold text-slate-700">Books From</label>
+                                                            <div className="w-2/3">
+                                                                <input type="date" name="books_from" className="input-premium !rounded" value={profileForm.books_from} onChange={handleProfileChange} />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -487,10 +537,21 @@ const ProfilePage = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end pt-4">
-                                                <button type="submit" disabled={saving.profile} className="btn-action-save !py-2.5 !px-10 flex items-center gap-2">
+                                            <div className="flex items-center justify-between pt-6">
+                                                {!isNewProfile && (user?.role === 'ADMIN' || user?.role === 'OWNER') && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDeleteProfile}
+                                                        disabled={saving.delete}
+                                                        className="btn-premium-primary !bg-rose-600 !text-white hover:!bg-rose-700 !border-transparent !py-2.5 !px-6 flex items-center gap-2 font-bold text-xs rounded-lg shadow-sm transition-all"
+                                                    >
+                                                        {saving.delete ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                                                        DELETE PROFILE
+                                                    </button>
+                                                )}
+                                                <button type="submit" disabled={saving.profile} className="btn-premium-primary !py-2.5 !px-8 flex items-center gap-2 ml-auto">
                                                     {saving.profile ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                                    {isNewProfile ? 'CREATE PROFILE' : 'UPDATE DETAILS'}
+                                                    {isNewProfile ? 'CREATE PROFILE' : 'SAVE CHANGES'}
                                                 </button>
                                             </div>
                                         </form>
@@ -507,83 +568,69 @@ const ProfilePage = () => {
                                         {/* Header Controls */}
                                         <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
                                             <div>
-                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Profile Directory</h3>
-                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Directory of storefront records</p>
+                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Store Profile</h3>
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Overview of registered store details</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => { setIsEditing(true); setActiveTab('view'); }} className="btn-premium-outline !py-1.5 !px-4 !text-xs">EDIT DETAILS</button>
+                                                <button onClick={() => { setIsEditing(true); setActiveTab('view'); }} className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
+                                                    <Edit2 size={13} /> EDIT DETAILS
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {/* Two-column display card */}
-                                        <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                                        {success.profile && (
+                                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6">
+                                                <CheckCircle size={18} /> Profile details saved successfully!
+                                            </div>
+                                        )}
 
+                                        <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                
                                                 {/* LEFT COLUMN */}
-                                                <div className="p-6">
+                                                <div>
                                                     <div className="flex items-center gap-2 mb-5">
-                                                        <div className="w-1 h-4 rounded-full bg-slate-800"></div>
-                                                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.18em]">Business Information</h4>
+                                                        <div className="w-1 h-4 rounded-full bg-orange-600"></div>
+                                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">General Information</h4>
                                                     </div>
 
-                                                    <div className="flex flex-col gap-0">
+                                                    <div className="space-y-4 text-xs">
                                                         {[
                                                             { label: 'Company Legal Name', value: profileForm.businessName },
-                                                            { label: 'Storefront Name', value: profileForm.store_name },
-                                                            { label: 'Name on Bills', value: profileForm.print_name },
-                                                            { label: 'Business Type', value: profileForm.restaurantType ? `${profileForm.restaurantType} POS` : null },
-                                                            { label: 'Owner Name', value: profileForm.ownerName },
+                                                            { label: 'Operating Store Name', value: profileForm.store_name },
+                                                            { label: 'Name on Receipt', value: profileForm.print_name },
+                                                            { label: 'System Type', value: profileForm.restaurantType + ' POS' },
+                                                            { label: 'Store Address', value: profileForm.address },
+                                                            { label: 'Contact Person', value: profileForm.ownerName },
                                                             { label: 'Email Address', value: profileForm.email },
-                                                            { label: 'Mobile Number', value: profileForm.mobile },
-                                                            { label: 'Full Address', value: profileForm.address },
+                                                            { label: 'Phone Number', value: profileForm.mobile }
                                                         ].map(({ label, value }) => (
-                                                            <div key={label} className="flex items-start py-3.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded transition-colors">
-                                                                <span className="w-[42%] text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 flex-shrink-0">{label}</span>
-                                                                <strong className="w-[58%] text-sm font-semibold text-slate-800 break-words leading-snug">
-                                                                    {value || <span className="text-slate-300 font-normal italic text-xs">Not configured</span>}
-                                                                </strong>
+                                                            <div key={label} className="flex justify-between py-2 border-b border-slate-100 last:border-0">
+                                                                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">{label}</span>
+                                                                <span className="font-bold text-slate-800 text-right">{value || 'Not set'}</span>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 {/* RIGHT COLUMN */}
-                                                <div className="p-6">
+                                                <div>
                                                     <div className="flex items-center gap-2 mb-5">
-                                                        <div className="w-1 h-4 rounded-full bg-indigo-500"></div>
-                                                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.18em]">Tax & Compliance</h4>
+                                                        <div className="w-1 h-4 rounded-full bg-orange-600"></div>
+                                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Tax & Financial Settings</h4>
                                                     </div>
 
-                                                    <div className="flex flex-col gap-0">
+                                                    <div className="space-y-4 text-xs">
                                                         {[
                                                             { label: 'GSTIN / Tax Code', value: profileForm.gstin },
                                                             { label: 'FSSAI License No', value: profileForm.fssai_no },
+                                                            { label: 'Financial Year Start', value: profileForm.financial_year_start },
+                                                            { label: 'Financial Year End', value: profileForm.financial_year_end },
+                                                            { label: 'Books Commencing', value: profileForm.books_from }
                                                         ].map(({ label, value }) => (
-                                                            <div key={label} className="flex items-start py-3.5 border-b border-slate-50 group hover:bg-slate-50/60 -mx-2 px-2 rounded transition-colors">
-                                                                <span className="w-[42%] text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 flex-shrink-0">{label}</span>
-                                                                <strong className="w-[58%] text-sm font-semibold text-slate-800 break-words leading-snug">
-                                                                    {value || <span className="text-slate-300 font-normal italic text-xs">Not configured</span>}
-                                                                </strong>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 mt-7 mb-5">
-                                                        <div className="w-1 h-4 rounded-full bg-emerald-500"></div>
-                                                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.18em]">Financial Year</h4>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-0">
-                                                        {[
-                                                            { label: 'Year Start', value: profileForm.financial_year_start },
-                                                            { label: 'Year End', value: profileForm.financial_year_end },
-                                                            { label: 'Books Commencing', value: profileForm.books_from },
-                                                        ].map(({ label, value }) => (
-                                                            <div key={label} className="flex items-start py-3.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded transition-colors">
-                                                                <span className="w-[42%] text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 flex-shrink-0">{label}</span>
-                                                                <strong className="w-[58%] text-sm font-semibold text-slate-800 break-words leading-snug">
-                                                                    {value || <span className="text-slate-300 font-normal italic text-xs">Not configured</span>}
-                                                                </strong>
+                                                            <div key={label} className="flex justify-between py-2 border-b border-slate-100 last:border-0">
+                                                                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">{label}</span>
+                                                                <span className="font-bold text-slate-800 text-right">{value || 'Not set'}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -598,131 +645,169 @@ const ProfilePage = () => {
 
                             {/* BACKUP TAB */}
                             {activeTab === 'backup' && (
-                                <div className="profile-detail-card fade-in">
-                                    <div className="flex justify-between items-start mb-8 pb-4 border-b border-slate-100">
+                                <div className="fade-in">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
                                         <div>
-                                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">System Backup Control</h3>
-                                            <p className="text-xs font-bold text-slate-400 mt-1">Configure database export rules and manual triggers</p>
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Backup Storage & Configuration</h3>
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Configure software installation directory backups and manual export</p>
                                         </div>
                                         {lastBackup && (
                                             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
-                                                <Clock size={12} className="text-emerald-500 animate-pulse" />
-                                                <span className="text-[10px] font-black text-emerald-600 uppercase">Last Backup: {lastBackup}</span>
+                                                <Clock size={13} className="text-emerald-600 animate-pulse" />
+                                                <span className="text-[10px] font-bold text-emerald-700 uppercase">Last Backup: {lastBackup}</span>
                                             </div>
                                         )}
                                     </div>
 
                                     {diskSpaceWarning && (
-                                        <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex items-start gap-4 text-amber-800 mb-6 shadow-sm">
-                                            <AlertCircle size={24} className="shrink-0 text-amber-500" />
+                                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center gap-3 text-amber-800 mb-6 text-xs font-bold shadow-sm">
+                                            <AlertCircle size={20} className="shrink-0 text-amber-600" />
                                             <div>
-                                                <p className="font-black text-sm uppercase">Disk Space warning!</p>
-                                                <p className="text-xs font-bold opacity-80 mt-1">Storage space is extremely low. Backup might fail if not resolved.</p>
+                                                <p className="uppercase">Low Disk Space Warning!</p>
+                                                <p className="opacity-80 font-medium">Storage space is extremely low. Free up disk space before creating new backups.</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {success.backup && (
-                                        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl flex items-center gap-4 text-emerald-800 mb-6 shadow-sm">
-                                            <CheckCircle size={24} className="text-emerald-500" />
-                                            <div>
-                                                <p className="font-black text-sm uppercase">Backup Archive created</p>
-                                                <p className="text-xs font-bold opacity-80">Backup generated and stored in specified path.</p>
-                                            </div>
+                                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6 shadow-sm">
+                                            <CheckCircle size={18} /> Backup archive created successfully!
                                         </div>
                                     )}
 
-                                    <div className="space-y-6 backup-card-body">
-                                        <div className="profile-form-group">
-                                            <label className="!text-indigo-600 flex items-center gap-2"><Folder size={14} /> Local Backup Path</label>
-                                            <div className="flex gap-3">
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+                                        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                <Folder size={16} className="text-orange-600" /> Backup Path
+                                            </h4>
+                                            <div className="flex gap-2 items-center">
                                                 <div className="relative flex-1">
-                                                    <HardDrive size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                    <input type="text" className="profile-form-input !pl-12 font-mono text-xs" value={backupPath} onChange={e => handleBackupPathChange(e.target.value)} />
+                                                    <HardDrive size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                    <input 
+                                                        type="text" 
+                                                        className="pef-f-input !h-10 font-mono font-bold w-full !pl-10 text-xs" 
+                                                        value={backupPath} 
+                                                        onChange={e => handleBackupPathChange(e.target.value)} 
+                                                        placeholder="Application Installation Path/Backup" 
+                                                    />
                                                 </div>
-                                                <button className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all hover:bg-white hover:shadow-lg">
-                                                    <Folder size={18} />
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const customPath = prompt("Enter or select backup directory path (e.g., D:\\RestaurantBackup):", backupPath || '');
+                                                        if (customPath && customPath.trim() !== '') {
+                                                            handleBackupPathChange(customPath.trim());
+                                                        }
+                                                    }} 
+                                                    className="px-4 h-10 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
+                                                >
+                                                    <Folder size={14} /> BROWSE...
                                                 </button>
                                             </div>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 px-1">Tip: We recommend pointing this to a cloud-synced folder or external disk.</p>
+                                            <p className="text-xs text-slate-500 font-medium">
+                                                ★ Default location stores backups in a dedicated <code className="bg-slate-200 px-1 py-0.5 rounded text-orange-700 font-bold">Backup</code> folder inside the software installation directory.
+                                            </p>
                                         </div>
 
-                                        <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-slate-100">
-                                                        <RefreshCw size={20} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-sm uppercase text-slate-700">Auto-Backup on Close</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Perform automatic archive export when you sign out</p>
-                                                    </div>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" checked={autoBackupOnClose} onChange={e => handleAutoBackupToggle(e.target.checked)} className="sr-only peer" />
-                                                    <div className="w-14 h-8 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
-                                                </label>
+                                        <div className="flex items-center justify-between p-5 bg-slate-50 rounded border border-slate-100">
+                                            <div>
+                                                <p className="font-black text-slate-800 uppercase tracking-tight text-sm">Auto-Backup On Close</p>
+                                                <p className="text-xs font-bold text-slate-400 mt-0.5">Perform automatic timestamped database backup when closing software</p>
                                             </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" checked={autoBackupOnClose} onChange={e => handleAutoBackupToggle(e.target.checked)} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 peer-checked:bg-orange-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                            </label>
                                         </div>
-                                    </div>
 
-                                    <div className="flex justify-end mt-8 bg-indigo-50/50 p-5 rounded-[1.5rem] border border-indigo-100/50">
-                                        <button onClick={handleBackup} disabled={saving.backup} className="btn-premium-primary !bg-indigo-600 !text-white !border-transparent !py-3.5 !px-10 shadow-xl shadow-indigo-100 flex items-center gap-2">
-                                            {saving.backup ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />} RUN MANUAL EXPORT
-                                        </button>
+                                        <div className="flex justify-end pt-2">
+                                            <button onClick={handleBackup} disabled={saving.backup} className="btn-premium-primary !py-2.5 !px-8 flex items-center gap-2">
+                                                {saving.backup ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
+                                                RUN MANUAL BACKUP NOW
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* RESTORE TAB */}
                             {activeTab === 'restore' && (
-                                <div className="profile-detail-card fade-in">
-                                    <div className="mb-6 pb-4 border-b border-slate-100">
-                                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Database Restoration</h3>
-                                        <p className="text-xs font-bold text-slate-400 mt-1">Reload database parameters from a local JSON backup</p>
-                                    </div>
-
-                                    <div className="restore-toggle-grid mb-6">
-                                        <button onClick={() => setRestoreType('BACKUP')}
-                                            className={`restore-toggle-btn ${restoreType === 'BACKUP' ? 'active' : ''}`}>
-                                            <Download className="mx-auto mb-2" size={24} />
-                                            <p className="font-black text-sm uppercase">Full Database File</p>
-                                            <p className="text-[10px] font-bold opacity-60 uppercase mt-0.5">Overwrite entire database</p>
-                                        </button>
-                                        <button onClick={() => setRestoreType('DATA')}
-                                            className={`restore-toggle-btn ${restoreType === 'DATA' ? 'active-emerald' : ''}`}>
-                                            <FileJson className="mx-auto mb-2" size={24} />
-                                            <p className="font-black text-sm uppercase">Import Records</p>
-                                            <p className="text-[10px] font-bold opacity-60 uppercase mt-0.5">Append specific data records</p>
-                                        </button>
-                                    </div>
-
-                                    <div className="restore-drop-zone text-center py-10 px-6 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50/50 hover:bg-white hover:border-indigo-400 transition-all group">
-                                        <Upload className={`mx-auto mb-3 ${restoreType === 'BACKUP' ? 'text-indigo-400' : 'text-emerald-400'} group-hover:scale-110 transition-transform`} size={42} />
-                                        <p className="font-black text-slate-700 uppercase">Drop {restoreType.toLowerCase()} file here</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 mb-5">Supported formats: .json, .archive</p>
-                                        <input type="file" id="restore-file" className="hidden" accept=".json" onChange={handleFileSelect} />
-                                        <label htmlFor="restore-file" className="btn-premium-primary !bg-white !text-slate-700 !border-slate-200 cursor-pointer inline-flex shadow-sm hover:shadow-md transition-all font-bold">
-                                            CHOOSE LOCAL FILE
-                                        </label>
-                                        {selectedFile && (
-                                            <div className="mt-5 flex items-center justify-center gap-2 text-emerald-600 font-bold text-xs uppercase bg-emerald-50 px-4 py-2 rounded-full w-fit mx-auto border border-emerald-100">
-                                                <CheckCircle size={14} /> File loaded successfully! Ready to restore
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="restore-footer flex items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
-                                        <div className="restore-warning flex items-center gap-3 text-rose-600 bg-rose-50 px-4 py-3 rounded-2xl border border-rose-100">
-                                            <AlertCircle size={20} className="shrink-0" />
-                                            <p className="text-[10px] font-black uppercase leading-[1.3] max-w-[240px]">
-                                                Warning: Restoration overwrites your existing transactions. Back up your data first!
-                                            </p>
+                                <div className="fade-in">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+                                        <div>
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Database Restoration</h3>
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Restore database state or attach external data file</p>
                                         </div>
-                                        <button onClick={handleRestore} disabled={saving.restore || !selectedFile} className={`btn-premium-primary !py-3.5 !px-8 ${restoreType === 'BACKUP' ? '!bg-indigo-600' : '!bg-emerald-600'} !text-white shadow-xl flex items-center gap-2`}>
-                                            {saving.restore ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={18} />}
-                                            RUN RESTORATION
-                                        </button>
+                                    </div>
+
+                                    {errors.restore && (
+                                        <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-xs mb-6">
+                                            <AlertCircle size={16} /> {errors.restore}
+                                        </div>
+                                    )}
+
+                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div 
+                                                onClick={() => setRestoreType('BACKUP')}
+                                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreType === 'BACKUP' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-black text-xs uppercase text-slate-800 flex items-center gap-2">
+                                                        <Download size={16} className="text-orange-600" /> Full Database Restore
+                                                    </span>
+                                                    {restoreType === 'BACKUP' && <span className="w-3 h-3 rounded-full bg-orange-600"></span>}
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                    Restore full database state from an existing backup JSON file. Replaces current records.
+                                                </p>
+                                            </div>
+
+                                            <div 
+                                                onClick={() => setRestoreType('DATA')}
+                                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreType === 'DATA' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-black text-xs uppercase text-slate-800 flex items-center gap-2">
+                                                        <FileJson size={16} className="text-orange-600" /> Attach / Merge Data
+                                                    </span>
+                                                    {restoreType === 'DATA' && <span className="w-3 h-3 rounded-full bg-orange-600"></span>}
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                    Attach external database/data file. Merges data seamlessly without purging existing system records.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50 hover:border-orange-400 transition-all">
+                                            <Upload className="mx-auto mb-3 text-orange-500" size={36} />
+                                            <p className="font-black text-slate-800 text-sm uppercase mb-1">Select {restoreType === 'BACKUP' ? 'Backup' : 'Data'} JSON File</p>
+                                            <p className="text-xs text-slate-400 font-semibold mb-4">Click below to browse for valid backup file</p>
+                                            <input type="file" id="restore-file-input" className="hidden" accept=".json" onChange={handleFileSelect} />
+                                            <label htmlFor="restore-file-input" className="btn-premium-primary !py-2 !px-6 cursor-pointer inline-flex items-center gap-2 font-bold text-xs shadow-sm">
+                                                <Folder size={14} /> BROWSE BACKUP FILE
+                                            </label>
+                                            {selectedFile && (
+                                                <div className="mt-4 flex items-center justify-center gap-2 text-emerald-700 font-bold text-xs uppercase bg-emerald-50 px-4 py-2 rounded-full w-fit mx-auto border border-emerald-100">
+                                                    <CheckCircle size={14} /> File Loaded & Ready for Restoration!
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2">
+                                            <div className="flex items-center gap-2 text-rose-600 text-xs font-bold">
+                                                <AlertCircle size={16} />
+                                                <span>Restoration overwrites existing data records. Keep a backup before proceeding.</span>
+                                            </div>
+                                            <button 
+                                                onClick={handleRestore} 
+                                                disabled={saving.restore || !selectedFile} 
+                                                className="btn-premium-primary !py-2.5 !px-8 flex items-center gap-2"
+                                            >
+                                                {saving.restore ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                                                EXECUTE RESTORATION
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}

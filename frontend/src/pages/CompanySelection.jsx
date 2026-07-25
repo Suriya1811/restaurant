@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoSidebar from '../assets/logo_sidebar.png';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
@@ -63,7 +64,7 @@ const CompanySelection = () => {
                 >
                     <div className="form-header mb-8 flex flex-col items-center text-center">
                         <img
-                            src="/Logo_new_bg.png"
+                            src={logoSidebar}
                             alt="Yugam Software Logo"
                             style={{ maxWidth: '250px', height: 'auto' }}
                         />

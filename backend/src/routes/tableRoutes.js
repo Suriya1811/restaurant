@@ -3,7 +3,7 @@ const router = express.Router();
 const { 
     getTables, createTable, updateTable, toggleTableStatus, deleteTable, 
     reserveTable, cancelReservation,
-    occupyTable, markTablePrinted, freeTable, updateTableAmount, updateKotStatus
+    occupyTable, markTablePrinted, freeTable, updateTableAmount, updateKotStatus, transferItems
 } = require('../controllers/tableController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -32,5 +32,6 @@ router.route('/:id/mark-printed').patch(markTablePrinted);
 router.route('/:id/free').patch(freeTable);
 router.route('/:id/update-amount').patch(updateTableAmount);
 router.route('/:id/kot-status').patch(updateKotStatus);
+router.route('/:id/transfer-items').post(transferItems);
 
 module.exports = router;

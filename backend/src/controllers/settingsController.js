@@ -45,9 +45,13 @@ exports.getUserSettings = async (req, res) => {
                 },
                 printer: {
                     enabled: restaurant.printer_enabled || false,
-                    width: restaurant.printer_width || '58mm',
+                    width: restaurant.printer_width || '80mm',
                     kot_printer_ip: restaurant.kot_printer_ip || '',
                     bill_printer_ip: restaurant.bill_printer_ip || '',
+                    sales_bill_printer: restaurant.printer_settings?.sales_bill_printer || 'Sales Bill Printer',
+                    kot_printer: restaurant.printer_settings?.kot_printer || 'KOT Printer',
+                    delivery_printer: restaurant.printer_settings?.delivery_printer || 'Delivery Printer',
+                    print_format: restaurant.printer_settings?.print_format || 'NORMAL_3_INCH',
                     kitchen_mapping: restaurant.kitchen_mapping || []
                 },
                 orderIntegration: {
@@ -238,7 +242,36 @@ exports.updateProfile = async (req, res) => {
         });
     } catch (error) {
         console.error('Update profile error:', error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error'
+        });
+    }
+};
+
+// @desc    Delete store profile completely
+// @route   DELETE /api/settings/profile
+// @access  Private (Admin, Owner)
+exports.deleteProfile = async (req, res) => {
+    try {
+        const restaurant_id = req.user.restaurant_id;
+        const user_id = req.user._id || req.user.id;
+
+        if (restaurant_id) {
+            await Restaurant.findByIdAndDelete(restaurant_id);
+        }
+
+        if (user_id) {
+            await User.findByIdAndDelete(user_id);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Profile deleted completely'
+        });
+    } catch (error) {
+        console.error('Delete profile error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete profile: ' + error.message });
     }
 };
 
@@ -387,7 +420,7 @@ exports.togglePasswordProtection = async (req, res) => {
 // @access  Private (Admin, Owner)
 exports.updatePrinterSettings = async (req, res) => {
     try {
-        const { enabled, width } = req.body;
+        const { enabled, width, sales_bill_printer, kot_printer, delivery_printer, print_format } = req.body;
 
         // Validate input
         if (enabled === undefined) {
@@ -404,11 +437,22 @@ exports.updatePrinterSettings = async (req, res) => {
             });
         }
 
+        if (print_format && !['NORMAL_3_INCH', 'NORMAL_3_INCH_WITH_TOKEN'].includes(print_format)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid print format selected'
+            });
+        }
+
         const restaurant = await Restaurant.findByIdAndUpdate(
             req.user.restaurant_id,
             {
                 printer_enabled: enabled,
-                printer_width: width || '58mm'
+                printer_width: width || '80mm',
+                'printer_settings.sales_bill_printer': sales_bill_printer || 'Sales Bill Printer',
+                'printer_settings.kot_printer': kot_printer || 'KOT Printer',
+                'printer_settings.delivery_printer': delivery_printer || 'Delivery Printer',
+                'printer_settings.print_format': print_format || 'NORMAL_3_INCH'
             },
             { new: true, runValidators: true }
         );
@@ -426,7 +470,11 @@ exports.updatePrinterSettings = async (req, res) => {
             data: {
                 printer: {
                     enabled: restaurant.printer_enabled,
-                    width: restaurant.printer_width
+                    width: restaurant.printer_width,
+                    sales_bill_printer: restaurant.printer_settings?.sales_bill_printer,
+                    kot_printer: restaurant.printer_settings?.kot_printer,
+                    delivery_printer: restaurant.printer_settings?.delivery_printer,
+                    print_format: restaurant.printer_settings?.print_format
                 }
             }
         });

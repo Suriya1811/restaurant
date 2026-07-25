@@ -4,6 +4,7 @@ const Supplier = require('../models/Supplier');
 const Customer = require('../models/Customer');
 const Ledger = require('../models/Ledger');
 const Purchase = require('../models/Purchase');
+const Voucher = require('../models/Voucher');
 const mongoose = require('mongoose');
 
 // @desc    Get daily/range sales report
@@ -344,81 +345,103 @@ exports.getTopProducts = async (req, res) => {
 exports.getSupplierOutstanding = async (req, res) => {
     try {
         const companyId = req.user.restaurant_id;
+        const { startDate, endDate } = req.query;
+
+        const purchaseQuery = { company_id: companyId, is_deleted: { $ne: true } };
+        const voucherQuery = { company_id: companyId, is_deleted: { $ne: true }, voucher_type: { $in: ['PAYMENT', 'JOURNAL'] } };
+
+        if (startDate || endDate) {
+            const pDate = {};
+            const vDate = {};
+            if (startDate) {
+                pDate.$gte = new Date(startDate + 'T00:00:00.000Z');
+                vDate.$gte = new Date(startDate + 'T00:00:00.000Z');
+            }
+            if (endDate) {
+                pDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+                vDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+            }
+            purchaseQuery.invoice_date = pDate;
+            voucherQuery.date = vDate;
+        }
 
         const [suppliers, creditorsLedgers, purchases, vouchers] = await Promise.all([
             Supplier.find({ company_id: companyId }).lean(),
             Ledger.find({ company_id: companyId, $or: [{ group: 'Sundry Creditors' }, { party_type: 'SUPPLIER' }] }).lean(),
-            Purchase.find({ company_id: companyId, is_deleted: { $ne: true } }).lean(),
-            Voucher.find({ company_id: companyId, is_deleted: { $ne: true }, voucher_type: { $in: ['PAYMENT', 'JOURNAL'] } }).populate('debit_ledger credit_ledger').lean()
+            Purchase.find(purchaseQuery).lean(),
+            Voucher.find(voucherQuery).populate('debit_ledger credit_ledger').lean()
         ]);
 
         const supplierMap = {};
 
-        // Process Supplier records
-        (suppliers || []).forEach(s => {
-            const rawName = s && s.name ? String(s.name).trim() : '';
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
-            supplierMap[key] = {
-                id: s._id,
-                name: rawName,
-                mobile: s.contact_number || s.phone || '-',
-                pay_in: parseFloat(s.opening_balance) || 0,
-                pay_out: 0,
-                balance: parseFloat(s.opening_balance) || 0
-            };
-        });
-
-        // Process Creditors Ledgers
-        (creditorsLedgers || []).forEach(l => {
-            const rawName = l && l.name ? String(l.name).replace(/\(Supplier\)/gi, '').trim() : '';
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
+        const getEntry = (id, rawName, mobile = '-') => {
+            const key = rawName.trim().toLowerCase();
             if (!supplierMap[key]) {
                 supplierMap[key] = {
-                    id: l._id,
-                    name: rawName,
-                    mobile: l.phone || l.mobile2 || l.contact_person || '-',
-                    pay_in: parseFloat(l.opening_balance) || 0,
-                    pay_out: 0,
-                    balance: parseFloat(l.opening_balance) || 0
-                };
-            }
-        });
-
-        // Process Purchases (Increases Pay In / Balance)
-        (purchases || []).forEach(p => {
-            const sName = p.supplier_name || (p.supplier_id ? String(p.supplier_id.name || p.supplier_id) : '');
-            const rawName = String(sName).trim();
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
-            if (!supplierMap[key]) {
-                supplierMap[key] = {
-                    id: p.supplier_id || p._id,
-                    name: rawName,
-                    mobile: '-',
+                    id: id,
+                    name: rawName.trim(),
+                    mobile: mobile || '-',
                     pay_in: 0,
                     pay_out: 0,
                     balance: 0
                 };
             }
-            const grand = parseFloat(p.grand_total) || 0;
-            const paid = parseFloat(p.paid_amount) || 0;
-            supplierMap[key].pay_in += grand;
-            supplierMap[key].pay_out += paid;
-            supplierMap[key].balance = supplierMap[key].pay_in - supplierMap[key].pay_out;
+            return supplierMap[key];
+        };
+
+        // 1. Process Supplier records
+        (suppliers || []).forEach(s => {
+            if (!s || !s.name) return;
+            const entry = getEntry(s._id, s.name, s.contact_number || s.phone);
+            const op = parseFloat(s.opening_balance) || 0;
+            if (op > 0) entry.pay_in += op;
+            else if (op < 0) entry.pay_out += Math.abs(op);
         });
 
-        // Process Payment Vouchers
+        // 2. Process Creditors Ledgers
+        (creditorsLedgers || []).forEach(l => {
+            if (!l || !l.name) return;
+            const cleanName = String(l.name).replace(/\(Supplier\)/gi, '').trim();
+            const entry = getEntry(l._id, cleanName, l.phone || l.mobile2 || l.contact_person);
+            if (entry.pay_in === 0 && entry.pay_out === 0) {
+                const op = parseFloat(l.opening_balance) || 0;
+                if (op > 0) entry.pay_in += op;
+                else if (op < 0) entry.pay_out += Math.abs(op);
+            }
+        });
+
+        // 3. Process Purchases (Increases Pay In by Grand Total, Increases Pay Out by Paid Amount on Purchase)
+        (purchases || []).forEach(p => {
+            const sName = p.supplier_name || (p.supplier_id ? String(p.supplier_id.name || p.supplier_id) : '');
+            if (!sName) return;
+            const entry = getEntry(p.supplier_id || p._id, sName, '-');
+            const grand = parseFloat(p.grand_total) || 0;
+            const paid = parseFloat(p.paid_amount) || 0;
+            entry.pay_in += grand;
+            entry.pay_out += paid;
+        });
+
+        // 4. Process Payment Vouchers that were NOT linked to purchases (advance / on-account payments)
         (vouchers || []).forEach(v => {
-            const debitName = v.debit_ledger && v.debit_ledger.name ? String(v.debit_ledger.name).replace(/\(Supplier\)/gi, '').trim() : '';
-            if (!debitName) return;
-            const key = debitName.toLowerCase();
+            if (v.settled_bills && v.settled_bills.length > 0) return;
+
+            let sName = '';
+            if (v.debit_ledger && v.debit_ledger.name) {
+                sName = String(v.debit_ledger.name).replace(/\(Supplier\)/gi, '').trim();
+            } else if (v.party_id) {
+                sName = String(v.party_id.name || v.party_id);
+            }
+            if (!sName) return;
+            const key = sName.trim().toLowerCase();
             if (supplierMap[key]) {
                 const amt = parseFloat(v.amount) || 0;
                 supplierMap[key].pay_out += amt;
-                supplierMap[key].balance = supplierMap[key].pay_in - supplierMap[key].pay_out;
             }
+        });
+
+        // Compute balances
+        Object.values(supplierMap).forEach(item => {
+            item.balance = item.pay_in - item.pay_out;
         });
 
         const dataList = Object.values(supplierMap);
@@ -434,80 +457,109 @@ exports.getSupplierOutstanding = async (req, res) => {
 exports.getCustomerOutstanding = async (req, res) => {
     try {
         const companyId = req.user.restaurant_id;
+        const { startDate, endDate } = req.query;
+
+        const billQuery = { company_id: companyId, is_deleted: { $ne: true } };
+        const voucherQuery = { company_id: companyId, is_deleted: { $ne: true }, voucher_type: { $in: ['RECEIPT', 'JOURNAL'] } };
+
+        if (startDate || endDate) {
+            const bDate = {};
+            const vDate = {};
+            if (startDate) {
+                bDate.$gte = new Date(startDate + 'T00:00:00.000Z');
+                vDate.$gte = new Date(startDate + 'T00:00:00.000Z');
+            }
+            if (endDate) {
+                bDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+                vDate.$lte = new Date(endDate + 'T23:59:59.999Z');
+            }
+            billQuery.createdAt = bDate;
+            voucherQuery.date = vDate;
+        }
 
         const [customers, debtorsLedgers, bills, vouchers] = await Promise.all([
             Customer.find({ company_id: companyId }).lean(),
             Ledger.find({ company_id: companyId, $or: [{ group: 'Sundry Debtors' }, { party_type: 'CUSTOMER' }] }).lean(),
-            Bill.find({ company_id: companyId, is_deleted: { $ne: true } }).lean(),
-            Voucher.find({ company_id: companyId, is_deleted: { $ne: true }, voucher_type: { $in: ['RECEIPT', 'JOURNAL'] } }).populate('debit_ledger credit_ledger').lean()
+            Bill.find(billQuery).populate('customer_id').lean(),
+            Voucher.find(voucherQuery).populate('debit_ledger credit_ledger').lean()
         ]);
 
         const customerMap = {};
 
-        // Process Customer records
-        (customers || []).forEach(c => {
-            const rawName = c && c.name ? String(c.name).trim() : '';
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
-            customerMap[key] = {
-                id: c._id,
-                name: rawName,
-                mobile: c.phone || '-',
-                pay_in: parseFloat(c.opening_balance) || 0,
-                pay_out: 0,
-                balance: parseFloat(c.opening_balance) || 0
-            };
-        });
-
-        // Process Debtors Ledgers
-        (debtorsLedgers || []).forEach(l => {
-            const rawName = l && l.name ? String(l.name).replace(/\(Customer\)/gi, '').trim() : '';
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
+        const getEntry = (id, rawName, mobile = '-') => {
+            const key = rawName.trim().toLowerCase();
             if (!customerMap[key]) {
                 customerMap[key] = {
-                    id: l._id,
-                    name: rawName,
-                    mobile: l.phone || l.mobile2 || '-',
-                    pay_in: parseFloat(l.opening_balance) || 0,
-                    pay_out: 0,
-                    balance: parseFloat(l.opening_balance) || 0
-                };
-            }
-        });
-
-        // Process Sales Bills
-        (bills || []).forEach(b => {
-            const rawName = String(b.customer_name || (b.customer_id ? b.customer_id.name || b.customer_id : 'Walk-in Customer')).trim();
-            if (!rawName) return;
-            const key = rawName.toLowerCase();
-            if (!customerMap[key]) {
-                customerMap[key] = {
-                    id: b.customer_id || b._id,
-                    name: rawName,
-                    mobile: b.customer_phone || '-',
+                    id: id,
+                    name: rawName.trim(),
+                    mobile: mobile || '-',
                     pay_in: 0,
                     pay_out: 0,
                     balance: 0
                 };
             }
-            const grand = parseFloat(b.grand_total) || 0;
-            const paid = b.status === 'PAID' ? grand : (parseFloat(b.total_paid || b.paid_amount) || 0);
-            customerMap[key].pay_in += grand;
-            customerMap[key].pay_out += paid;
-            customerMap[key].balance = customerMap[key].pay_in - customerMap[key].pay_out;
+            return customerMap[key];
+        };
+
+        // 1. Process Customer records
+        (customers || []).forEach(c => {
+            if (!c || !c.name) return;
+            const entry = getEntry(c._id, c.name, c.phone);
+            const op = parseFloat(c.opening_balance) || 0;
+            if (op > 0) entry.pay_in += op;
+            else if (op < 0) entry.pay_out += Math.abs(op);
         });
 
-        // Process Receipt Vouchers
+        // 2. Process Debtors Ledgers
+        (debtorsLedgers || []).forEach(l => {
+            if (!l || !l.name) return;
+            const cleanName = String(l.name).replace(/\(Customer\)/gi, '').trim();
+            const entry = getEntry(l._id, cleanName, l.phone || l.mobile2);
+            if (entry.pay_in === 0 && entry.pay_out === 0) {
+                const op = parseFloat(l.opening_balance) || 0;
+                if (op > 0) entry.pay_in += op;
+                else if (op < 0) entry.pay_out += Math.abs(op);
+            }
+        });
+
+        // 3. Process Sales Bills
+        (bills || []).forEach(b => {
+            const custName = b.customer_name || (b.customer_id ? b.customer_id.name : '');
+            const rawName = custName ? String(custName).trim() : 'Walk-in Customer';
+            const isWalkIn = !custName || rawName.toLowerCase() === 'walk-in customer';
+
+            const grand = parseFloat(b.grand_total) || 0;
+            const paid = b.status === 'PAID' ? grand : (parseFloat(b.total_paid || b.paid_amount) || 0);
+
+            // Skip walk-in customers if they have zero balance
+            if (isWalkIn && grand <= paid) return;
+
+            const entry = getEntry(b.customer_id ? b.customer_id._id : b._id, rawName, b.customer_phone || (b.customer_id ? b.customer_id.phone : '-'));
+            entry.pay_in += grand;
+            entry.pay_out += paid;
+        });
+
+        // 4. Process Receipt Vouchers not linked directly to bills
         (vouchers || []).forEach(v => {
-            const creditName = v.credit_ledger && v.credit_ledger.name ? String(v.credit_ledger.name).replace(/\(Customer\)/gi, '').trim() : '';
-            if (!creditName) return;
-            const key = creditName.toLowerCase();
+            if (v.settled_bills && v.settled_bills.length > 0) return;
+
+            let cName = '';
+            if (v.credit_ledger && v.credit_ledger.name) {
+                cName = String(v.credit_ledger.name).replace(/\(Customer\)/gi, '').trim();
+            } else if (v.party_id) {
+                cName = String(v.party_id.name || v.party_id);
+            }
+            if (!cName) return;
+            const key = cName.trim().toLowerCase();
             if (customerMap[key]) {
                 const amt = parseFloat(v.amount) || 0;
                 customerMap[key].pay_out += amt;
-                customerMap[key].balance = customerMap[key].pay_in - customerMap[key].pay_out;
             }
+        });
+
+        // Calculate final balance
+        Object.values(customerMap).forEach(item => {
+            item.balance = item.pay_in - item.pay_out;
         });
 
         const dataList = Object.values(customerMap);
@@ -687,29 +739,51 @@ exports.getPurchaseSummary = async (req, res) => {
 // @desc    Get Daybook (All transactions for a specific day)
 exports.getDaybook = async (req, res) => {
     try {
-        const { date } = req.query;
-        let start = new Date(date || new Date());
-        start.setHours(0, 0, 0, 0);
-        let end = new Date(date || new Date());
-        end.setHours(23, 59, 59, 999);
+        const { date, startDate, endDate } = req.query;
+        let start, end;
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            start = new Date(date || new Date());
+            start.setHours(0, 0, 0, 0);
+            end = new Date(date || new Date());
+            end.setHours(23, 59, 59, 999);
+        }
+
+        const coId = req.user.restaurant_id;
 
         const [bills, purchases, vouchers] = await Promise.all([
-            Bill.find({ company_id: req.user.restaurant_id, status: 'PAID', createdAt: { $gte: start, $lte: end } }),
-            Purchase.find({ company_id: req.user.restaurant_id, purchase_date: { $gte: start, $lte: end } }).populate('supplier_id', 'name'),
-            require('../models/Voucher').find({ company_id: req.user.restaurant_id, date: { $gte: start, $lte: end } }).populate('debit_ledger credit_ledger', 'name')
+            Bill.find({
+                company_id: coId,
+                status: { $in: ['PAID', 'OPEN', 'CREDIT'] },
+                $or: [{ createdAt: { $gte: start, $lte: end } }, { delivery_date: { $gte: start, $lte: end } }]
+            }),
+            Purchase.find({
+                company_id: coId,
+                is_deleted: { $ne: true },
+                $or: [{ purchase_date: { $gte: start, $lte: end } }, { invoice_date: { $gte: start, $lte: end } }, { createdAt: { $gte: start, $lte: end } }]
+            }).populate('supplier_id', 'name'),
+            require('../models/Voucher').find({
+                company_id: coId,
+                is_deleted: { $ne: true },
+                date: { $gte: start, $lte: end }
+            }).populate('debit_ledger credit_ledger', 'name')
         ]);
 
         const transactions = [
-            ...bills.map(b => ({ time: b.createdAt, type: 'SALE', ref: b.bill_number, desc: `Sales Bill`, amount: b.grand_total, side: 'IN' })),
-            ...purchases.map(p => ({ time: p.purchase_date, type: 'PURCHASE', ref: p.invoice_number, desc: `Purchase from ${p.supplier_id?.name}`, amount: p.grand_total, side: 'OUT' })),
-            ...vouchers.map(v => ({ time: v.date, type: v.voucher_type, ref: v.voucher_number, desc: `${v.debit_ledger?.name} / ${v.credit_ledger?.name}`, amount: v.amount, side: v.voucher_type === 'RECEIPT' ? 'IN' : (v.voucher_type === 'PAYMENT' ? 'OUT' : 'TRANS') }))
+            ...bills.map(b => ({ time: b.createdAt || b.delivery_date, type: 'SALE', ref: b.bill_number, desc: `Sales Bill - ${b.customer_name || 'Walk-in Customer'}`, amount: b.grand_total, side: 'IN' })),
+            ...purchases.map(p => ({ time: p.purchase_date || p.invoice_date || p.createdAt, type: 'PURCHASE', ref: p.invoice_number || 'PURCHASE', desc: `Purchase from ${p.supplier_id?.name || 'Supplier'}`, amount: p.grand_total, side: 'OUT' })),
+            ...vouchers.map(v => ({ time: v.date, type: v.voucher_type, ref: v.voucher_number, desc: `${v.debit_ledger?.name || 'Debit'} / ${v.credit_ledger?.name || 'Credit'}`, amount: v.amount, side: v.voucher_type === 'RECEIPT' ? 'IN' : (v.voucher_type === 'PAYMENT' ? 'OUT' : 'TRANS') }))
         ].sort((a, b) => new Date(a.time) - new Date(b.time));
 
         res.status(200).json({ success: true, data: transactions });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
-// @desc    Get Ledger Statement
+// @desc    Get Ledger Statement (Synced with AccountTransaction double-entry records)
 exports.getLedgerStatement = async (req, res) => {
     try {
         const { ledgerId, startDate, endDate } = req.query;
@@ -720,33 +794,69 @@ exports.getLedgerStatement = async (req, res) => {
         let end = new Date(endDate || new Date());
         end.setHours(23, 59, 59, 999);
 
-        const Voucher = require('../models/Voucher');
-        const transactions = await Voucher.find({
-            company_id: req.user.restaurant_id,
-            $or: [{ debit_ledger: ledgerId }, { credit_ledger: ledgerId }],
-            date: { $gte: start, $lte: end }
-        }).populate('debit_ledger credit_ledger', 'name').sort({ date: 1 });
-
+        const coId = req.user.restaurant_id;
         const ledger = await Ledger.findById(ledgerId);
+        if (!ledger) return res.status(404).json({ success: false, error: 'Ledger not found' });
 
-        let runningBalance = ledger.opening_balance;
-        const statement = transactions.map(t => {
-            const isDebit = t.debit_ledger?._id.toString() === ledgerId;
-            const dr = isDebit ? t.amount : 0;
-            const cr = isDebit ? 0 : t.amount;
-            runningBalance += (dr - cr);
-            return {
-                date: t.date,
-                voucher_no: t.voucher_number,
-                type: t.voucher_type,
-                particulars: isDebit ? `To ${t.credit_ledger?.name}` : `By ${t.debit_ledger?.name}`,
-                debit: dr,
-                credit: cr,
-                balance: runningBalance
-            };
+        const AccountTransaction = require('../models/AccountTransaction');
+        let accTxns = await AccountTransaction.find({
+            company_id: coId,
+            ledger_id: ledgerId,
+            date: { $gte: start, $lte: end },
+            is_deleted: { $ne: true }
+        }).sort({ date: 1, createdAt: 1 });
+
+        let runningBalance = ledger.opening_balance || 0;
+        let statement = [];
+
+        if (accTxns && accTxns.length > 0) {
+            statement = accTxns.map(t => {
+                const dr = t.type === 'DEBIT' ? t.amount : 0;
+                const cr = t.type === 'CREDIT' ? t.amount : 0;
+                runningBalance += (dr - cr);
+                return {
+                    date: t.date,
+                    voucher_no: t.voucher_number,
+                    type: t.voucher_type,
+                    particulars: t.narration || `${t.voucher_type} - ${t.voucher_number}`,
+                    debit: dr,
+                    credit: cr,
+                    balance: runningBalance
+                };
+            });
+        } else {
+            // Fallback to Voucher query if no AccountTransactions exist
+            const Voucher = require('../models/Voucher');
+            const vTxns = await Voucher.find({
+                company_id: coId,
+                $or: [{ debit_ledger: ledgerId }, { credit_ledger: ledgerId }],
+                date: { $gte: start, $lte: end },
+                is_deleted: { $ne: true }
+            }).populate('debit_ledger credit_ledger', 'name').sort({ date: 1 });
+
+            statement = vTxns.map(t => {
+                const isDebit = t.debit_ledger?._id?.toString() === ledgerId || t.debit_ledger === ledgerId;
+                const dr = isDebit ? t.amount : 0;
+                const cr = isDebit ? 0 : t.amount;
+                runningBalance += (dr - cr);
+                return {
+                    date: t.date,
+                    voucher_no: t.voucher_number,
+                    type: t.voucher_type,
+                    particulars: isDebit ? `To ${t.credit_ledger?.name || 'Credit Account'}` : `By ${t.debit_ledger?.name || 'Debit Account'}`,
+                    debit: dr,
+                    credit: cr,
+                    balance: runningBalance
+                };
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            ledger: ledger.name,
+            opening_balance: ledger.opening_balance || 0,
+            data: statement
         });
-
-        res.status(200).json({ success: true, ledger: ledger.name, opening_balance: ledger.opening_balance, data: statement });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
@@ -2214,7 +2324,7 @@ exports.getTrialBalance = async (req, res) => {
 exports.getAgingReport = async (req, res) => {
     try {
         const companyId = req.user.restaurant_id;
-        const { type = 'CUSTOMER' } = req.query;
+        const { type = 'CUSTOMER', startDate, endDate } = req.query;
         const isSupplier = type.toUpperCase() === 'SUPPLIER';
 
         const today = new Date();
@@ -2224,17 +2334,26 @@ exports.getAgingReport = async (req, res) => {
             const Purchase = require('../models/Purchase');
             const Supplier = require('../models/Supplier');
 
+            const purchaseQuery = { company_id: companyId, is_deleted: { $ne: true } };
+            if (startDate || endDate) {
+                purchaseQuery.invoice_date = {};
+                if (startDate) purchaseQuery.invoice_date.$gte = new Date(startDate + 'T00:00:00.000Z');
+                if (endDate) purchaseQuery.invoice_date.$lte = new Date(endDate + 'T23:59:59.999Z');
+            }
+
             const [purchases, suppliers] = await Promise.all([
-                Purchase.find({ company_id: companyId, is_deleted: { $ne: true } }).populate('supplier_id'),
-                Supplier.find({ company_id: companyId })
+                Purchase.find(purchaseQuery).populate('supplier_id').lean(),
+                Supplier.find({ company_id: companyId }).lean()
             ]);
 
             const agingList = [];
 
             // Add Purchases with due balance
             purchases.forEach((p, idx) => {
-                const pending = p.due_amount !== undefined ? p.due_amount : (p.grand_total - (p.paid_amount || 0));
-                if (pending <= 0) return;
+                const grand = parseFloat(p.grand_total) || 0;
+                const paid = parseFloat(p.paid_amount) || 0;
+                const pending = p.due_amount !== undefined && p.due_amount > 0 ? parseFloat(p.due_amount) : Math.max(0, grand - paid);
+                if (pending <= 0 || p.payment_status === 'PAID') return;
 
                 const invDate = p.invoice_date || p.createdAt || today;
                 const ageDays = Math.max(0, Math.floor((today - new Date(invDate)) / (1000 * 60 * 60 * 24)));
@@ -2255,8 +2374,8 @@ exports.getAgingReport = async (req, res) => {
             });
 
             // Add Suppliers with opening balance if no purchase entries yet
-            suppliers.forEach((s, idx) => {
-                const pending = s.opening_balance || 0;
+            suppliers.forEach((s) => {
+                const pending = parseFloat(s.opening_balance) || 0;
                 if (pending <= 0) return;
                 const hasPurchases = agingList.some(item => item.name.trim().toLowerCase() === s.name.trim().toLowerCase());
                 if (!hasPurchases) {
@@ -2282,16 +2401,24 @@ exports.getAgingReport = async (req, res) => {
             const Bill = require('../models/Bill');
             const Customer = require('../models/Customer');
 
+            const billQuery = { company_id: companyId, is_deleted: { $ne: true } };
+            if (startDate || endDate) {
+                billQuery.createdAt = {};
+                if (startDate) billQuery.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
+                if (endDate) billQuery.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+            }
+
             const [bills, customers] = await Promise.all([
-                Bill.find({ company_id: companyId, is_deleted: { $ne: true }, status: { $in: ['DUE', 'CREDIT', 'OPEN', 'PENDING'] } }).populate('customer_id'),
-                Customer.find({ company_id: companyId })
+                Bill.find(billQuery).populate('customer_id').lean(),
+                Customer.find({ company_id: companyId }).lean()
             ]);
 
             const agingList = [];
 
             bills.forEach((b, idx) => {
-                const paid = b.total_paid || b.paid_amount || 0;
-                const pending = Math.max(0, (b.grand_total || 0) - paid);
+                const grand = parseFloat(b.grand_total) || 0;
+                const paid = b.status === 'PAID' ? grand : (parseFloat(b.total_paid || b.paid_amount) || 0);
+                const pending = Math.max(0, grand - paid);
                 if (pending <= 0) return;
 
                 const billDate = b.createdAt || today;
@@ -2312,8 +2439,8 @@ exports.getAgingReport = async (req, res) => {
                 });
             });
 
-            customers.forEach((c, idx) => {
-                const pending = c.opening_balance || 0;
+            customers.forEach((c) => {
+                const pending = parseFloat(c.opening_balance) || 0;
                 if (pending <= 0) return;
                 const hasBills = agingList.some(item => item.name.trim().toLowerCase() === c.name.trim().toLowerCase());
                 if (!hasBills) {

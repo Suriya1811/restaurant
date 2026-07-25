@@ -131,8 +131,11 @@ export default function PurchaseEntryForm() {
     const supplierRef = useRef(null);
     const itemRefs = useRef([]);
 
-    // Items
-    const [items, setItems] = useState([emptyItem()]);
+    // Items - default 10 rows for immediate entry
+    const [items, setItems] = useState([
+        emptyItem(), emptyItem(), emptyItem(), emptyItem(), emptyItem(),
+        emptyItem(), emptyItem(), emptyItem(), emptyItem(), emptyItem()
+    ]);
     const [totals, setTotals] = useState({ sub_total: 0, discount_amount: 0, tax_amount: 0, cgst_amount: 0, sgst_amount: 0, net_amount: 0, grand_total: 0 });
 
     const toggleSidebar = () => {
@@ -456,16 +459,49 @@ export default function PurchaseEntryForm() {
                     title="PURCHASE ENTRY"
                     onClose={() => navigate('/dashboard/self-service/home')}
                     actions={
-                        <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setTempColConfig({ ...colConfig });
                                     setShowColSettings(true);
                                 }}
-                                className="btn-column-settings"
+                                style={{
+                                    background: '#FF5722',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '7px 14px',
+                                    fontSize: '12px',
+                                    fontWeight: 800,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 4px rgba(255,87,34,0.25)'
+                                }}
                             >
-                                <Settings size={14} /> <span>Column Settings</span>
+                                <Settings size={15} /> <span>COLUMN SETTINGS</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/dashboard/self-service/home')}
+                                style={{
+                                    background: '#FFFFFF',
+                                    color: '#D32F2F',
+                                    border: '1.5px solid #FF8A80',
+                                    borderRadius: '6px',
+                                    padding: '6px 14px',
+                                    fontSize: '12px',
+                                    fontWeight: 800,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <XCircle size={15} /> <span>CLOSE</span>
                             </button>
 
                             {/* Column Settings Slide-Over Drawer Panel */}
@@ -514,7 +550,7 @@ export default function PurchaseEntryForm() {
                                                     if (tempColConfig) setColConfig(tempColConfig);
                                                     setShowColSettings(false);
                                                 }}
-                                                className="flex-1 py-2 text-xs font-bold text-white bg-[#ff6b00] rounded hover:bg-[#e66000] transition-colors cursor-pointer"
+                                                className="flex-1 py-2 text-xs font-bold text-white bg-[#FF5722] rounded hover:bg-[#e64a19] transition-colors cursor-pointer"
                                             >
                                                 APPLY
                                             </button>
@@ -527,46 +563,51 @@ export default function PurchaseEntryForm() {
                 />
                 <div className="pef-container fade-in-up" style={{ animationDuration: '0.4s' }}>
 
-                    {/* ─── Bill Header (Neat Unified Form) ─── */}
+                    {/* ─── Bill Header (3-Column Layout Matching Image) ─── */}
                     <div className="pef-bill-header-unified">
                         <div className="pef-form-grid">
-                            {/* Column 1 */}
+                            {/* Column 1: Invoice No, Date, Invoice Date, Payment */}
                             <div className="pef-form-col">
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">INVOICE NO</label>
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">Invoice No</span>
                                     <input id="invoice-no-field" className="pef-f-input" value={invoiceNo}
                                         onChange={e => setInvoiceNo(e.target.value.toUpperCase())}
                                         onKeyDown={e => handleHeaderKeyDown(e, 'invoice-date-field')}
                                         placeholder="INV-001" />
                                 </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">DATE</label>
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">Date</span>
                                     <input id="invoice-date-field" type="date" className="pef-f-input" value={invoiceDate}
                                         onKeyDown={e => handleHeaderKeyDown(e, 'payment-type-field')}
                                         onChange={e => handleInvoiceDateChange(e.target.value)} />
                                 </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">PAYMENT</label>
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">Invoice Date</span>
+                                    <input type="date" className="pef-f-input" value={invoiceDate}
+                                        onChange={e => handleInvoiceDateChange(e.target.value)} />
+                                </div>
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">Payment</span>
                                     <div className="pef-f-select-wrap">
-                                        <ChevronDown size={11} className="pef-f-chevron" />
+                                        <ChevronDown size={14} className="pef-f-chevron" style={{ color: '#FF5722' }} />
                                         <select id="payment-type-field" className="pef-f-select" value={paymentType}
                                             onChange={e => setPaymentType(e.target.value)}>
-                                            <option value="CASH">CASH</option>
                                             <option value="CREDIT">CREDIT</option>
+                                            <option value="CASH">CASH</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Column 2 */}
+                            {/* Column 2: Supplier & Lined Address */}
                             <div className="pef-form-col">
-                                <div className="pef-f-group" ref={supplierRef}>
-                                    <label className="pef-f-label">Supplier</label>
-                                    <div className="flex w-full gap-2 relative">
-
+                                <div className="pef-f-group-horizontal" ref={supplierRef}>
+                                    <span className="pef-f-label-left">Supplier</span>
+                                    <div style={{ display: 'flex', width: '100%', gap: '6px', position: 'relative' }}>
                                         <input 
                                             id="supplier-search-field"
-                                            className="pef-f-input font-bold flex-1" 
+                                            className="pef-f-input" 
+                                            style={{ flex: 1, fontWeight: 700 }}
                                             value={supplierSearch}
                                             autoComplete="off"
                                             onFocus={() => setShowSupplierDropdown(true)}
@@ -603,7 +644,7 @@ export default function PurchaseEntryForm() {
                                                     setShowSupplierDropdown(false);
                                                 }
                                             }}
-                                            placeholder="Type name to search..."
+                                            placeholder="Rajesh Traders"
                                         />
                                         {showSupplierDropdown && (
                                             <div className="pef-dropdown-container">
@@ -631,43 +672,72 @@ export default function PurchaseEntryForm() {
                                                 </div>
                                             </div>
                                         )}
-                                        <button className="flex items-center justify-center w-10 border border-[#f97316] rounded-md text-[#f97316] hover:bg-orange-50 transition-colors" title="Add Supplier" onClick={() => navigate('/dashboard/self-service/ledgers/create')}>
+                                        <button 
+                                            type="button"
+                                            style={{ width: '32px', height: '32px', border: '1.5px solid #FFAB91', borderRadius: '6px', color: '#FF5722', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                            title="Add Supplier" 
+                                            onClick={() => navigate('/dashboard/self-service/ledgers/create')}
+                                        >
                                             <Plus size={16} />
                                         </button>
                                     </div>
                                 </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">GSTIN</label>
-                                    <input className="pef-f-input pef-f-readonly" readOnly value={selectedSupplier?.gst_number || ''} />
-                                </div>
-                                <div className="flex gap-2 w-full">
-                                    <div className="pef-f-group w-1/2">
-                                        <label className="pef-f-label">Balance</label>
-                                        <div className="relative w-full">
-                                            <input className="pef-f-input pef-f-readonly font-bold !text-left" 
-                                                readOnly value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : ''} />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 font-bold text-xs bg-orange-100 px-1 rounded">CR</span>
-                                        </div>
-                                    </div>
-                                    <div className="pef-f-group w-1/2">
-                                        <label className="pef-f-label">Address</label>
-                                        <input className="pef-f-input pef-f-readonly" 
-                                            readOnly value={selectedSupplier?.address || ''} placeholder="Address..." />
-                                    </div>
+
+                                <div className="pef-f-group-horizontal" style={{ alignItems: 'flex-start' }}>
+                                    <span className="pef-f-label-left" style={{ paddingTop: '4px' }}>Address</span>
+                                    <textarea 
+                                        className="pef-address-box" 
+                                        readOnly 
+                                        value={selectedSupplier?.address || ''} 
+                                        placeholder="Supplier address details..." 
+                                    />
                                 </div>
                             </div>
 
-                            {/* Column 3 */}
+                            {/* Column 3: GSTIN, Balance, Days & Due Date */}
                             <div className="pef-form-col">
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">Days</label>
-                                    <input id="due-days-field" type="number" className="pef-f-input !font-bold text-center" min="0"
-                                        value={dueDays} onChange={e => handleDueDaysChange(e.target.value)} />
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">GSTIN</span>
+                                    <input className="pef-f-input" readOnly value={selectedSupplier?.gst_number || '33, AXBPV, 5028, C1ZL'} />
                                 </div>
-                                <div className="pef-f-group">
-                                    <label className="pef-f-label">DUE DATE</label>
-                                    <input id="due-date-field" type="date" className="pef-f-input font-bold"
-                                        value={dueDate} onChange={e => setDueDate(e.target.value)} />
+
+                                <div className="pef-f-group-horizontal">
+                                    <span className="pef-f-label-left">Balance</span>
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <input 
+                                            className="pef-f-input" 
+                                            style={{ paddingRight: '45px', fontWeight: 800 }} 
+                                            readOnly 
+                                            value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : '₹12,500.00'} 
+                                        />
+                                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: '#FFF3E0', color: '#E65100', border: '1px solid #FFE0B2', fontWeight: 800, fontSize: '10px', padding: '1px 5px', borderRadius: '4px' }}>CR</span>
+                                    </div>
+                                </div>
+
+                                <div className="pef-f-group-horizontal" style={{ gap: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>Days</span>
+                                        <input 
+                                            id="due-days-field" 
+                                            type="number" 
+                                            className="pef-f-input" 
+                                            style={{ width: '48px', textAlign: 'center', fontWeight: 800 }} 
+                                            min="0"
+                                            value={dueDays} 
+                                            onChange={e => handleDueDaysChange(e.target.value)} 
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>Date</span>
+                                        <input 
+                                            id="due-date-field" 
+                                            type="date" 
+                                            className="pef-f-input" 
+                                            style={{ flex: 1, fontWeight: 700 }}
+                                            value={dueDate} 
+                                            onChange={e => setDueDate(e.target.value)} 
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -902,59 +972,57 @@ export default function PurchaseEntryForm() {
                         </div>
                     </div>
 
-                    {/* ─── Footer ─── */}
-                    <div className="flex items-center justify-between w-full pt-3 mt-2 border-t border-slate-200">
-                        <input 
-                            type="text"
-                            className="w-1/4 border border-orange-400 rounded px-3 py-2 h-10 text-xs font-semibold outline-none focus:ring-1 focus:ring-orange-500 bg-white" 
-                            placeholder="Remarks..." 
-                            value={remarks}
-                            onChange={e => setRemarks(e.target.value)}
-                        />
+                    {/* ─── Footer (Matching Image Exactly) ─── */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '10px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ width: '220px' }}>
+                            <input 
+                                type="text"
+                                className="pef-f-input"
+                                style={{ height: '38px', fontSize: '12px', border: '1.5px solid #FFAB91', background: '#FFFBFB' }} 
+                                placeholder="Remarks" 
+                                value={remarks}
+                                onChange={e => setRemarks(e.target.value)}
+                            />
+                        </div>
                         
-                        <div className="flex items-center gap-3">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button 
                                 type="button"
-                                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 h-10 rounded text-xs font-bold uppercase transition-colors shadow-sm cursor-pointer"
+                                style={{ background: '#FF5722', color: '#FFFFFF', border: 'none', borderRadius: '6px', padding: '0 14px', height: '38px', fontSize: '11px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(255,87,34,0.25)' }}
                                 onClick={() => setShowGstModal(true)}
                             >
-                                <FileText size={14} /> GST Details
+                                <FileText size={14} /> <span>GST DETAILS</span>
                             </button>
+
                             <button 
                                 type="button"
-                                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 h-10 rounded text-xs font-bold uppercase transition-colors shadow-sm cursor-pointer"
+                                style={{ background: '#FF5722', color: '#FFFFFF', border: 'none', borderRadius: '6px', padding: '0 14px', height: '38px', fontSize: '11px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(255,87,34,0.25)' }}
                                 onClick={() => setShowMoreDrawer(true)}
                             >
-                                <MoreHorizontal size={14} /> More
+                                <MoreHorizontal size={14} /> <span>MORE</span>
                             </button>
                             
-                            <div className="bg-[#0f172a] text-white flex items-center px-4 rounded h-10 shadow-sm gap-4 text-xs font-bold">
-                                <div className="flex items-center gap-1.5 border-r border-slate-700 pr-4">
-                                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Round Off:</span>
-                                    <span className="font-extrabold text-white">₹{parseFloat(roundOff || 0).toFixed(2)}</span>
+                            {/* Dark Navy Summary Block */}
+                            <div style={{ background: '#0A1128', color: '#FFFFFF', borderRadius: '8px', height: '42px', padding: '0 18px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 10px rgba(10,17,40,0.15)' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.05em' }}>ROUND OFF</span>
+                                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#FFFFFF' }}>₹{parseFloat(roundOff || 0).toFixed(2)}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Net Amount:</span>
-                                    <span className="font-extrabold text-orange-400 text-sm">₹{totals.grand_total.toFixed(2)}</span>
+                                <div style={{ width: '1px', height: '22px', background: '#1E293B' }}></div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.05em' }}>NET AMOUNT</span>
+                                    <span style={{ fontSize: '15px', fontWeight: 900, color: '#FF7A00' }}>₹{totals.grand_total.toFixed(2)}</span>
                                 </div>
                             </div>
 
                             <button 
                                 type="button"
-                                onClick={() => navigate('/dashboard/self-service/home')} 
-                                className="px-5 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded shadow-sm uppercase transition-colors cursor-pointer"
-                            >
-                                Cancel
-                            </button>
-
-                            <button 
-                                type="button"
-                                className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e66000] text-white px-6 h-10 rounded text-xs font-black uppercase shadow-md transition-colors cursor-pointer"
                                 disabled={saving}
                                 onClick={() => handleSave(false)}
+                                style={{ background: '#FF5722', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '0 24px', height: '42px', fontSize: '13px', fontWeight: 900, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(255,87,34,0.3)' }}
                             >
-                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
-                                Save
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
+                                <span>SAVE</span>
                             </button>
                         </div>
                     </div>

@@ -108,6 +108,47 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Automatic Silent Interval Backup Service
+    useEffect(() => {
+        if (!user || !user.token) return;
+
+        let backupTimer = null;
+
+        const initAutoBackup = async () => {
+            try {
+                const apiBase = import.meta.env.VITE_API_URL;
+                const { data } = await axios.get(`${apiBase}/settings/backup/status`, {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+
+                if (data.success && data.data?.settings) {
+                    const { auto_interval } = data.data.settings;
+                    if (auto_interval && auto_interval > 0) {
+                        const intervalMs = auto_interval * 60 * 60 * 1000;
+                        backupTimer = setInterval(async () => {
+                            try {
+                                await axios.post(`${apiBase}/settings/backup`, {}, {
+                                    headers: { 'Authorization': `Bearer ${user.token}` }
+                                });
+                                console.log(`[SILENT BACKUP] Auto backup executed silently every ${auto_interval} hour(s).`);
+                            } catch (err) {
+                                console.error('[SILENT BACKUP ERROR]', err);
+                            }
+                        }, intervalMs);
+                    }
+                }
+            } catch (err) {
+                console.error('[AUTO BACKUP STATUS ERROR]', err);
+            }
+        };
+
+        initAutoBackup();
+
+        return () => {
+            if (backupTimer) clearInterval(backupTimer);
+        };
+    }, [user?.token]);
+
     const register = async (userData) => {
         try {
             const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, userData);

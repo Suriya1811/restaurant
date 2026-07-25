@@ -28,6 +28,8 @@ const SidebarPaymentFlow = ({
     const [advAmount, setAdvAmount] = useState('');
     const [activeMode, setActiveMode] = useState('CASH');
 
+    const [paymentType, setPaymentType] = useState('CASH');
+
     const handleModeSelect = (mode) => {
         setActiveMode(mode);
         if (mode === 'CASH') {
@@ -83,18 +85,22 @@ const SidebarPaymentFlow = ({
 
     const handleSubmit = (shouldPrint = false) => {
         const modes = [];
-        if (cashUsed > 0) modes.push({ type: 'CASH', amount: cashUsed });
-        if (parseFloat(upiAmount) > 0) modes.push({ type: 'UPI', amount: parseFloat(upiAmount) });
-        if (parseFloat(cardAmount) > 0) modes.push({ type: 'CARD', amount: parseFloat(cardAmount) });
-        if (parseFloat(chequeAmount) > 0) modes.push({ type: 'ONLINE', amount: parseFloat(chequeAmount) });
+        if (paymentType === 'CREDIT') {
+            modes.push({ type: 'CREDIT', amount: grandTotal });
+        } else {
+            if (cashUsed > 0) modes.push({ type: 'CASH', amount: cashUsed });
+            if (parseFloat(upiAmount) > 0) modes.push({ type: 'UPI', amount: parseFloat(upiAmount) });
+            if (parseFloat(cardAmount) > 0) modes.push({ type: 'CARD', amount: parseFloat(cardAmount) });
+            if (parseFloat(chequeAmount) > 0) modes.push({ type: 'ONLINE', amount: parseFloat(chequeAmount) });
 
-        if (modes.length === 0) return alert("Please enter payment amount");
-        if (pending > 0 && !partialAllowed) {
-            return alert(`Please collect full amount (Pending: ₹${pending.toFixed(2)})`);
+            if (modes.length === 0) return alert("Please enter payment amount or select Credit sale.");
+            if (pending > 0 && !partialAllowed) {
+                return alert(`Please collect full amount (Pending: ₹${pending.toFixed(2)})`);
+            }
         }
 
         const tips = parseFloat(tipsAmount) || 0;
-        onPaymentSubmit(modes, tips, pending > 0, 0, { shouldPrint });
+        onPaymentSubmit(modes, tips, paymentType === 'CREDIT' || pending > 0, 0, { shouldPrint, paymentType });
     };
 
     const isConfirmDisabled = useMemo(() => {
@@ -121,6 +127,39 @@ const SidebarPaymentFlow = ({
         <div className="payment-modal-overlay">
             <div className="sidebar-payment-container animate-in slide-in-from-bottom-2">
                 <div className="unified-payment-rectangle">
+                    {/* PAYMENT TYPE SELECTOR (CASH vs CREDIT, Default: CASH) */}
+                    <div className="mb-3 p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-2 shadow-xs">
+                        <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <CreditCard size={16} className={paymentType === 'CREDIT' ? 'text-orange-600' : 'text-slate-500'} />
+                            Payment Type
+                        </label>
+                        <select
+                            value={paymentType}
+                            onChange={(e) => {
+                                const selected = e.target.value;
+                                setPaymentType(selected);
+                                if (selected === 'CREDIT') {
+                                    setCashAmounts({ received: '' });
+                                    setUpiAmount('');
+                                    setCardAmount('');
+                                    setChequeAmount('');
+                                } else {
+                                    setCashAmounts({ received: grandTotal.toString() });
+                                }
+                            }}
+                            className="bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 focus:border-orange-500 outline-none transition-all cursor-pointer shadow-xs"
+                        >
+                            <option value="CASH">Cash Sale (Immediate Payment)</option>
+                            <option value="CREDIT">Credit Sale (Party Outstanding)</option>
+                        </select>
+                    </div>
+
+                    {paymentType === 'CREDIT' && (
+                        <div className="mb-3 p-3 bg-orange-50 rounded-xl border border-orange-200 text-xs font-bold text-orange-800 flex items-center justify-between">
+                            <span>Credit Sale Selected: Total ₹{parseFloat(grandTotal).toFixed(2)} will be debited to Customer Outstanding.</span>
+                        </div>
+                    )}
+
                     {/* 1st ROW: CASH */}
                     <div className={`unified-row-module ${activeMode === 'CASH' ? 'active-row' : ''}`}>
                         <div className="row-header" onClick={() => handleModeSelect('CASH')}>

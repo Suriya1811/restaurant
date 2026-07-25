@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     getUserSettings,
     updateProfile,
+    deleteProfile,
     changePassword,
     updatePrinterSettings,
     updateBillFormat,
@@ -18,7 +19,8 @@ const {
 const {
     createBackup,
     restoreBackup,
-    getBackupStatus
+    getBackupStatus,
+    updateBackupSettings
 } = require('../controllers/backupController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -34,6 +36,7 @@ router.put('/advanced', updateAdvancedSettings);
 
 // Update profile
 router.put('/profile', updateProfile);
+router.delete('/profile', deleteProfile);
 
 // Change password
 router.put('/password', changePassword);
@@ -65,6 +68,7 @@ router.post('/extra-modules/verify-password', verifyExtraModulesPassword);
 
 // Backup & Restore
 router.get('/backup/status', getBackupStatus);
+router.put('/backup/settings', updateBackupSettings);
 router.post('/backup', createBackup);
 router.post('/restore', restoreBackup);
 

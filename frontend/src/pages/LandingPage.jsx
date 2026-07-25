@@ -107,16 +107,16 @@ const LandingPage = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="w-full mt-6">
-                        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6 shadow-sm">
-                            {/* Email Field */}
-                            <div className="px-5 py-3 border-b border-gray-200 relative">
-                                <label className="block text-[13px] font-medium text-gray-500 mb-1">User ID or Email</label>
+                    <form onSubmit={handleSubmit} className="w-full mt-6 space-y-5">
+                        <div className="space-y-4">
+                            {/* Username Field */}
+                            <div>
+                                <label className="block text-xs font-black uppercase text-slate-300 tracking-wider mb-1.5">User ID or Username</label>
                                 <input
                                     type="text"
                                     name="username"
                                     required
-                                    className="w-full text-base font-semibold text-gray-900 bg-[#edf2f7] outline-none border-none py-1.5 px-3 rounded-sm focus:ring-0"
+                                    className="w-full text-base font-bold text-slate-900 bg-white border-2 border-orange-500 rounded-lg py-2.5 px-4 outline-none focus:ring-2 focus:ring-orange-400 shadow-sm transition-all"
                                     value={formData.username}
                                     onChange={handleChange}
                                     onBlur={(e) => checkPasswordRequirement(e.target.value)}
@@ -125,44 +125,26 @@ const LandingPage = () => {
                             
                             {/* Password Field */}
                             {isPasswordRequired && (
-                                <div className="px-5 pt-3 pb-5 relative">
-                                    <label className="block text-[13px] font-medium text-gray-500 mb-1">Password</label>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-slate-300 tracking-wider mb-1.5">Password</label>
                                     <input
-                                        type={showPassword ? "text" : "password"}
+                                        type="password"
                                         name="password"
                                         required={isPasswordRequired}
-                                        className="w-full text-base font-semibold text-gray-900 bg-[#edf2f7] outline-none border-none py-1.5 px-3 rounded-sm focus:ring-0 pr-10"
+                                        className="w-full text-base font-bold text-slate-900 bg-white border-2 border-orange-500 rounded-lg py-2.5 px-4 outline-none focus:ring-2 focus:ring-orange-400 shadow-sm transition-all"
                                         value={formData.password}
                                         onChange={handleChange}
                                     />
-                                    <div 
-                                        className="absolute right-5 top-10 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                         {showPassword ? (
-                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                                         ) : (
-                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                         )}
-                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Remember me */}
-                        <div className="flex justify-between items-center mb-8 text-sm">
-                            <label className="flex items-center gap-2 cursor-pointer text-slate-300">
-                                <input type="checkbox" className="rounded border-gray-300 w-4 h-4 text-[#2563eb] focus:ring-[#2563eb]" />
-                                Remember me
-                            </label>
-                        </div>
-
                         {/* Submit Button */}
-                        <div className="flex justify-start">
+                        <div className="pt-2 flex justify-start">
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white h-12 px-10 rounded-lg font-bold text-base transition-colors flex items-center justify-center gap-2"
+                                className="bg-orange-600 hover:bg-orange-700 text-white h-12 px-10 rounded-lg font-bold text-base transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30"
                             >
                                 {loading ? (
                                     <Loader2 className="animate-spin w-5 h-5" />
@@ -170,13 +152,6 @@ const LandingPage = () => {
                                     'LOGIN'
                                 )}
                             </button>
-                        </div>
-
-                        <div className="mt-8 text-sm text-slate-300">
-                            New to Yugam software?{' '}
-                            <Link to="/register" className="text-[#2563eb] font-semibold hover:text-[#1d4ed8] transition-colors">
-                                Register here
-                            </Link>
                         </div>
                     </form>
                 </motion.div>

@@ -197,3 +197,72 @@ exports.updateKotStatus = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// POST /tables/:id/transfer-items — transfer items to another table's open bill
+exports.transferItems = async (req, res) => {
+    try {
+        const { source_bill_id, items } = req.body;
+        const targetTable = await Table.findOne({ _id: req.params.id, company_id: req.user.restaurant_id });
+        if (!targetTable) return res.status(404).json({ success: false, error: 'Target table not found' });
+
+        const Bill = require('../models/Bill');
+        let targetBill = null;
+
+        if (targetTable.bill_id) {
+            targetBill = await Bill.findOne({ _id: targetTable.bill_id, company_id: req.user.restaurant_id });
+        }
+
+        if (!targetBill) {
+            targetBill = await Bill.findOne({
+                company_id: req.user.restaurant_id,
+                table_no: targetTable.table_number || targetTable.table_no,
+                status: 'OPEN'
+            });
+        }
+
+        if (!targetBill) {
+            targetBill = await Bill.create({
+                company_id: req.user.restaurant_id,
+                bill_number: `TEMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                table_no: targetTable.table_number || targetTable.table_no,
+                status: 'OPEN',
+                type: 'DINE_IN',
+                created_by: req.user.id,
+                items: []
+            });
+            targetTable.bill_id = targetBill._id;
+            targetTable.status = 'OCCUPIED';
+            targetTable.occupied_since = targetTable.occupied_since || new Date();
+            await targetTable.save();
+        }
+
+        items.forEach(item => {
+            const existingIdx = targetBill.items.findIndex(i => i.product_id?.toString() === item.product_id?.toString() && i.name === item.name);
+            if (existingIdx > -1) {
+                targetBill.items[existingIdx].quantity += item.quantity;
+                targetBill.items[existingIdx].total_price = targetBill.items[existingIdx].quantity * targetBill.items[existingIdx].unit_price;
+            } else {
+                targetBill.items.push({
+                    product_id: item.product_id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    total_price: item.quantity * item.unit_price
+                });
+            }
+        });
+
+        const subTotal = targetBill.items.reduce((sum, i) => sum + (i.is_complementary ? 0 : i.total_price), 0);
+        targetBill.sub_total = subTotal;
+        targetBill.grand_total = subTotal;
+        await targetBill.save();
+
+        targetTable.running_amount = subTotal;
+        await targetTable.save();
+
+        res.status(200).json({ success: true, message: 'Items transferred successfully', data: targetBill });
+    } catch (error) {
+        console.error("Transfer items error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};

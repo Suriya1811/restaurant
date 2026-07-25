@@ -16,6 +16,7 @@ import {
     RotateCcw,
     ArrowLeft,
     User,
+    UserPlus,
     Table,
     Users,
     Save,
@@ -31,6 +32,8 @@ import {
     Timer,
     Gift,
     MoreHorizontal,
+    MoreVertical,
+    SlidersHorizontal,
     ArrowRight,
     Ticket,
     CheckSquare,
@@ -132,7 +135,9 @@ const BillingPage = () => {
     const [couponUnlocked, setCouponUnlocked] = useState(false);
     const [showRateColumn, setShowRateColumn] = useState(() => localStorage.getItem('pos_show_rate') !== 'false');
     const [showProductPrice, setShowProductPrice] = useState(() => localStorage.getItem('pos_show_prod_price') !== 'false');
-    const [showBillNumber, setShowBillNumber] = useState(true);
+    const [directQtyEditing, setDirectQtyEditing] = useState(() => localStorage.getItem('pos_direct_qty_editing') !== 'false');
+    const [showBillNumber, setShowBillNumber] = useState(() => localStorage.getItem('pos_show_bill_no') !== 'false');
+    const [showKotNumber, setShowKotNumber] = useState(() => localStorage.getItem('pos_show_kot_no') !== 'false');
 
     const [billSearchQuery, setBillSearchQuery] = useState("");
     const [dailySearchQuery, setDailySearchQuery] = useState("");
@@ -175,6 +180,7 @@ const BillingPage = () => {
     const [showLoyaltyForm, setShowLoyaltyForm] = useState(false);
     const [showCouponForm, setShowCouponForm] = useState(false);
     const [showMoreForm, setShowMoreForm] = useState(false);
+    const [showMorePopup, setShowMorePopup] = useState(false);
     const [couponNumber, setCouponNumber] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -198,6 +204,36 @@ const BillingPage = () => {
 
     // Prevent auto-create from firing while we are fetching an existing bill for a table
     const isRestoringTableBill = useRef(false);
+    const customerFormRef = useRef(null);
+    const morePanelRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutsideCustomer = (event) => {
+            if (showCustomerForm && customerFormRef.current && !customerFormRef.current.contains(event.target)) {
+                setShowCustomerForm(false);
+            }
+        };
+        if (showCustomerForm) {
+            document.addEventListener('mousedown', handleClickOutsideCustomer);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideCustomer);
+        };
+    }, [showCustomerForm]);
+
+    useEffect(() => {
+        const handleClickOutsideMore = (event) => {
+            if (showMorePopup && morePanelRef.current && !morePanelRef.current.contains(event.target)) {
+                setShowMorePopup(false);
+            }
+        };
+        if (showMorePopup) {
+            document.addEventListener('mousedown', handleClickOutsideMore);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideMore);
+        };
+    }, [showMorePopup]);
 
     const toggleExpandableForm = (formName) => {
         // Validation: For ALTER, TRANSFER, RETURN, we need an active bill loaded via search
@@ -218,6 +254,7 @@ const BillingPage = () => {
         setShowCaptainForm(formName === 'CAPTAIN' ? !showCaptainForm : false);
         setShowWaiterForm(formName === 'WAITER' ? !showWaiterForm : false);
         setShowMoreForm(formName === 'MORE' ? !showMoreForm : false);
+        setShowMorePopup(formName === 'MORE' ? !showMoreForm : false);
         setShowCouponForm(formName === 'COUPON' ? !showCouponForm : false);
         setStepProceeded(formName === 'PAYMODE' ? !stepProceeded : false);
         setCheckoutActive(formName === 'PAYMODE' ? !checkoutActive : false);
@@ -568,10 +605,8 @@ const BillingPage = () => {
             if (location.state.reservationName) setCustomerName(location.state.reservationName);
             if (location.state.reservationPhone) setCustomerPhone(location.state.reservationPhone);
 
-            const isPrintedOrOccupied = tableStatus === 'PRINTED' || tableStatus === 'OCCUPIED';
-
-            if (isPrintedOrOccupied && billId) {
-                // ── Load existing bill (bill counter opening a PRINTED table to pay) ──
+            if (billId) {
+                // ── Load existing bill (Opening KOT or table to view/pay) ──
                 isRestoringTableBill.current = true;  // block auto-create during fetch
                 const savedUser = localStorage.getItem('user');
                 if (savedUser) {
@@ -587,7 +622,8 @@ const BillingPage = () => {
                                 setCurrentBillId(bill._id);
                                 setBillNumber(bill.bill_number);
                                 setPreviousItems(bill.items || []);
-                                setBillItems([]);
+                                setBillItems(bill.items || []);
+                                setShowConsolidatedView(true); // Automatically display items on right sidebar ready for billing
                                 setSelectedTableId(tableId); // Set the table ID from navigation state
                                 setTableNo(bill.table_no || location.state.tableNo || '');
                                 setPersons(bill.persons || location.state.persons || '');
@@ -1039,7 +1075,43 @@ const BillingPage = () => {
         const newItems = [...billItems];
         newItems[index].is_complementary = !newItems[index].is_complementary;
         setBillItems(newItems);
-        // Backend update could happen here if model supports it
+    };
+
+    const handleQtyChange = (idx, delta) => {
+        const newItems = [...billItems];
+        const currentQty = parseFloat(newItems[idx].quantity) || 0;
+        const nextQty = currentQty + delta;
+        if (nextQty <= 0) {
+            removeFromBill(idx);
+            return;
+        }
+        newItems[idx].quantity = nextQty;
+        newItems[idx].total_price = nextQty * (parseFloat(newItems[idx].unit_price) || 0);
+        setBillItems(newItems);
+
+        if (selectedTableId) {
+            const newSub = newItems.reduce((acc, i) => acc + (i.is_complementary ? 0 : i.total_price), 0);
+            updateTableLiveAmount(selectedTableId, newSub);
+        }
+    };
+
+    const handleDirectQtyChange = (idx, val) => {
+        const newItems = [...billItems];
+        if (val === '' || val === null) {
+            newItems[idx].quantity = '';
+            newItems[idx].total_price = 0;
+            setBillItems(newItems);
+            return;
+        }
+        const parsed = Math.max(1, parseInt(val, 10) || 1);
+        newItems[idx].quantity = parsed;
+        newItems[idx].total_price = parsed * (parseFloat(newItems[idx].unit_price) || 0);
+        setBillItems(newItems);
+
+        if (selectedTableId) {
+            const newSub = newItems.reduce((acc, i) => acc + (i.is_complementary ? 0 : i.total_price), 0);
+            updateTableLiveAmount(selectedTableId, newSub);
+        }
     };
 
 
@@ -1106,7 +1178,8 @@ const BillingPage = () => {
                     waiter_name: waiterName,
                     type: orderMode,
                     alternate_phone: partyData?.alternate_phone,
-                    is_partial: (grandTotal > allPaymentModes.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0) + 0.01),
+                    payment_type: options?.paymentType || (allPaymentModes.some(p => p.type === 'CREDIT') ? 'CREDIT' : 'CASH'),
+                    is_partial: options?.paymentType === 'CREDIT' ? false : (grandTotal > allPaymentModes.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0) + 0.01),
                     redeem_loyalty_points: loyaltyRedeemedPoints,
                     bill_number: billNumber
                 })
@@ -1318,14 +1391,20 @@ const BillingPage = () => {
 
     const handleKOTPrint = (kotData) => {
         if (!kotData || !kotData.items || kotData.items.length === 0) return;
-        const rowsHtml = kotData.items.map(item => `
-            <tr>
-                <td class="item-name">
-                    ${item.name} ${item.notes ? `<br><span style="font-weight:bold; font-style:italic; font-size:12px; color:#000;">* Note: ${item.notes}</span>` : ''}
-                </td>
-                <td class="item-qty">x${item.quantity}</td>
-            </tr>
-        `).join('');
+        
+        const isRunningTable = (previousItems && previousItems.length > 0) || (kotData.is_running_table === true);
+        const kotTableStatus = isRunningTable ? 'RUNNING TABLE' : 'NEW TABLE';
+
+        const rowsHtml = kotData.items.map(item => {
+            const remarkText = item.remarks || item.notes || item.remark || '';
+            const displayName = `${item.name}${remarkText ? ` (${remarkText})` : ''}`;
+            return `
+                <tr>
+                    <td class="item-name">${displayName}</td>
+                    <td class="item-qty" style="text-align: right; font-weight: 900;">x${item.quantity}</td>
+                </tr>
+            `;
+        }).join('');
 
         let resData = {};
         try {
@@ -1345,45 +1424,50 @@ const BillingPage = () => {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>${kotData.kot_number}</title>
+    <title>${kotData.kot_number || 'KOT'}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page { size: 80mm auto; margin: 4mm; }
-        body { font-family: 'Courier New', Courier, monospace; font-size: 13px; width: 72mm; padding: 4px; }
+        body { font-family: 'Courier New', Courier, monospace; font-size: 13px; width: 72mm; padding: 4px; color: #000; }
         .sep { border: none; border-top: 1px dashed #000; margin: 6px 0; }
         .sep-solid { border: none; border-top: 2px solid #000; margin: 6px 0; }
         .center { text-align: center; }
         .bold { font-weight: 900; }
-        .big { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
-        .table-label { font-size: 17px; font-weight: 900; }
-        .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 2px 0; }
+        .big { font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+        .table-label { font-size: 16px; font-weight: 900; margin: 4px 0; }
+        .status-badge { background: #000; color: #fff; text-align: center; font-weight: 900; font-size: 13px; padding: 3px; margin: 5px 0; text-transform: uppercase; }
+        .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 3px 0; }
         table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-        .item-name { font-weight: 700; font-size: 14px; padding: 5px 2px; vertical-align: middle; }
-        .footer { text-align: center; font-size: 11px; margin-top: 8px; }
+        .item-name { font-weight: 700; font-size: 13px; padding: 4px 2px; vertical-align: middle; }
+        .item-qty { font-weight: 900; font-size: 14px; text-align: right; padding: 4px 2px; }
+        .footer { text-align: center; font-size: 11px; margin-top: 10px; font-weight: 900; }
         @media print { body { width: 72mm; } }
     </style>
 </head>
 <body>
     <div class="center" style="margin-bottom: 5px;">
-        <h2 style="font-size: 16px; margin: 0;">${resData.name || 'RESTAURANT'}</h2>
+        <h2 style="font-size: 17px; font-weight: 900; margin: 0;">${resData.company_name || resData.name || 'RESTAURANT'}</h2>
         ${resData.address ? `<p style="font-size: 10px; margin: 2px 0;">${resData.address}</p>` : ''}
-        ${resData.phone ? `<p style="font-size: 10px; margin: 2px 0;">Cell: ${resData.phone}</p>` : ''}
-        ${resData.fssai_no ? `<p style="font-size: 10px; margin: 2px 0;">FSSAI: ${resData.fssai_no}</p>` : ''}
-        ${resData.gstin ? `<p style="font-size: 10px; margin: 2px 0;">GSTIN: ${resData.gstin}</p>` : ''}
-        ${tableAreaName ? `<p style="font-size: 11px; font-weight: 900; margin: 4px 0;">Type: ${tableAreaName}</p>` : ''}
-        <div class="table-label" style="margin-top: 8px;">${tableNo ? 'TABLE ' + tableNo : (orderMode === 'TAKEAWAY' ? 'TAKEAWAY' : (orderMode === 'PARCEL' ? 'PARCEL' : (orderMode === 'DELIVERY' ? 'DELIVERY' : (orderMode === 'PARTY' ? 'PARTY' : 'COUNTER'))))}</div>
+        ${resData.phone ? `<p style="font-size: 10px; margin: 2px 0;">Ph: ${resData.phone}</p>` : ''}
+        ${tableAreaName ? `<p style="font-size: 11px; font-weight: 900; margin: 3px 0;">Area: ${tableAreaName}</p>` : ''}
+        <div class="table-label">${tableNo ? 'TABLE ' + tableNo : (orderMode === 'TAKEAWAY' ? 'TAKEAWAY' : (orderMode === 'PARCEL' ? 'PARCEL' : (orderMode === 'DELIVERY' ? 'DELIVERY' : (orderMode === 'PARTY' ? 'PARTY' : 'COUNTER'))))}</div>
     </div>
+    
+    <div class="status-badge">${kotTableStatus}</div>
+
     <hr class="sep-solid">
-    <div class="info-row"><span class="bold">KOT No:</span><span class="bold">${kotData.kot_number}</span></div>
-    ${(previousItems && previousItems.length > 0) ? `<div class="info-row"><span class="bold">Status:</span><span class="bold">RUNNING TABLE</span></div>` : ''}
-    <div class="info-row"><span>Bill#</span><span>${billNumber}</span></div>
-    <div class="info-row"><span>Date</span><span>${new Date(kotData.created_at || Date.now()).toLocaleString('en-IN', { hour12: true })}</span></div>
+    <div class="info-row"><span class="bold">Company:</span><span class="bold">${resData.company_name || resData.name || 'RESTAURANT'}</span></div>
+    <div class="info-row"><span class="bold">Table No:</span><span class="bold">${tableNo || 'N/A'}</span></div>
+    <div class="info-row"><span class="bold">KOT Status:</span><span class="bold">${kotTableStatus}</span></div>
+    <div class="info-row"><span class="bold">KOT No:</span><span class="bold">${kotData.kot_number || '1'}</span></div>
+    <div class="info-row"><span>Bill No:</span><span>${billNumber || 'N/A'}</span></div>
+    <div class="info-row"><span>Date & Time:</span><span>${new Date(kotData.created_at || Date.now()).toLocaleString('en-IN', { hour12: true })}</span></div>
     <hr class="sep-solid">
     <table>
         <thead>
-            <tr>
-                <th style="text-align:left; font-size:11px; padding-bottom:3px;">ITEM NAME</th>
-                <th style="text-align:right; font-size:11px; padding-bottom:3px;">QUANTITY</th>
+            <tr style="border-bottom: 1px solid #000;">
+                <th style="text-align:left; font-size:11px; padding-bottom:4px;">ITEM NAME</th>
+                <th style="text-align:right; font-size:11px; padding-bottom:4px;">QTY</th>
             </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -1409,7 +1493,7 @@ const BillingPage = () => {
         const allKotsHtml = billData.kots.map(kot => {
             const rowsHtml = kot.items.map(item => `
                 <tr>
-                    <td class="item-name">${item.name}</td>
+                    <td class="item-name">${item.name}${item.notes ? ` (${item.notes})` : ''}</td>
                     <td class="item-qty">x${item.quantity}</td>
                 </tr>
             `).join('');
@@ -1770,6 +1854,7 @@ const BillingPage = () => {
         setShowSplitForm(false);
         setShowLoyaltyForm(false);
         setShowMoreForm(false);
+        setShowMorePopup(false);
         setShowCouponForm(false);
         setAppliedCoupon(null);
         setCouponNumber('');
@@ -2083,6 +2168,39 @@ const BillingPage = () => {
                                         <span className="slider round"></span>
                                     </label>
                                 </div>
+                                <div className="settings-option">
+                                    <span>Direct Quantity Editing</span>
+                                    <label className="switch">
+                                        <input type="checkbox" checked={directQtyEditing} onChange={() => {
+                                            const next = !directQtyEditing;
+                                            setDirectQtyEditing(next);
+                                            localStorage.setItem('pos_direct_qty_editing', String(next));
+                                        }} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                                <div className="settings-option">
+                                    <span>Show Bill Number</span>
+                                    <label className="switch">
+                                        <input type="checkbox" checked={showBillNumber} onChange={() => {
+                                            const next = !showBillNumber;
+                                            setShowBillNumber(next);
+                                            localStorage.setItem('pos_show_bill_no', String(next));
+                                        }} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                                <div className="settings-option">
+                                    <span>Show KOT Number</span>
+                                    <label className="switch">
+                                        <input type="checkbox" checked={showKotNumber} onChange={() => {
+                                            const next = !showKotNumber;
+                                            setShowKotNumber(next);
+                                            localStorage.setItem('pos_show_kot_no', String(next));
+                                        }} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
 
 
                             </div>
@@ -2354,7 +2472,7 @@ const BillingPage = () => {
 
                 {/* 3. Bill Panel (Right) */}
                 <div className="bill-sidebar">
-                    {/* Meta Icons row from reference image */}
+                    {/* Meta Icons row */}
                     <div className="sidebar-meta-icons">
                         <div className="meta-icon-btn active" style={{ cursor: 'default', pointerEvents: 'none' }}>
                             <div className="icon-bg"><TableLogo size={18} /></div>
@@ -2362,11 +2480,18 @@ const BillingPage = () => {
                                 {tableNo || 'TABLE'}
                             </span>
                         </div>
-                        <div className="meta-icon-btn active" style={{ cursor: 'default', pointerEvents: 'none' }}>
-                            <div className="icon-bg"><Users size={18} /></div>
-                            <span style={{ color: persons ? '#ea580c' : 'inherit', fontWeight: persons ? 900 : 'normal' }}>
-                                {persons ? `${persons} PAX` : 'PERSONS'}
-                            </span>
+                        <div ref={customerFormRef} style={{ display: 'inline-block', position: 'relative' }}>
+                            <button
+                                type="button"
+                                className={`meta-icon-btn ${showCustomerForm ? 'active' : ''}`}
+                                onClick={() => setShowCustomerForm(!showCustomerForm)}
+                                title="Customer Creation"
+                            >
+                                <div className="icon-bg"><UserPlus size={18} /></div>
+                                <span style={{ color: (customerName || customerPhone) ? '#ea580c' : 'inherit', fontWeight: (customerName || customerPhone) ? 900 : 'normal' }}>
+                                    {customerName ? customerName : 'CUSTOMER'}
+                                </span>
+                            </button>
                         </div>
                         <button className={`meta-icon-btn ${showAlterForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('ALTER')}>
                             <div className="icon-bg"><Edit size={18} /></div>
@@ -2382,29 +2507,47 @@ const BillingPage = () => {
                         </button>
                     </div>
 
-
-
-
-
-                    {/* Customer Form Section */}
+                    {/* Customer Creation Expandable Dropdown Section (Accordion / Inline Panel) */}
                     {showCustomerForm && (
-                        <div className="customer-expandable-form animate-in slide-in-from-top-2 duration-300">
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Name</label>
-                                    <input type="text" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                        <div ref={customerFormRef} className="customer-expandable-form animate-in slide-in-from-top-2 duration-300 border border-orange-200 rounded-xl p-3 bg-white shadow-md my-2">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#ea580c', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                    Customer Creation
+                                </span>
+                                <button type="button" onClick={() => setShowCustomerForm(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
+                                    ✕
+                                </button>
+                            </div>
+                            <div className="form-grid" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Customer Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Customer Name"
+                                        value={customerName}
+                                        onChange={(e) => setCustomerName(e.target.value)}
+                                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 600 }}
+                                    />
                                 </div>
-                                <div className="form-group">
-                                    <label>Phone</label>
-                                    <input type="text" placeholder="Phone Number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Mobile Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Mobile Number"
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 600 }}
+                                    />
                                 </div>
-                                <div className="form-group">
-                                    <label>Address</label>
-                                    <textarea rows="1" placeholder="Address" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} style={{ minHeight: '38px' }}></textarea>
-                                </div>
-                                <div className="form-group">
-                                    <label>GST Number</label>
-                                    <input type="text" placeholder="GSTIN" value={customerGst} onChange={(e) => setCustomerGst(e.target.value)} />
+                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>GST Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder="GST Number"
+                                        value={customerGst}
+                                        onChange={(e) => setCustomerGst(e.target.value)}
+                                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 600 }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -2674,7 +2817,57 @@ const BillingPage = () => {
                         </div>
                     )}
 
-                    {/* Item List */}
+                    {/* Separate Bill Number & KOT Number Display Fields */}
+                    {(showBillNumber || showKotNumber) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+                            {showBillNumber && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, color: '#334155' }}>
+                                    <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bill No:</span>
+                                    <span style={{ color: billNumber && !billNumber.startsWith('TEMP-') ? '#0284c7' : '#94a3b8' }}>
+                                        {billNumber && !billNumber.startsWith('TEMP-') ? billNumber : 'Pending'}
+                                    </span>
+                                </div>
+                            )}
+                            {showKotNumber && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, color: '#c2410c' }}>
+                                    <span style={{ color: '#ea580c', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>KOT No:</span>
+                                    <span>
+                                        {billSearchKots && billSearchKots.length > 0 ? billSearchKots[billSearchKots.length - 1].kot_number : (billItems.length > 0 || previousItems.length > 0 ? '1' : 'New')}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Item List Header with Total Bill Complimentary Toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Order Items ({billItems.length})
+                        </span>
+                        {billItems.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={toggleFullBillComplimentary}
+                                style={{
+                                    fontSize: '10px',
+                                    fontWeight: 900,
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    border: billItems.every(i => i.is_complementary) ? '1px solid #d97706' : '1px solid #cbd5e1',
+                                    background: billItems.every(i => i.is_complementary) ? '#f59e0b' : '#ffffff',
+                                    color: billItems.every(i => i.is_complementary) ? '#ffffff' : '#475569',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                                title="Make Entire Bill Complimentary"
+                            >
+                                <Gift size={12} />
+                                {billItems.every(i => i.is_complementary) ? 'BILL COMPLIMENTARY (ACTIVE)' : 'BILL COMPLIMENTARY'}
+                            </button>
+                        )}
+                    </div>
                     <div className={`order-items-header ${showRateColumn ? 'with-rate' : 'no-rate'}`}>
                         <span className="col-name">ITEM</span>
                         <span className="col-qty">QTY</span>
@@ -2713,15 +2906,19 @@ const BillingPage = () => {
                                     {showConsolidatedView ? (
                                         // CONSOLIDATED VIEW
                                         getConsolidatedItems([...previousItems, ...billItems]).map((item, idx) => (
-                                            <div key={`cons-${idx}`} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#f8fafc', borderLeft: '3px solid #6366f1' }}>
+                                            <div key={`cons-${idx}`} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff', borderLeft: '3px solid #e2e8f0' }}>
                                                 <div className="item-name-cell">
-                                                    <div className="item-name-wrap">
-                                                        <span style={{ color: '#475569' }}>{item.name}</span>
-                                                        {item.notes && (
-                                                            <div className="text-[10px] text-emerald-600 font-bold italic mt-0.5">
-                                                                * {item.notes}
-                                                            </div>
-                                                        )}
+                                                    <div
+                                                        className="cursor-pointer hover:text-orange-600 transition-colors flex-1"
+                                                        onClick={() => {
+                                                            setNoteModalIdx(idx);
+                                                            setTempNote(item.notes || '');
+                                                        }}
+                                                        title="Click item to add/edit remarks"
+                                                    >
+                                                        <span style={{ fontWeight: 700, color: '#1e293b' }}>
+                                                            {item.name} {item.notes ? <span style={{ color: '#ea580c', fontWeight: 800, fontSize: '11px', marginLeft: '4px' }}>({item.notes})</span> : ''}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="item-qty-cell" style={{ justifyContent: 'center' }}>
@@ -2754,52 +2951,94 @@ const BillingPage = () => {
 
                                             {/* NEW ITEMS (Unsaved KOT) */}
                                     {billItems.map((item, idx) => (
-                                        <div key={idx} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`}>
+                                        <div key={idx} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff' }}>
                                             <div className="item-name-cell">
-                                                <div className="item-name-wrap flex items-center justify-between w-full">
-                                                    <div
-                                                        className="cursor-pointer hover:text-indigo-600 transition-colors flex-1"
-                                                        onClick={() => {
-                                                            setNoteModalIdx(idx);
-                                                            setTempNote(item.notes || '');
-                                                        }}
-                                                    >
-                                                        <span>{item.name}</span>
-                                                        {item.notes && (
-                                                            <div className="text-[10px] text-emerald-600 font-bold italic mt-0.5 animate-in fade-in slide-in-from-left-1">
-                                                                * {item.notes}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setNoteModalIdx(idx);
-                                                            setTempNote(item.notes || '');
-                                                        }}
-                                                        className="text-[9px] bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 font-bold px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap ml-1 transition-colors"
-                                                        title="Add Remarks"
-                                                    >
-                                                        + REMARK
-                                                    </button>
+                                                <div
+                                                    className="cursor-pointer hover:text-orange-600 transition-colors flex-1"
+                                                    onClick={() => {
+                                                        setNoteModalIdx(idx);
+                                                        setTempNote(item.notes || '');
+                                                    }}
+                                                    title="Click item to add/edit remarks"
+                                                >
+                                                    <span style={{ fontWeight: 700, color: '#1e293b' }}>
+                                                        {item.name} {item.notes ? <span style={{ color: '#ea580c', fontWeight: 800, fontSize: '11px', marginLeft: '4px' }}>({item.notes})</span> : ''}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="item-qty-cell">
-                                                {orderMode === 'PARTY_ORDER' ? (
+                                            <div className="item-qty-cell" style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQtyChange(idx, -1)}
+                                                    style={{
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid #cbd5e1',
+                                                        background: '#ffffff',
+                                                        color: '#475569',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    title="Decrease Quantity"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                {directQtyEditing ? (
                                                     <input
                                                         type="number"
+                                                        min="1"
                                                         value={item.quantity}
-                                                        onChange={e => updateItemQtyDirect(idx, e.target.value)}
-                                                        style={{ width: '45px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px', fontSize: '12px', fontWeight: 800 }}
+                                                        onChange={(e) => handleDirectQtyChange(idx, e.target.value)}
+                                                        style={{
+                                                            width: '46px',
+                                                            height: '24px',
+                                                            textAlign: 'center',
+                                                            border: '1px solid #cbd5e1',
+                                                            borderRadius: '4px',
+                                                            padding: '0 2px',
+                                                            fontSize: '12px',
+                                                            fontWeight: 800,
+                                                            color: '#1e293b',
+                                                            background: '#f8fafc',
+                                                            outline: 'none'
+                                                        }}
+                                                        title="Type quantity directly"
                                                     />
                                                 ) : (
-                                                    <>
-                                                        <button onClick={() => updateItemQuantity(item.product_id, -1)}><Minus size={12} /></button>
-                                                        <span>{item.quantity}</span>
-                                                        <button onClick={() => updateItemQuantity(item.product_id, 1)}><Plus size={12} /></button>
-                                                    </>
+                                                    <span
+                                                        style={{
+                                                            minWidth: '28px',
+                                                            textAlign: 'center',
+                                                            fontWeight: 800,
+                                                            fontSize: '12px',
+                                                            color: '#1e293b'
+                                                        }}
+                                                    >
+                                                        {item.quantity}
+                                                    </span>
                                                 )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQtyChange(idx, 1)}
+                                                    style={{
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid #cbd5e1',
+                                                        background: '#ffffff',
+                                                        color: '#475569',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    title="Increase Quantity"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
                                             </div>
                                             {showRateColumn && (
                                                 <div className="item-rate">
@@ -2816,38 +3055,36 @@ const BillingPage = () => {
                                                 </div>
                                             )}
                                             <div className="item-amt">{item.is_complementary ? 0 : item.total_price}</div>
-                                            <div className="item-actions-cell">
-                                                <button className="remove-btn" onClick={() => removeFromBill(idx)} title="Remove Item"><Trash2 size={14} /></button>
-                                                {activeItemActions === idx && (
-                                                    <div className="extra-actions-layer">
-                                                        <button className="row-action-btn" onClick={() => handleTransferItem(idx)} title="Transfer Item"><ArrowLeftRight size={14} /></button>
-                                                        <button className="row-action-btn" onClick={() => handleReturnItem(idx)} title="Return Item"><Undo2 size={14} /></button>
-                                                        <button
-                                                            className="row-action-btn"
-                                                            onClick={() => {
-                                                                setNoteModalIdx(idx);
-                                                                setTempNote(item.notes || '');
-                                                                setActiveItemActions(null);
-                                                            }}
-                                                            title="Add Notes/Instructions"
-                                                        >
-                                                            <Edit size={14} />
-                                                        </button>
-                                                        <button
-                                                            className={`comp-toggle-sm ${item.is_complementary ? 'active' : ''}`}
-                                                            onClick={() => toggleComplementary(idx)}
-                                                            title="Complementary"
-                                                        >
-                                                            <Gift size={14} />
-                                                        </button>
-                                                    </div>
-                                                )}
+                                            <div className="item-actions-cell" style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
                                                 <button
-                                                    className={`item-action-toggle ${activeItemActions === idx ? 'active' : ''}`}
-                                                    onClick={() => setActiveItemActions(activeItemActions === idx ? null : idx)}
-                                                    title="Action Toggle"
+                                                    type="button"
+                                                    onClick={() => toggleComplementary(idx)}
+                                                    title={item.is_complementary ? "Complementary Active" : "Make Item Complementary"}
+                                                    style={{
+                                                        padding: '4px 6px',
+                                                        borderRadius: '6px',
+                                                        border: 'none',
+                                                        background: item.is_complementary ? '#f59e0b' : '#f1f5f9',
+                                                        color: item.is_complementary ? '#fff' : '#64748b',
+                                                        cursor: 'pointer'
+                                                    }}
                                                 >
-                                                    <MoreHorizontal size={14} />
+                                                    <Gift size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeFromBill(idx)}
+                                                    title="Delete Item"
+                                                    style={{
+                                                        padding: '4px 6px',
+                                                        borderRadius: '6px',
+                                                        border: 'none',
+                                                        background: '#fef2f2',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </div>
@@ -2862,7 +3099,7 @@ const BillingPage = () => {
                         <div className="order-summary-scrollable">
                             <div className="summary-section">
                                 {showMoreForm && (
-                                    <div className={`collapsible-summary-area animate-in fade-in slide-in-from-top-2 duration-300`}>
+                                    <div className={`collapsible-summary-area`}>
                                         <div className="sum-row" style={{ padding: '5px 0', borderBottom: '1px dashed #e2e8f0' }}>
                                             <span>Subtotal ({billItems.length} items)</span>
                                             <span className="mono">₹{subTotal.toFixed(2)}</span>
@@ -3051,46 +3288,207 @@ const BillingPage = () => {
                         </div>
                     </div>
 
-                    <div className="order-footer-fixed">
-                        {/* Top Control Buttons moved above summary */}
-                        <div className="billing-actions-panel">
-                            <div className="panel-controls">
-                                {loyaltyUnlocked && loyaltyEnabled && (
-                                    <button className={`control-btn ${showLoyaltyForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('LOYALTY')}>
-                                        <Gift size={15} /> Loyalty
-                                    </button>
-                                )}
-                                {couponUnlocked && couponEnabled && (
-                                    <button className={`control-btn ${showCouponForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('COUPON')}>
-                                        <Ticket size={15} /> COUPON
-                                    </button>
-                                )}
-                                <button className={`control-btn ${showMoreForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('MORE')}>
-                                    <MoreHorizontal size={15} /> More
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="summary-section" style={{ padding: '12px 8px', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', marginBottom: '12px', marginTop: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="order-footer-fixed relative">
+                        <div className="summary-section" style={{ padding: '10px 12px', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', marginBottom: '8px', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL PAYABLE</span>
-                                        <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '900', letterSpacing: '0.5px' }}>
+                                        <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '900' }}>
                                             {previousItems.reduce((sum, item) => sum + item.quantity, 0) + billItems.reduce((sum, item) => sum + item.quantity, 0)} QTY
                                         </span>
                                     </div>
                                     {orderMode === 'PARTY_ORDER' && partyData?.advance_paid > 0 && (
-                                        <span style={{ fontSize: '10px', color: '#f97316', fontWeight: 'bold', marginTop: '4px' }}>
+                                        <span style={{ fontSize: '10px', color: '#f97316', fontWeight: 'bold', marginTop: '2px' }}>
                                             (Total: ₹{grandTotal.toFixed(2)} - Adv: ₹{partyData.advance_paid.toFixed(2)})
                                         </span>
                                     )}
                                 </div>
-                                <span style={{ fontSize: '24px', fontWeight: '900', color: '#ea580c', letterSpacing: '-0.5px' }}>₹{(orderMode === 'PARTY_ORDER' ? Math.max(0, grandTotal - (partyData?.advance_paid || 0)) : grandTotal).toFixed(2)}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '22px', fontWeight: '900', color: '#ea580c', letterSpacing: '-0.5px' }}>₹{(orderMode === 'PARTY_ORDER' ? Math.max(0, grandTotal - (partyData?.advance_paid || 0)) : grandTotal).toFixed(2)}</span>
+
+                                    {/* More (⋮) Icon Button with Expandable Popup Panel */}
+                                    <div ref={morePanelRef} style={{ position: 'relative', display: 'inline-block' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => { const next = !showMoreForm; setShowMoreForm(next); setShowMorePopup(next); }}
+                                            title="More Options (Discount, Coupon, Loyalty)"
+                                            style={{
+                                                padding: '8px 10px',
+                                                borderRadius: '10px',
+                                                border: showMoreForm ? '2px solid #ea580c' : '1.5px solid #cbd5e1',
+                                                background: showMoreForm ? '#ea580c' : '#f8fafc',
+                                                color: showMoreForm ? '#ffffff' : '#334155',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxShadow: showMoreForm ? '0 4px 12px rgba(234,88,12,0.3)' : '0 2px 4px rgba(0,0,0,0.04)',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <MoreVertical size={18} />
+                                        </button>
+
+                                        {/* Expandable Popup Panel (Opens above More button) */}
+                                        {showMorePopup && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: 'calc(100% + 8px)',
+                                                right: 0,
+                                                width: '310px',
+                                                background: '#ffffff',
+                                                border: '1.5px solid #cbd5e1',
+                                                borderRadius: '16px',
+                                                boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
+                                                padding: '14px',
+                                                zIndex: 999,
+                                                color: '#1e293b'
+                                            }} className="animate-in zoom-in-95 duration-200">
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', marginBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <SlidersHorizontal size={15} color="#ea580c" /> More Options
+                                                    </span>
+                                                    <button type="button" onClick={() => setShowMorePopup(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>✕</button>
+                                                </div>
+
+                                                {/* 1. DISCOUNT SECTION */}
+                                                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Discount</label>
+                                                        <div style={{ display: 'flex', background: '#fff', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '2px' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDiscountType('PERCENT')}
+                                                                style={{
+                                                                    padding: '2px 6px', fontSize: '10px', fontWeight: 800, borderRadius: '4px', border: 'none', cursor: 'pointer',
+                                                                    background: discountType === 'PERCENT' ? '#ea580c' : 'none',
+                                                                    color: discountType === 'PERCENT' ? '#fff' : '#64748b'
+                                                                }}
+                                                            >
+                                                                % (Percent)
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDiscountType('FIXED')}
+                                                                style={{
+                                                                    padding: '2px 6px', fontSize: '10px', fontWeight: 800, borderRadius: '4px', border: 'none', cursor: 'pointer',
+                                                                    background: discountType === 'FIXED' ? '#ea580c' : 'none',
+                                                                    color: discountType === 'FIXED' ? '#fff' : '#64748b'
+                                                                }}
+                                                            >
+                                                                ₹ (Amount)
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ position: 'relative', flex: 1 }}>
+                                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>
+                                                                {discountType === 'PERCENT' ? '%' : '₹'}
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Discount value"
+                                                                value={discount}
+                                                                onChange={(e) => setDiscount(e.target.value)}
+                                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 700 }}
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#ea580c', minWidth: '65px', textAlign: 'right' }}>
+                                                            - ₹{billCalculations.discountAmount.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 2. COUPON SECTION (Show ONLY IF couponEnabled is true) */}
+                                                {couponEnabled && (
+                                                    <div style={{ background: '#f5f3ff', padding: '10px', borderRadius: '12px', border: '1px solid #ddd6fe', marginBottom: '10px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#5b21b6', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                                                            <Ticket size={12} color="#7c3aed" /> Apply Coupon
+                                                        </label>
+                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            <select
+                                                                value={couponSearchName}
+                                                                onChange={(e) => setCouponSearchName(e.target.value)}
+                                                                style={{ flex: 1, padding: '5px 8px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', outline: 'none', background: '#fff', fontWeight: 700 }}
+                                                            >
+                                                                <option value="">Select Coupon</option>
+                                                                {availableCoupons.map(c => (
+                                                                    <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
+                                                                ))}
+                                                            </select>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="No."
+                                                                value={couponNumber}
+                                                                onChange={(e) => setCouponNumber(e.target.value)}
+                                                                style={{ width: '50px', padding: '5px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', outline: 'none', background: '#fff', fontWeight: 700 }}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleApplyCoupon}
+                                                                style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 900, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                                            >
+                                                                APPLY
+                                                            </button>
+                                                        </div>
+                                                        {appliedCoupon && (
+                                                            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#166534' }}>
+                                                                <span>Coupon: {appliedCoupon.coupon_name} (-₹{couponDiscount.toFixed(2)})</span>
+                                                                <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* 3. LOYALTY SECTION (Show ONLY IF loyaltyEnabled is true) */}
+                                                {loyaltyEnabled && (
+                                                    <div style={{ background: '#fffbeb', padding: '10px', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                            <label style={{ fontSize: '10px', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Gift size={12} color="#d97706" /> Loyalty Points
+                                                            </label>
+                                                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#b45309' }}>{customerPoints} Pts Available</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Points to redeem"
+                                                                value={redeemPointsInput}
+                                                                onChange={(e) => setRedeemPointsInput(e.target.value)}
+                                                                disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                                                style={{ flex: 1, padding: '5px 8px', fontSize: '11px', borderRadius: '6px', border: '1px solid #fcd34d', outline: 'none', background: '#fff', fontWeight: 700 }}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const pts = parseInt(redeemPointsInput);
+                                                                    if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
+                                                                    if (pts > customerPoints) return alert('Insufficient points');
+                                                                    if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
+                                                                    setLoyaltyRedeemedPoints(pts);
+                                                                    setRedeemPointsInput('');
+                                                                }}
+                                                                disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                                                style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 900, background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                                            >
+                                                                REDEEM
+                                                            </button>
+                                                        </div>
+                                                        {loyaltyRedeemedPoints > 0 && (
+                                                            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#92400e' }}>
+                                                                <span>Redeemed {loyaltyRedeemedPoints} Pts (-₹{loyaltyDiscount.toFixed(2)})</span>
+                                                                <button type="button" onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-
 
                         {/* Integrated Sidebar Payment Flow */}
                         {stepProceeded && (
@@ -3294,11 +3692,12 @@ const BillingPage = () => {
                             </div>
 
                             <div className="flex gap-2 p-1 overflow-x-auto pb-2 scrollbar-none">
-                                {['Spicy', 'Less Oil', 'Sugar Free', 'Creamy', 'No Onions', 'Extra Hot'].map(suggest => (
+                                {['Less Spicy', 'No Onion', 'Extra Cheese', 'Spicy', 'Less Oil', 'Sugar Free', 'Parcel', 'Jain'].map(suggest => (
                                     <button
                                         key={suggest}
+                                        type="button"
                                         onClick={() => setTempNote(suggest)}
-                                        className="whitespace-nowrap px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all"
+                                        className="whitespace-nowrap px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black text-slate-600 hover:bg-orange-600 hover:text-white hover:border-orange-600 transition-all cursor-pointer"
                                     >
                                         {suggest}
                                     </button>

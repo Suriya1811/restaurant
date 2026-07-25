@@ -90,51 +90,52 @@ const KotPrintTemplate = ({
         <div id="kot-print-content" style={{ display: 'none' }}>
             <div className="kot-header">
                 <h2>{restaurantName || 'RESTAURANT'}</h2>
-                {restaurantAddress && <p>{restaurantAddress}</p>}
-                {restaurantPhone && <p>Ph: {restaurantPhone}</p>}
-                {fssaiNo && <p>FSSAI: {fssaiNo}</p>}
-                {gstinNo && <p>GSTIN: {gstinNo}</p>}
-                <p><strong>{tableType || 'TABLE'}</strong></p>
+                {tableNo && (
+                    <div style={{ fontSize: '15px', fontWeight: 900, marginTop: '4px' }}>
+                        TABLE {tableNo}
+                    </div>
+                )}
             </div>
 
-            {kotStatus && (
-                <div className="kot-status-banner">
-                    {kotStatus}
-                </div>
-            )}
+            <div className="kot-status-banner" style={{ background: '#000', color: '#fff', padding: '4px', fontWeight: 900, fontSize: '13px', textAlign: 'center', marginBottom: '8px' }}>
+                {kotStatus || 'NEW TABLE'}
+            </div>
 
             <div className="kot-meta">
+                <p><strong>Company:</strong> {restaurantName || 'RESTAURANT'}</p>
+                <p><strong>Table No:</strong> {tableNo || 'N/A'}</p>
+                <p><strong>Status:</strong> {kotStatus || 'NEW TABLE'}</p>
                 <p><strong>KOT No:</strong> {kotNumber}</p>
-                <p><strong>Table No:</strong> {tableNo}</p>
-                <p><strong>Date & Time:</strong> {new Date(date || Date.now()).toLocaleString()}</p>
+                <p><strong>Date & Time:</strong> {new Date(date || Date.now()).toLocaleString('en-IN', { hour12: true })}</p>
             </div>
 
             <table className="kot-table">
                 <thead>
                     <tr>
-                        <th style={{ width: '80%' }}>Item Name</th>
-                        <th style={{ width: '20%', textAlign: 'center' }}>Qty</th>
+                        <th style={{ width: '75%', textAlign: 'left' }}>Item Name</th>
+                        <th style={{ width: '25%', textAlign: 'right' }}>Qty</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {items.map((item, idx) => (
-                        <tr key={idx} style={{ verticalAlign: 'top' }}>
-                            <td>
-                                <div>{item.name}</div>
-                                {item.remarks && (
-                                    <span className="item-remark">({item.remarks})</span>
-                                )}
-                            </td>
-                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                                {item.quantity}
-                            </td>
-                        </tr>
-                    ))}
+                    {items.map((item, idx) => {
+                        const remarkText = item.remarks || item.notes || item.remark;
+                        return (
+                            <tr key={idx} style={{ verticalAlign: 'top' }}>
+                                <td style={{ padding: '4px 0', fontWeight: 700 }}>
+                                    {item.name || item.item_name}
+                                    {remarkText ? ` (${remarkText})` : ''}
+                                </td>
+                                <td style={{ textAlign: 'right', fontWeight: 900, padding: '4px 0' }}>
+                                    {item.quantity}
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
             
-            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px' }}>
-                *** KOT END ***
+            <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '11px', fontWeight: 900 }}>
+                *** KITCHEN KOT END ***
             </div>
         </div>
     );

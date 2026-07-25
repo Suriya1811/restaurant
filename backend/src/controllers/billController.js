@@ -260,23 +260,29 @@ exports.processPayment = async (req, res) => {
         }
 
         // Calculate total paid from all payment modes
+        const isCreditSale = req.body.payment_type === 'CREDIT' || req.body.payment_mode === 'CREDIT' || (payment_modes && payment_modes.some(pm => pm.type === 'CREDIT'));
+
         let totalPaid = 0;
-        for (const payment of payment_modes) {
-            if (!payment.type || !['CASH', 'UPI', 'CARD', 'ONLINE', 'SPLIT'].includes(payment.type)) {
-                return res.status(400).json({ success: false, error: 'Invalid payment type. Must be CASH, UPI, CARD, ONLINE, or SPLIT' });
+        if (payment_modes && Array.isArray(payment_modes)) {
+            for (const payment of payment_modes) {
+                if (!payment.type || !['CASH', 'UPI', 'CARD', 'ONLINE', 'SPLIT', 'CREDIT'].includes(payment.type)) {
+                    return res.status(400).json({ success: false, error: 'Invalid payment type. Must be CASH, UPI, CARD, ONLINE, SPLIT, or CREDIT' });
+                }
+                if (typeof payment.amount !== 'number' || payment.amount < 0) {
+                    return res.status(400).json({ success: false, error: 'Payment amount must be a number' });
+                }
+                if (payment.type !== 'CREDIT') {
+                    totalPaid += payment.amount;
+                }
             }
-            if (typeof payment.amount !== 'number' || payment.amount < 0) {
-                return res.status(400).json({ success: false, error: 'Payment amount must be a number' });
-            }
-            totalPaid += payment.amount;
         }
 
         // Final totals (prefer values from frontend but fallback to bill values)
         const finalGrandTotal = grand_total !== undefined ? grand_total : bill.grand_total;
 
-        // Balance check: if not partial, must cover full amount
-        if (!is_partial && totalPaid < (finalGrandTotal - 0.1)) {
-            return res.status(400).json({ success: false, error: 'Total payment amount is less than bill amount. Use partial payment mode for advances.' });
+        // Balance check: if not partial and not credit sale, must cover full amount
+        if (!is_partial && !isCreditSale && totalPaid < (finalGrandTotal - 0.1)) {
+            return res.status(400).json({ success: false, error: 'Total payment amount is less than bill amount. Select Credit for credit sales.' });
         }
 
         // Generate final sequential bill number if not already generated
@@ -286,7 +292,20 @@ exports.processPayment = async (req, res) => {
         }
 
         // Update bill status and final financial values
-        bill.status = is_partial ? 'ADVANCE' : 'PAID';
+        if (isCreditSale) {
+            bill.status = totalPaid > 0 ? 'PARTIAL' : 'CREDIT';
+            bill.payment_mode = 'CREDIT';
+            bill.due_amount = Math.max(0, finalGrandTotal - totalPaid);
+        } else {
+            bill.status = is_partial ? 'ADVANCE' : 'PAID';
+            if (payment_modes.length === 1) {
+                bill.payment_mode = payment_modes[0].type;
+            } else {
+                bill.payment_mode = 'SPLIT';
+            }
+            bill.due_amount = Math.max(0, finalGrandTotal - totalPaid);
+        }
+
         bill.payment_modes = payment_modes;
         bill.total_paid = totalPaid;
         bill.sub_total = sub_total !== undefined ? sub_total : bill.sub_total;
@@ -304,12 +323,6 @@ exports.processPayment = async (req, res) => {
         bill.delivery_date = delivery_date;
         bill.delivery_time = delivery_time;
         bill.delivery_address = delivery_address;
-
-        if (payment_modes.length === 1) {
-            bill.payment_mode = payment_modes[0].type;
-        } else {
-            bill.payment_mode = 'SPLIT';
-        }
 
         const cashPayment = payment_modes.find(pm => pm.type === 'CASH');
         bill.payment_details = bill.payment_details || {};
@@ -377,7 +390,7 @@ exports.processPayment = async (req, res) => {
                 // 2. Debit Payment Method Ledgers for amount actually paid
                 let defaultBankL = null;
                 for (const pm of payment_modes) {
-                    if (pm.amount <= 0) continue;
+                    if (pm.amount <= 0 || pm.type === 'CREDIT') continue;
 
                     let payL = null;
                     if (pm.ledger_id) {
@@ -424,9 +437,29 @@ exports.processPayment = async (req, res) => {
                     }
                 }
 
-                // 3. If Partial Payment, Debit Customer Ledger for the balance
+                // 3. Debit Customer Ledger & update Customer Party Balance for credit/due balance
                 const balance = bill.grand_total - totalPaid;
                 if (balance > 0.01) {
+                    let customerDoc = null;
+                    if (bill.customer_phone) {
+                        customerDoc = await Customer.findOne({ company_id: coId, phone: bill.customer_phone });
+                    }
+                    if (!customerDoc && bill.customer_name) {
+                        customerDoc = await Customer.findOne({ company_id: coId, name: bill.customer_name });
+                    }
+                    if (!customerDoc && (bill.customer_name || bill.customer_phone)) {
+                        customerDoc = await Customer.create({
+                            company_id: coId,
+                            name: bill.customer_name || 'Walk-in Customer',
+                            phone: bill.customer_phone || '',
+                            opening_balance: 0
+                        });
+                    }
+                    if (customerDoc) {
+                        customerDoc.opening_balance = (customerDoc.opening_balance || 0) + balance;
+                        await customerDoc.save();
+                    }
+
                     let custL = null;
                     if (bill.customer_phone) {
                         custL = await Ledger.findOne({ company_id: coId, phone: bill.customer_phone, party_type: 'CUSTOMER' });
@@ -446,7 +479,7 @@ exports.processPayment = async (req, res) => {
                         await AccountTransaction.create({
                             company_id: coId, ledger_id: custL._id, type: 'DEBIT', amount: balance,
                             voucher_type: 'SALES', voucher_number: bill.bill_number, reference_id: bill._id,
-                            narration: `Outstanding Balance - Bill ${bill.bill_number}`, date: new Date()
+                            narration: `Credit Sale / Outstanding - Bill ${bill.bill_number}`, date: new Date()
                         });
                         await Ledger.findByIdAndUpdate(custL._id, { $inc: { opening_balance: balance } });
                     }
@@ -689,13 +722,8 @@ exports.getAllBills = async (req, res) => {
             query.delivery_date = { $gte: today };
         }
 
-        if (status) {
-            if (status !== 'ALL') {
-                query.status = status;
-            }
-        } else if (!search && !type) {
-            // Default to PAID if no status/type/search is explicitly specified
-            query.status = 'PAID';
+        if (status && status !== 'ALL') {
+            query.status = status;
         }
 
         if (type && type !== 'ALL') {

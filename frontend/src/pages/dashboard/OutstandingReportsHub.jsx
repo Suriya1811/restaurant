@@ -153,34 +153,39 @@ const OutstandingReportsHub = ({ defaultTab, isEmbedded = false }) => {
             const result = await res.json();
 
             if (result.success && Array.isArray(result.data)) {
-                if (result.data.length > 0) {
-                    if (activeTab === 'customer' || activeTab === 'supplier') {
-                        const mapped = result.data.map((item, idx) => ({
-                            id: item.id || item.ledger_id || idx + 1,
-                            name: item.name,
-                            pay_in: item.pay_in !== undefined ? item.pay_in : (item.balance || 0),
-                            pay_out: item.pay_out !== undefined ? item.pay_out : 0,
-                            mobile: item.mobile || item.phone || item.contact || '-'
-                        }));
-                        setData(mapped);
-                    } else {
-                        const mapped = result.data.map((item, idx) => ({
-                            id: item.id || idx + 1,
-                            name: item.name || item.entity,
-                            cell: item.cell || item.phone || '-',
-                            bill_number: item.bill_number || item.reference || `BIL-100${idx + 1}`,
-                            date: item.date ? (typeof item.date === 'string' && item.date.includes('/') ? item.date : new Date(item.date).toLocaleDateString('en-GB')) : '-',
-                            total_days: item.total_days !== undefined ? item.total_days : (item.age || 0),
-                            pending_amount: item.pending_amount !== undefined ? item.pending_amount : (item.amount || 0),
-                            days_1_15: item.days_1_15 || 0,
-                            days_16_30: item.days_16_30 || 0,
-                            days_31_60: item.days_31_60 || 0,
-                            above_60: item.above_60 || 0
-                        }));
-                        setData(mapped);
-                    }
+                if (activeTab === 'customer' || activeTab === 'supplier') {
+                    const mapped = result.data.map((item, idx) => ({
+                        id: item.id || item.ledger_id || idx + 1,
+                        name: item.name || 'Unknown',
+                        pay_in: parseFloat(item.pay_in) || 0,
+                        pay_out: parseFloat(item.pay_out) || 0,
+                        mobile: item.mobile || item.phone || item.contact || '-'
+                    }));
+                    setData(mapped);
                 } else {
-                    setData([]);
+                    const formatDateForDisplay = (dateStr) => {
+                        if (!dateStr) return '-';
+                        if (typeof dateStr === 'string' && dateStr.includes('/')) return dateStr;
+                        const cleanStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : '';
+                        const parts = cleanStr.split('-');
+                        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        return new Date(dateStr).toLocaleDateString('en-GB');
+                    };
+
+                    const mapped = result.data.map((item, idx) => ({
+                        id: item.id || idx + 1,
+                        name: item.name || item.entity || 'Unknown',
+                        cell: item.cell || item.phone || '-',
+                        bill_number: item.bill_number || item.reference || `BIL-${1000 + idx}`,
+                        date: formatDateForDisplay(item.date),
+                        total_days: item.total_days !== undefined ? item.total_days : (item.age || 0),
+                        pending_amount: parseFloat(item.pending_amount) || 0,
+                        days_1_15: parseFloat(item.days_1_15) || 0,
+                        days_16_30: parseFloat(item.days_16_30) || 0,
+                        days_31_60: parseFloat(item.days_31_60) || 0,
+                        above_60: parseFloat(item.above_60) || 0
+                    }));
+                    setData(mapped);
                 }
             } else {
                 setData([]);
@@ -369,86 +374,86 @@ const OutstandingReportsHub = ({ defaultTab, isEmbedded = false }) => {
         <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] p-3 sm:p-4 lg:p-6 overflow-hidden">
 
             {/* ── FILTER & DATE BAR ─────────────────────────────────────── */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between gap-2 mb-4 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-sm overflow-x-auto custom-scrollbar lg:overflow-visible">
                 {/* FILTER TABS */}
-                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1 lg:pb-0">
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-nowrap">
                     {/* CUSTOMER TAB */}
                     <button
                         onClick={() => handleTabChange('customer')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'customer'
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'customer'
                                 ? 'bg-[#f97316] text-white border-[#f97316] shadow-sm'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                             }`}
                     >
-                        <UserCircle size={16} className={activeTab === 'customer' ? 'text-white' : 'text-slate-500'} />
+                        <UserCircle size={14} className={activeTab === 'customer' ? 'text-white' : 'text-slate-500'} />
                         Customer
                     </button>
 
                     {/* SUPPLIER TAB */}
                     <button
                         onClick={() => handleTabChange('supplier')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'supplier'
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'supplier'
                                 ? 'bg-[#f97316] text-white border-[#f97316] shadow-sm'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                             }`}
                     >
-                        <Users size={16} className={activeTab === 'supplier' ? 'text-white' : 'text-slate-500'} />
+                        <Users size={14} className={activeTab === 'supplier' ? 'text-white' : 'text-slate-500'} />
                         Supplier
                     </button>
 
                     {/* RECEIVABLE TAB */}
                     <button
                         onClick={() => handleTabChange('receivable')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'receivable'
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'receivable'
                                 ? 'bg-[#f97316] text-white border-[#f97316] shadow-sm'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                             }`}
                     >
-                        <TrendingUp size={16} className={activeTab === 'receivable' ? 'text-white' : 'text-slate-500'} />
+                        <TrendingUp size={14} className={activeTab === 'receivable' ? 'text-white' : 'text-slate-500'} />
                         Receivable
                     </button>
 
                     {/* PAYABLE TAB */}
                     <button
                         onClick={() => handleTabChange('payable')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'payable'
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all whitespace-nowrap border cursor-pointer ${activeTab === 'payable'
                                 ? 'bg-[#f97316] text-white border-[#f97316] shadow-sm'
                                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                             }`}
                     >
-                        <TrendingDown size={16} className={activeTab === 'payable' ? 'text-white' : 'text-slate-500'} />
+                        <TrendingDown size={14} className={activeTab === 'payable' ? 'text-white' : 'text-slate-500'} />
                         Payable
                     </button>
                 </div>
 
                 {/* DATE FILTERS & REFRESH BUTTON */}
-                <div className="flex items-center gap-3 flex-wrap justify-end">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">From Date</span>
+                <div className="flex items-center gap-2 flex-nowrap shrink-0">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">From</span>
                         <input
                             type="date"
                             value={fromDate}
                             onChange={(e) => setFromDate(e.target.value)}
-                            className="border border-slate-200 rounded-md px-3 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-xs"
+                            className="border border-slate-200 rounded-md px-2 py-1 text-[11px] font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-xs"
                         />
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">To Date</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">To</span>
                         <input
                             type="date"
                             value={toDate}
                             onChange={(e) => setToDate(e.target.value)}
-                            className="border border-slate-200 rounded-md px-3 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-xs"
+                            className="border border-slate-200 rounded-md px-2 py-1 text-[11px] font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-xs"
                         />
                     </div>
 
                     <button
                         onClick={fetchReportData}
                         disabled={loading}
-                        className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold text-xs rounded-md shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                        className="flex items-center gap-1 px-3 py-1 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold text-[11px] rounded-md shadow-xs transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
                     >
-                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                         Refresh
                     </button>
                 </div>

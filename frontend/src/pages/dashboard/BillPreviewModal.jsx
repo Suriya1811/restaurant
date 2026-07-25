@@ -227,7 +227,7 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
                                                 <React.Fragment key={idx}>
                                                     <tr className="tr-item">
                                                         <td className="td-name">
-                                                            <div>{item.name}</div>
+                                                            <div>{item.name}{item.notes ? ` (${item.notes})` : ''}</div>
                                                             {item.variation && <div className="td-var">({item.variation})</div>}
                                                         </td>
                                                         <td className="td-qty">{item.quantity}</td>
@@ -313,6 +313,57 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
                                         <p>Thank You For Your Order!</p>
                                         <p className="bpm-visit-again">★ VISIT AGAIN ★</p>
                                     </div>
+
+                                    {/* Category-Wise Detachable Tokens (If NORMAL_3_INCH_WITH_TOKEN format is active) */}
+                                    {(printerSettings?.print_format === 'NORMAL_3_INCH_WITH_TOKEN' || JSON.parse(localStorage.getItem('pos_printer_settings') || '{}')?.print_format === 'NORMAL_3_INCH_WITH_TOKEN') && (
+                                        <div className="bpm-tokens-section" style={{ marginTop: '15px' }}>
+                                            {Object.entries(
+                                                (billData?.items || []).reduce((acc, item) => {
+                                                    const catName = item.category_name || item.product_id?.category || item.category || 'Kitchen Orders';
+                                                    if (!acc[catName]) acc[catName] = [];
+                                                    acc[catName].push(item);
+                                                    return acc;
+                                                }, {})
+                                            ).map(([catName, catItems], catIdx) => (
+                                                <div key={catIdx} className="bpm-token-ticket" style={{ marginTop: '16px', borderTop: '2px dashed #000', paddingTop: '10px', pageBreakInside: 'avoid' }}>
+                                                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                        ✂ ----------------------------------------
+                                                    </div>
+                                                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', margin: '4px 0', color: '#000' }}>
+                                                        TOKEN — {catName}
+                                                    </div>
+                                                    <div style={{ fontSize: '10px', fontWeight: 800, display: 'flex', justifyBetween: 'space-between', marginBottom: '4px', color: '#000' }}>
+                                                        <span>TOKEN #{catIdx + 1} | BILL #{billData?.bill_number}</span>
+                                                        <span>{formatDate(billData?.createdAt)} {formatTime(billData?.createdAt)}</span>
+                                                    </div>
+                                                    {billData?.table_no && (
+                                                        <div style={{ fontSize: '10px', fontWeight: 800, marginBottom: '4px', color: '#000' }}>
+                                                            TABLE: {billData.table_no} ({billData.order_type || 'DINE IN'})
+                                                        </div>
+                                                    )}
+                                                    <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', borderTop: '1px dashed #000', borderBottom: '1px dashed #000', margin: '4px 0' }}>
+                                                        <thead>
+                                                            <tr style={{ textTransform: 'uppercase', borderBottom: '1px solid #000', color: '#000' }}>
+                                                                <th style={{ textAlign: 'left', padding: '3px 0' }}>ITEM</th>
+                                                                <th style={{ textAlign: 'right', padding: '3px 0' }}>QTY</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {catItems.map((ci, cidx) => (
+                                                                <tr key={cidx} style={{ color: '#000' }}>
+                                                                    <td style={{ padding: '3px 0', fontWeight: 700 }}>{ci.name || ci.item_name}</td>
+                                                                    <td style={{ textAlign: 'right', padding: '3px 0', fontWeight: 900 }}>{ci.quantity}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    <div style={{ textAlign: 'center', fontSize: '9px', fontWeight: 800, marginTop: '4px', textTransform: 'uppercase', color: '#000' }}>
+                                                        [ COUNTER COPY — DETACHABLE TOKEN ]
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

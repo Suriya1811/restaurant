@@ -8,6 +8,7 @@ const PayModePopup = ({
     onCancel,
     loading = false
 }) => {
+    const [paymentType, setPaymentType] = useState('CASH');
     const [cashAmount, setCashAmount] = useState('');
     const [upiAmount, setUpiAmount] = useState('');
     const [cardAmount, setCardAmount] = useState('');
@@ -25,17 +26,20 @@ const PayModePopup = ({
     
     const handleSubmit = () => {
         const modes = [];
-        const actualCashPaid = Math.max(0, cash - refundAmount);
-        
-        if (actualCashPaid > 0) modes.push({ type: 'CASH', amount: actualCashPaid });
-        if (upi > 0) modes.push({ type: 'UPI', amount: upi });
-        if (card > 0) modes.push({ type: 'CARD', amount: card });
+        if (paymentType === 'CREDIT') {
+            modes.push({ type: 'CREDIT', amount: totalBill });
+        } else {
+            const actualCashPaid = Math.max(0, cash - refundAmount);
+            if (actualCashPaid > 0) modes.push({ type: 'CASH', amount: actualCashPaid });
+            if (upi > 0) modes.push({ type: 'UPI', amount: upi });
+            if (card > 0) modes.push({ type: 'CARD', amount: card });
 
-        if (balanceDue > 0.01) {
-            return alert(`Please collect the full amount (Pending: ₹${balanceDue.toFixed(2)})`);
+            if (balanceDue > 0.01) {
+                return alert(`Please collect the full amount (Pending: ₹${balanceDue.toFixed(2)})`);
+            }
         }
 
-        onPaymentSubmit(modes);
+        onPaymentSubmit(modes, 0, false, 0, { paymentType });
     };
 
     return (
@@ -52,6 +56,28 @@ const PayModePopup = ({
                 </div>
 
                 <div className="p-6 space-y-4">
+                    {/* Payment Type Selector (Cash vs Credit, Default: Cash) */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-2">
+                        <label className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
+                            <CreditCard size={16} className={paymentType === 'CREDIT' ? 'text-orange-600' : 'text-slate-500'} />
+                            Payment Type
+                        </label>
+                        <select
+                            value={paymentType}
+                            onChange={(e) => setPaymentType(e.target.value)}
+                            className="bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 focus:border-orange-500 outline-none cursor-pointer"
+                        >
+                            <option value="CASH">Cash Sale (Immediate Payment)</option>
+                            <option value="CREDIT">Credit Sale (Party Outstanding)</option>
+                        </select>
+                    </div>
+
+                    {paymentType === 'CREDIT' && (
+                        <div className="p-3 bg-orange-50 rounded-2xl border border-orange-200 text-xs font-bold text-orange-800">
+                            Credit Sale Selected: Total ₹{totalBill.toFixed(2)} will be debited to Customer Outstanding.
+                        </div>
+                    )}
+
                     {/* Summary */}
                     <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
                         <span className="text-sm font-black text-slate-500 uppercase tracking-widest">Bill Amount</span>

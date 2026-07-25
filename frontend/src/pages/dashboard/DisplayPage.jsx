@@ -143,7 +143,7 @@ const DisplayPage = () => {
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
 
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/bills`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/bills?startDate=${fromDate}&endDate=${toDate}&status=ALL`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -213,7 +213,7 @@ const DisplayPage = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [fromDate, toDate]);
 
     useEffect(() => {
         fetchStaff();
@@ -701,7 +701,21 @@ const DisplayPage = () => {
                                                         <td className="py-3 px-4 relative text-center border-r border-slate-200 last:border-0">
                                                             <ActionDropdown
                                                                 item={record}
-                                                                onView={(r) => alert(`Viewing details for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}`)}
+                                                                onView={(r) => {
+                                                                    const targetBillId = r.raw_bill_id || r._id || r.bill_id;
+                                                                    if (targetBillId) {
+                                                                        navigate('/dashboard/self-service/billing', {
+                                                                            state: {
+                                                                                fromTable: true,
+                                                                                billId: targetBillId,
+                                                                                tableNo: r.table || '',
+                                                                                tableStatus: 'OCCUPIED'
+                                                                            }
+                                                                        });
+                                                                    } else {
+                                                                        alert(`Viewing details for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}`);
+                                                                    }
+                                                                }}
                                                                 onAlter={record.canAlter ? (r) => alert(`Alter functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
                                                                 onCancel={record.canCancel ? (r) => alert(`Cancel functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
                                                                 onDelete={record.canDelete ? (r) => { if(window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) alert('Delete functionality is coming soon.'); } : null}

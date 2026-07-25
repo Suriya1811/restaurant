@@ -81,6 +81,19 @@ const restaurantSchema = new mongoose.Schema({
     },
     kot_printer_ip: { type: String, default: '' },
     bill_printer_ip: { type: String, default: '' },
+    printer_settings: {
+        sales_bill_printer: { type: String, default: 'Sales Bill Printer' },
+        kot_printer: { type: String, default: 'KOT Printer' },
+        delivery_printer: { type: String, default: 'Delivery Printer' },
+        print_format: { type: String, enum: ['NORMAL_3_INCH', 'NORMAL_3_INCH_WITH_TOKEN'], default: 'NORMAL_3_INCH' }
+    },
+    backup_settings: {
+        backup_dir: { type: String, default: '' },
+        on_startup: { type: Boolean, default: false },
+        on_exit: { type: Boolean, default: false },
+        auto_interval: { type: Number, default: 0 },
+        last_backup_at: { type: Date }
+    },
     kitchen_mapping: [{
         category: String,
         printer_ip: String
