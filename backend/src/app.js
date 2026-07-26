@@ -7,7 +7,7 @@ const path    = require('path');
 const fs      = require('fs');
 const connectDB = require('./config/db');
 
-// ─── Load env vars ────────────────────────────────────────────────────────────
+// ─── Load env vars ─────────────────────────────────────────────────────────────
 dotenv.config();
 
 // ─── JWT fallback ─────────────────────────────────────────────────────────────
