@@ -181,8 +181,8 @@ const UnitMaster = () => {
     const exportCols = ['#', 'Unit Name', 'Decimal Places'];
     const getExportRows = () => filteredUnits.map((u, i) => [i + 1, u.name, u.decimal_places]);
     const handleExcelExport = () => exportToCSV('Unit Master', exportCols, getExportRows(), 'Unit_Master');
-    const handlePDFExport   = () => exportToPDF('Unit Master', exportCols, getExportRows(), 'Unit_Master');
-    const handlePrint       = () => printTable('Unit Master', `Total: ${filteredUnits.length}`, exportCols, getExportRows());
+    const handlePDFExport = () => exportToPDF('Unit Master', exportCols, getExportRows(), 'Unit_Master');
+    const handlePrint = () => printTable('Unit Master', `Total: ${filteredUnits.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -217,16 +217,7 @@ const UnitMaster = () => {
                                     <span className="text-[10px] uppercase font-black">Add New Unit</span>
                                 </button>
                             </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
 
@@ -243,8 +234,8 @@ const UnitMaster = () => {
                                 />
                             </div>
                             <div className="flex items-center gap-4 ml-auto">
-                                <select 
-                                    value={statusFilter} 
+                                <select
+                                    value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
                                     style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
@@ -309,55 +300,61 @@ const UnitMaster = () => {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="px-8 py-8 w-full flex flex-col flex-1 overflow-y-auto relative bg-white">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
-                            <form id="unit-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex flex-col flex-1">
-                                <div className="flex flex-col gap-6 max-w-3xl">
-                                    <div className="flex items-center">
-                                        <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
-                                            Unit Name <span className="text-[#f97316]">*</span>
-                                        </label>
-                                        <input
-                                            ref={nameInputRef}
-                                            type="text"
-                                            name="name"
-                                            required
-                                            placeholder="e.g. Kgs"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
-                                            style={{ border: '1px solid #f97316' }}
-                                        />
-                                    </div>
-                                    <div className="flex items-center">
-                                        <label className="w-48 shrink-0 text-sm font-bold text-slate-800">
-                                            Decimal Places <span className="text-[#f97316]">*</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="decimal_places"
-                                            min="0"
-                                            max="4"
-                                            required
-                                            placeholder="0"
-                                            value={formData.decimal_places}
-                                            onChange={(e) => setFormData({ ...formData, decimal_places: e.target.value })}
-                                            className="flex-1 rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
-                                            style={{ border: '1px solid #f97316' }}
-                                        />
+                            <form id="unit-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div className="flex flex-col gap-6 max-w-4xl">
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Unit Name <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    ref={nameInputRef}
+                                                    type="text"
+                                                    name="name"
+                                                    required
+                                                    placeholder="e.g. Kgs"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Decimal Places <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="number"
+                                                    name="decimal_places"
+                                                    min="0"
+                                                    max="4"
+                                                    required
+                                                    placeholder="0"
+                                                    value={formData.decimal_places}
+                                                    onChange={(e) => setFormData({ ...formData, decimal_places: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end mt-12 w-full max-w-5xl absolute bottom-8 right-8">
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
                                     >
                                         {submitting ? <Loader2 size={18} className="animate-spin" /> : (
                                             <>

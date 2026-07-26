@@ -57,7 +57,12 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
     }, []);
 
     const storeName = 'YUGAM SOFTWARE';
-    const isMasterHeader = isMaster || showProfileControls === false || (Boolean(actions || headerActions) && showProfileControls !== true);
+    const isMainDashboardRoute = location.pathname === '/dashboard/self-service/home' || 
+                                location.pathname === '/dashboard/home' || 
+                                location.pathname === '/dashboard' || 
+                                location.pathname === '/dashboard/self-service' ||
+                                location.pathname === '/dashboard/self-service/';
+    const isMasterHeader = !isMainDashboardRoute || isMaster === true || showProfileControls === false;
 
     return (
         <header

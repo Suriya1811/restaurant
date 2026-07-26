@@ -275,16 +275,7 @@ const TableMaster = () => {
                                     <span className="text-[10px] uppercase font-black">Add New Table</span>
                                 </button>
                             </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
 
@@ -301,8 +292,8 @@ const TableMaster = () => {
                                 />
                             </div>
                             <div className="flex items-center gap-4 ml-auto">
-                                <select 
-                                    value={statusFilter} 
+                                <select
+                                    value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
                                     style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
@@ -383,8 +374,7 @@ const TableMaster = () => {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-
-                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
                                     <AlertCircle size={16} />
@@ -393,93 +383,117 @@ const TableMaster = () => {
                             )}
 
                             <form id="table-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
-                                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/30">
-                                    <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100">
-                                        
-                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
-                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Table Name <span className="text-red-500">*</span></label>
-                                            <input
-                                                ref={numberInputRef}
-                                                type="text"
-                                                required
-                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
-                                                placeholder="Enter table name"
-                                                value={formData.table_number}
-                                                onChange={(e) => setFormData({ ...formData, table_number: e.target.value.toUpperCase() })}
-                                            />
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div className="flex flex-col gap-6 max-w-4xl">
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Table Name <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    ref={numberInputRef}
+                                                    type="text"
+                                                    required
+                                                    placeholder="Enter table name"
+                                                    value={formData.table_number}
+                                                    onChange={(e) => setFormData({ ...formData, table_number: e.target.value.toUpperCase() })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
-                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Table Type <span className="text-red-500">*</span></label>
-                                            <select
-                                                required
-                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
-                                                value={formData.table_type}
-                                                onChange={(e) => setFormData({ ...formData, table_type: e.target.value })}
-                                            >
-                                                <option value="">Select table type</option>
-                                                {tableTypes.map(type => (
-                                                    <option key={type._id} value={type.name}>{type.name}</option>
-                                                ))}
-                                                {tableTypes.length === 0 && (
-                                                    <option disabled>No types yet — create in Table Type Master</option>
-                                                )}
-                                            </select>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Table Type <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <select
+                                                    required
+                                                    value={formData.table_type}
+                                                    onChange={(e) => setFormData({ ...formData, table_type: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                >
+                                                    <option value="">Select table type</option>
+                                                    {tableTypes.map(type => (
+                                                        <option key={type._id} value={type.name}>{type.name}</option>
+                                                    ))}
+                                                    {tableTypes.length === 0 && (
+                                                        <option disabled>No types yet — create in Table Type Master</option>
+                                                    )}
+                                                </select>
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
-                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Persons <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="number"
-                                                required
-                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
-                                                placeholder="Enter number of persons"
-                                                value={formData.seating_capacity}
-                                                onChange={(e) => setFormData({ ...formData, seating_capacity: e.target.value === '' ? '' : parseInt(e.target.value) || 0 })}
-                                            />
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Persons <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    placeholder="Enter number of persons"
+                                                    value={formData.seating_capacity}
+                                                    onChange={(e) => setFormData({ ...formData, seating_capacity: e.target.value === '' ? '' : parseInt(e.target.value) || 0 })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
-                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Captain <span className="text-red-500">*</span></label>
-                                            <select
-                                                required
-                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
-                                                value={formData.captain}
-                                                onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
-                                            >
-                                                <option value="">Select captain</option>
-                                                {captains.map(c => (
-                                                    <option key={c._id} value={c.name}>{c.name}</option>
-                                                ))}
-                                            </select>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Captain <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <select
+                                                    required
+                                                    value={formData.captain}
+                                                    onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                >
+                                                    <option value="">Select captain</option>
+                                                    {captains.map(c => (
+                                                        <option key={c._id} value={c.name}>{c.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
-                                            <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Waiter <span className="text-red-500">*</span></label>
-                                            <select
-                                                required
-                                                className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800 cursor-pointer appearance-none"
-                                                value={formData.waiter}
-                                                onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
-                                            >
-                                                <option value="">Select waiter</option>
-                                                {waiters.map(w => (
-                                                    <option key={w._id} value={w.name}>{w.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        
-                                        <div className="mt-6 flex justify-end">
-                                            <button type="submit" form="table-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all">
-                                                {submitting ? <Loader2 className="animate-spin" /> : (
-                                                    <>
-                                                        <Save size={20} />
-                                                        <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
-                                                    </>
-                                                )}
-                                            </button>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Waiter <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <select
+                                                    required
+                                                    value={formData.waiter}
+                                                    onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                >
+                                                    <option value="">Select waiter</option>
+                                                    {waiters.map(w => (
+                                                        <option key={w._id} value={w.name}>{w.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                        {submitting ? <Loader2 className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </form>
                         </div>

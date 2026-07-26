@@ -250,16 +250,7 @@ const GroupMaster = () => {
                                     <PlusCircle size={16} /> Create Group
                                 </button>
                             </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
 
@@ -340,68 +331,76 @@ const GroupMaster = () => {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="p-8 flex flex-col flex-1 overflow-y-auto relative bg-slate-50">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
-                            <form id="group-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex flex-col flex-1 space-y-6 max-w-3xl bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
-                                <div className="form-group-premium">
-                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Group Name *</label>
-                                    <input
-                                        ref={nameInputRef}
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Sundry Debtors"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-lg border border-orange-500 text-sm font-semibold text-black focus:outline-none focus:ring-1 focus:ring-orange-500"
-                                    />
+                            <form id="group-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div className="flex flex-col gap-6 max-w-4xl">
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800 uppercase">Group Name <span className="text-[#f97316]">*</span></label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    ref={nameInputRef}
+                                                    type="text"
+                                                    required
+                                                    placeholder="e.g. Sundry Debtors"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    className="w-full px-4 py-2.5 rounded-lg border border-orange-500 text-sm font-semibold text-black focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800 uppercase">Parent Group (Under)</label>
+                                            <div className="col-span-9">
+                                                <select
+                                                    value={formData.parent || ''}
+                                                    onChange={(e) => {
+                                                        const selParent = e.target.value;
+                                                        const nat = getNatureForGroup(selParent) || formData.nature || 'ASSETS';
+                                                        setFormData({ ...formData, parent: selParent, nature: nat });
+                                                    }}
+                                                    className="w-full px-4 py-2.5 rounded-lg border border-orange-500 text-sm font-semibold text-black focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                                                >
+                                                    <option value="">Primary Group (No Parent)</option>
+                                                    {(() => {
+                                                        const grouped = {};
+                                                        if (Array.isArray(groups)) {
+                                                            groups.forEach(g => {
+                                                                const nat = g.nature || getNatureForGroup(g.name) || 'ASSETS';
+                                                                if (!grouped[nat]) grouped[nat] = new Set();
+                                                                grouped[nat].add(g.name);
+                                                            });
+                                                        }
+                                                        return Object.entries(grouped).map(([nature, gSet]) => (
+                                                            <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
+                                                                {Array.from(gSet).sort().map(g => <option key={g} value={g}>{g}</option>)}
+                                                            </optgroup>
+                                                        ));
+                                                    })()}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="form-group-premium">
-                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Parent Group (Under)</label>
-                                    <select
-                                        value={formData.parent || ''}
-                                        onChange={(e) => {
-                                            const selParent = e.target.value;
-                                            const nat = getNatureForGroup(selParent) || formData.nature || 'ASSETS';
-                                            setFormData({ ...formData, parent: selParent, nature: nat });
-                                        }}
-                                        className="w-full px-4 py-3 rounded-lg border border-orange-500 text-sm font-semibold text-black focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-                                    >
-                                        <option value="">Primary Group (No Parent)</option>
-                                        {(() => {
-                                            const grouped = {};
-                                            if (Array.isArray(groups)) {
-                                                groups.forEach(g => {
-                                                    const nat = g.nature || getNatureForGroup(g.name) || 'ASSETS';
-                                                    if (!grouped[nat]) grouped[nat] = new Set();
-                                                    grouped[nat].add(g.name);
-                                                });
-                                            }
-                                            return Object.entries(grouped).map(([nature, gSet]) => (
-                                                <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
-                                                    {Array.from(gSet).sort().map(g => <option key={g} value={g}>{g}</option>)}
-                                                </optgroup>
-                                            ));
-                                        })()}
-                                    </select>
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                        {submitting ? <Loader2 className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </form>
-                        </div>
-
-                        <div className="p-6 bg-white border-t border-slate-100 flex justify-end">
-                            <button type="submit" form="group-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
-                                {submitting ? <Loader2 className="animate-spin" /> : (
-                                    <>
-                                        <Save size={20} />
-                                        <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
-                                    </>
-                                )}
-                            </button>
                         </div>
                     </div>
                 )}

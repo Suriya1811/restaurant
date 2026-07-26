@@ -309,16 +309,7 @@ const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
                                     <span className="text-[10px] uppercase font-black">Register New {staffType === 'CAPTAIN' ? 'Captain' : 'Waiter'}</span>
                                 </button>
                             </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
 
@@ -421,105 +412,126 @@ const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="bg-white p-6 flex flex-col flex-1 overflow-hidden relative">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
-                                <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
-                                    <AlertCircle size={16} className="shrink-0" /> {error}
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
+                                    <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
                             <form id="staff-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
                                 <div className="flex-1 overflow-y-auto pr-2 space-y-5">
-                                    <div>
-                                        <div className="w-full mb-1">
-                                            <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider">Personnel Details</h3>
+                                    <div className="flex flex-col gap-6 max-w-4xl">
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Personnel Name <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    ref={nameInputRef}
+                                                    type="text"
+                                                    required
+                                                    placeholder="e.g. RAHUL SHARMA"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
                                         </div>
-                                        <hr className="border-t border-orange-500 mt-1 mb-4" />
-
-                                        <div className="flex flex-col gap-4 max-w-4xl">
-                                            <div className="grid grid-cols-12 items-center gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Personnel Name <span className="text-red-500">*</span></label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={nameInputRef}
-                                                        type="text"
-                                                        required
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
-                                                        placeholder="e.g. RAHUL SHARMA"
-                                                        value={formData.name}
-                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
-                                                    />
-                                                </div>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Primary Cell No <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="10-digit primary contact"
+                                                    value={formData.phone}
+                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Primary Cell No <span className="text-red-500">*</span></label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
-                                                        placeholder="10-digit primary contact"
-                                                        value={formData.phone}
-                                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                    />
-                                                </div>
+                                        </div>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Secondary Cell No
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Secondary contact"
+                                                    value={formData.cell_no_2}
+                                                    onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Secondary Cell No</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        type="text"
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
-                                                        placeholder="Secondary contact"
-                                                        value={formData.cell_no_2}
-                                                        onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
-                                                    />
-                                                </div>
+                                        </div>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Joining Date
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="date"
+                                                    value={formData.joining_date}
+                                                    onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">Joining Date</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        type="date"
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"
-                                                        value={formData.joining_date}
-                                                        onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                                                    />
-                                                </div>
+                                        </div>
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                ID Proof
+                                            </label>
+                                            <div className="col-span-9">
+                                                <select
+                                                    value={formData.id_proof_type}
+                                                    onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                >
+                                                    <option value="NONE">SELECT ID PROOF</option>
+                                                    <option value="ADHAR CARD">ADHAR CARD</option>
+                                                    <option value="VOTER ID">VOTER ID</option>
+                                                    <option value="DRIVING LICENSE">DRIVING LICENSE</option>
+                                                </select>
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800">ID Proof</label>
-                                                <div className="col-span-9">
-                                                    <select
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800 cursor-pointer"
-                                                        value={formData.id_proof_type}
-                                                        onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
-                                                    >
-                                                        <option value="NONE">SELECT ID PROOF</option>
-                                                        <option value="ADHAR CARD">ADHAR CARD</option>
-                                                        <option value="VOTER ID">VOTER ID</option>
-                                                        <option value="DRIVING LICENSE">DRIVING LICENSE</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-start gap-4">
-                                                <label className="col-span-3 text-[14px] font-bold text-slate-800 pt-1.5">Residential Address</label>
-                                                <div className="col-span-9">
-                                                    <textarea
-                                                        className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800 min-h-[60px]"
-                                                        placeholder="Enter full residential address..."
-                                                        value={formData.address}
-                                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                                    ></textarea>
-                                                </div>
+                                        </div>
+                                        <div className="grid grid-cols-12 items-start gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800 pt-2">
+                                                Residential Address
+                                            </label>
+                                            <div className="col-span-9">
+                                                <textarea
+                                                    rows="3"
+                                                    placeholder="Enter full residential address..."
+                                                    value={formData.address}
+                                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                ></textarea>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-end bg-white pt-3 border-t border-slate-100">
-                                    <button type="submit" form="staff-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors">
-                                        {submitting ? <Loader2 className="animate-spin" size={16} /> : 'SAVE'}
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
+                                    >
+                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>

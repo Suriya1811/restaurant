@@ -150,173 +150,176 @@ const CategoryMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title="Category Creation"
+                    title={!showDrawer ? "Category Master" : (isEditing ? "CATEGORY MODIFICATION" : "CATEGORY CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
-                            <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
-                            </button>
-                            <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-                            <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} />
-                                <span className="text-[10px] uppercase font-black">Add New Category</span>
-                            </button>
-                        </>
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Add New Category</span>
+                                </button>
+                            </>
+                        ) : null
                     }
                 />
-                <div className="master-content-layout fade-in">
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search inventory categories..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search inventory categories..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                    TOTAL : {filteredCategories.length}
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredCategories.length}
-                            </span>
-                        </div>
-                    </div>
 
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
-                                    <th>Category Entity</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
                                     <tr>
-                                        <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Querying Archives...</p>
-                                        </td>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Category Entity</th>
+                                        <th>Status</th>
                                     </tr>
-                                ) : filteredCategories.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Grid size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No category definitions found.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredCategories.map((cat) => (
-                                    <tr key={cat._id} className="group">
-                                        <td className="w-10 text-center">
-                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                        </td>
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                                                    <Grid size={18} />
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Querying Archives...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredCategories.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Grid size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No category definitions found.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredCategories.map((cat) => (
+                                        <tr key={cat._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                        <Grid size={18} />
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{cat.name}</span>
                                                 </div>
-                                                <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{cat.name}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`badge-premium ${cat.is_active ? 'active' : 'disabled'}`}>
-                                                {cat.is_active ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100 shadow-sm">
-                            <h2 className="text-[22px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'Modify Category' : 'CATEGORY CREATION'}</h2>
-                            <button
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
-                            >
-                                <XCircle size={20} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${cat.is_active ? 'active' : 'disabled'}`}>
+                                                    {cat.is_active ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
+                                    <AlertCircle size={18} /> {error}
+                                </div>
+                            )}
 
-                        <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30">
-                            <div className="max-w-4xl mx-auto bg-white rounded-3xl p-8 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
-                                        <AlertCircle size={20} /> {error}
+                            <form id="category-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div className="flex flex-col gap-6 max-w-4xl">
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                Group Name <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    ref={nameInputRef}
+                                                    type="text"
+                                                    required
+                                                    placeholder="Enter Group Name"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                HSN Code <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="Enter HSN Code"
+                                                    value={formData.hsn_code}
+                                                    onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-12 items-center gap-4">
+                                            <label className="col-span-3 text-[14px] font-bold text-slate-800">
+                                                HSN Description <span className="text-[#f97316]">*</span>
+                                            </label>
+                                            <div className="col-span-9">
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="Enter HSN Description"
+                                                    value={formData.hsn_description}
+                                                    onChange={(e) => setFormData({ ...formData, hsn_description: e.target.value })}
+                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                    style={{ border: '1px solid #f97316' }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                                <form id="category-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-0">
+                                </div>
 
-                                    {/* Row 1: Group Name */}
-                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
-                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">GROUP NAME *</label>
-                                        <input
-                                            ref={nameInputRef}
-                                            type="text"
-                                            required
-                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
-                                            placeholder="Enter Group Name"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-
-
-
-                                    {/* Row 3: HSN Code */}
-                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
-                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">HSN CODE *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
-                                            placeholder="Enter HSN Code"
-                                            value={formData.hsn_code}
-                                            onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                                        />
-                                    </div>
-
-                                    {/* Row 4: HSN Description */}
-                                    <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
-                                        <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">HSN DESCRIPTION *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
-                                            placeholder="Enter HSN Description"
-                                            value={formData.hsn_description}
-                                            onChange={(e) => setFormData({ ...formData, hsn_description: e.target.value })}
-                                        />
-                                    </div>
-
-                                </form>
-
-                                <div className="mt-10 flex justify-end">
-                                    <button type="submit" form="category-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all">
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
                                         {submitting ? <Loader2 className="animate-spin" /> : (
                                             <>
                                                 <Save size={20} />
@@ -325,7 +328,7 @@ const CategoryMaster = () => {
                                         )}
                                     </button>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 )}

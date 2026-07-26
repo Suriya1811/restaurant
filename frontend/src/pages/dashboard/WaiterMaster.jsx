@@ -287,16 +287,7 @@ const WaiterMaster = () => {
                                     <span className="text-[10px] uppercase font-black">Register New Waiter</span>
                                 </button>
                             </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
                 {!showDrawer ? (

@@ -182,220 +182,212 @@ const SupplierMaster = () => {
             <main className="dashboard-main">
                 <Header 
                     toggleSidebar={toggleSidebar} 
-                    title="Supplier Master"
+                    title={!showDrawer ? "Supplier Master" : (isEditing ? "SUPPLIER MODIFICATION" : "SUPPLIER CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
-
-                            <button
-                                type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} /> 
-                            <span className="text-[10px] uppercase font-black">Register Vendor</span>
-                        </button>
-                    </>
-}
+                        !showDrawer ? (
+                            <>
+                                <button
+                                    type="button"
+                                    className="btn-export excel"
+                                    onClick={handleExcelExport}
+                                    title="Export to Excel"
+                                >
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-export pdf"
+                                    onClick={handlePDFExport}
+                                    title="Export to PDF"
+                                >
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-export print"
+                                    onClick={handlePrint}
+                                    title="Print"
+                                >
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} /> 
+                                    <span className="text-[10px] uppercase font-black">Register Vendor</span>
+                                </button>
+                            </>
+                        ) : null
+                    }
                 />
-                <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input type="text" placeholder="Search vendor registry..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input type="text" placeholder="Search vendor registry..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
+                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                {filteredSuppliers.length} Vendors
+                            </span>
                         </div>
-                        <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                            {filteredSuppliers.length} Vendors
-                        </span>
-                    </div>
 
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
-                                    <th>Vendor Entity</th>
-                                    <th>Contact Intelligence</th>
-                                    <th>Compliance & Capital</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                        <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                        <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Syncing Vendor Network...</p>
-                                    </td></tr>
-                                ) : filteredSuppliers.length === 0 ? (
-                                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                        <Truck size={64} className="text-slate-100 mx-auto mb-4" />
-                                        <p className="font-bold text-slate-400">No vendor contracts on file.</p>
-                                    </td></tr>
-                                ) : filteredSuppliers.map((sup) => (
-                                    <tr key={sup._id} className="group">
-                                        <td className="w-10 text-center">
-                                            <ActionDropdown item={sup} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                        </td>
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                                    {sup.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{sup.name}</div>
-                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5">
-                                                        <ChevronRight size={10} className="text-amber-300" />
-                                                        {sup.contact_person || 'No Contact Person'}
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Vendor Entity</th>
+                                        <th>Contact Intelligence</th>
+                                        <th>Compliance & Capital</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Syncing Vendor Network...</p>
+                                        </td></tr>
+                                    ) : filteredSuppliers.length === 0 ? (
+                                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <Truck size={64} className="text-slate-100 mx-auto mb-4" />
+                                            <p className="font-bold text-slate-400">No vendor contracts on file.</p>
+                                        </td></tr>
+                                    ) : filteredSuppliers.map((sup) => (
+                                        <tr key={sup._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={sup} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                        {sup.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{sup.name}</div>
+                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <ChevronRight size={10} className="text-amber-300" />
+                                                            {sup.contact_person || 'No Contact Person'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-xs font-black text-slate-600 uppercase tracking-tighter">
-                                                    <Phone size={14} className="text-slate-300" /> {sup.contact_number || '—'}
+                                            </td>
+                                            <td>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2 text-xs font-black text-slate-600 uppercase tracking-tighter">
+                                                        <Phone size={14} className="text-slate-300" /> {sup.contact_number || '—'}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        <Mail size={14} className="text-slate-300" /> {sup.email || 'NO_MAIL@VENDOR'}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    <Mail size={14} className="text-slate-300" /> {sup.email || 'NO_MAIL@VENDOR'}
+                                            </td>
+                                            <td>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                        GST: {sup.gst_number || 'UNREGISTERED'}
+                                                    </div>
+                                                    <div className="text-sm font-black text-rose-500">
+                                                        ₹{(sup.opening_balance || 0).toLocaleString()} Due
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="space-y-1">
-                                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                                    GST: {sup.gst_number || 'UNREGISTERED'}
-                                                </div>
-                                                <div className="text-sm font-black text-rose-500">
-                                                    ₹{(sup.opening_balance || 0).toLocaleString()} Due
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`badge-premium ${sup.is_active ? 'active' : 'disabled'}`}>
-                                                {sup.is_active ? 'CONTRACTED' : 'TERMINATED'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
-                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
-                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'SUPPLIER MODIFICATION' : 'SUPPLIER CREATION'}</h2>
-                            <button
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${sup.is_active ? 'active' : 'disabled'}`}>
+                                                    {sup.is_active ? 'CONTRACTED' : 'TERMINATED'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-
-                        <div className="p-6 flex flex-col flex-1 overflow-y-auto relative bg-slate-50">
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
-                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8">
-                                    <AlertCircle size={20} /> {error}
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
+                                    <AlertCircle size={18} /> {error}
                                 </div>
                             )}
-                            <form id="supplier-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-10 pb-10">
-                                {/* Entity Block */}
-                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <Building2 className="text-amber-600" size={20} />
-                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Corporate Identity</h4>
-                                    </div>
-                                    <div className="form-group-premium">
-                                        <label>Vendor Trade Name *</label>
-                                        <input ref={nameInputRef} type="text" required className="input-premium !text-xl" placeholder="e.g. RELIABLE PROVISIONS CO." value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
-                                    </div>
-                                </div>
 
-                                {/* Contact Block */}
-                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <User className="text-amber-600" size={20} />
-                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Communication Matrix</h4>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Point of Contact</label>
-                                            <input type="text" className="input-premium" placeholder="e.g. JOHN DOE" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value.toUpperCase() })} />
+                            <form id="supplier-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                                    {/* Entity Block */}
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <Building2 className="text-amber-600" size={18} />
+                                            <h4 className="text-base font-black text-slate-800 tracking-tight uppercase">Corporate Identity</h4>
                                         </div>
                                         <div className="form-group-premium">
-                                            <label>Direct Phone Channel</label>
-                                            <input type="text" className="input-premium" placeholder="e.g. +91 9876543210" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} />
-                                        </div>
-                                        <div className="form-group-premium col-span-full">
-                                            <label>Email Interface</label>
-                                            <input type="email" className="input-premium" placeholder="vendor@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} />
+                                            <label className="text-xs font-bold text-slate-700">Vendor Trade Name *</label>
+                                            <input ref={nameInputRef} type="text" required className="input-premium !text-base" placeholder="e.g. RELIABLE PROVISIONS CO." value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Fiscal Block */}
-                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <DollarSign className="text-amber-600" size={20} />
-                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Fiscal & Statutory</h4>
+                                    {/* Contact Block */}
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <User className="text-amber-600" size={18} />
+                                            <h4 className="text-base font-black text-slate-800 tracking-tight uppercase">Communication Matrix</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="form-group-premium">
+                                                <label className="text-xs font-bold text-slate-700">Point of Contact</label>
+                                                <input type="text" className="input-premium" placeholder="e.g. JOHN DOE" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value.toUpperCase() })} />
+                                            </div>
+                                            <div className="form-group-premium">
+                                                <label className="text-xs font-bold text-slate-700">Direct Phone Channel</label>
+                                                <input type="text" className="input-premium" placeholder="e.g. +91 9876543210" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} />
+                                            </div>
+                                            <div className="form-group-premium col-span-full">
+                                                <label className="text-xs font-bold text-slate-700">Email Interface</label>
+                                                <input type="email" className="input-premium" placeholder="vendor@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>GSTIN Tax Identification</label>
-                                            <input type="text" className="input-premium uppercase" placeholder="22AAAAA0000A1Z5" value={formData.gst_number} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })} />
+
+                                    {/* Fiscal Block */}
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <DollarSign className="text-amber-600" size={18} />
+                                            <h4 className="text-base font-black text-slate-800 tracking-tight uppercase">Fiscal & Statutory</h4>
                                         </div>
-                                        <div className="form-group-premium">
-                                            <label>Opening Credit Balance (Dr/Cr)</label>
-                                            <input type="number" className="input-premium" value={formData.opening_balance} onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
-                                        </div>
-                                        <div className="form-group-premium col-span-full">
-                                            <label>Physical Infrastructure Address</label>
-                                            <div className="relative">
-                                                <MapPin size={18} className="absolute left-4 top-4 text-slate-400" />
-                                                <textarea className="input-premium !pl-12 !h-24 !pt-4" placeholder="Full vendor address..." value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}></textarea>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="form-group-premium">
+                                                <label className="text-xs font-bold text-slate-700">GSTIN Tax Identification</label>
+                                                <input type="text" className="input-premium uppercase" placeholder="22AAAAA0000A1Z5" value={formData.gst_number} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })} />
+                                            </div>
+                                            <div className="form-group-premium">
+                                                <label className="text-xs font-bold text-slate-700">Opening Credit Balance (Dr/Cr)</label>
+                                                <input type="number" className="input-premium" value={formData.opening_balance} onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                                            </div>
+                                            <div className="form-group-premium col-span-full">
+                                                <label className="text-xs font-bold text-slate-700">Physical Infrastructure Address</label>
+                                                <div className="relative">
+                                                    <MapPin size={16} className="absolute left-3 top-3 text-slate-400" />
+                                                    <textarea className="input-premium !pl-10 !h-20 !pt-3" placeholder="Full vendor address..." value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}></textarea>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                        {submitting ? <Loader2 className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </form>
-                        </div>
-                        <div className="p-6 bg-white border-t border-slate-100 flex justify-end">
-                            <button type="submit" form="supplier-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
-                                {submitting ? <Loader2 className="animate-spin" /> : (
-                                    <>
-                                        <Save size={20} />
-                                        <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
-                                    </>
-                                )}
-                            </button>
                         </div>
                     </div>
                 )}

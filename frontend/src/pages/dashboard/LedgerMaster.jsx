@@ -537,39 +537,43 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 `}</style>
 
                 {/* Header Section */}
-                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-white shadow-sm no-print">
-                    <h2 className="text-xl font-bold text-black tracking-tight">Ledger Master</h2>
-                    <div className="flex items-center gap-2">
-                        <button type="button" className="btn-export excel" onClick={exportToCSV} title="Export to Excel">
-                            <Download size={14} />
-                            <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
-                        </button>
-                        <button type="button" className="btn-export pdf" onClick={exportToPDF} title="Export to PDF">
-                            <Download size={14} />
-                            <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                        </button>
-                        <button type="button" className="btn-export print" onClick={() => window.print()} title="Print">
-                            <Printer size={14} />
-                            <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                setTempVisibleColumns(visibleColumns);
-                                setShowColumnDropdown(true);
-                            }}
-                            className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer"
-                        >
-                            <Settings size={14} /> COLUMN SETTINGS
-                        </button>
-                        <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add">
-                            <PlusCircle size={16} /> Create Ledger
-                        </button>
-                        <button onClick={() => navigate('/dashboard/self-service/home')} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm">
-                            <X size={14} /> CLOSE
-                        </button>
-                    </div>
-                </div>
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title={!showDrawer ? "Ledger Master" : (isEditing ? "LEDGER ALTERATION" : "LEDGER CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
+                    actions={
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={exportToCSV} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={exportToPDF} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={() => window.print()} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setTempVisibleColumns(visibleColumns);
+                                        setShowColumnDropdown(true);
+                                    }}
+                                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer"
+                                >
+                                    <Settings size={14} /> COLUMN SETTINGS
+                                </button>
+                                <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add">
+                                    <PlusCircle size={16} /> Create Ledger
+                                </button>
+                            </>
+                        ) : null
+                    }
+                />
 
+                {!showDrawer ? (
                 <div className="dashboard-content print-section">
                     {/* Print Only Header */}
                     <div className="hidden print:block mb-6">
@@ -807,37 +811,18 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         </div>
                     )}
                 </div>
-
-                {/* Overhauled Ledger Creation Form Overlay */}
-                {showDrawer && (
-                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
-                        {/* Header */}
-                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-xl font-black uppercase tracking-tight text-black">
-                                    {isEditing ? 'LEDGER ALTERATION' : 'LEDGER CREATION'}
-                                </h2>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
-                        </div>
-
-                        {/* Form Body */}
-                        <div className="px-8 py-4 w-full flex flex-col overflow-y-auto">
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
-                            <form onSubmit={handleSave} className="flex flex-col">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
+                            <form id="ledger-form" onSubmit={handleSave} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
                                     {/* LEFT COLUMN */}
                                     <div className="flex flex-col gap-5">
                                         <div className="flex items-center">
@@ -1128,25 +1113,29 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                             </div>
                                         </fieldset>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex justify-end gap-4 mt-2 pt-2 shrink-0">
-                                            <button
-                                                type="button"
-                                                className="font-bold px-6 py-2 rounded flex items-center gap-2 transition-colors uppercase text-sm shadow-sm hover:opacity-90"
-                                                style={{ backgroundColor: '#FF5722', color: 'white' }}
-                                            >
-                                                <FileText size={16} /> OTHER DETAILS
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={saving}
-                                                className="font-bold px-8 py-2 rounded flex items-center gap-2 transition-colors disabled:opacity-50 uppercase text-sm shadow-sm hover:opacity-90"
-                                                style={{ backgroundColor: '#FF5722', color: 'white' }}
-                                            >
-                                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} SAVE
-                                            </button>
-                                        </div>
                                     </div>
+                                </div>
+                            </div>
+                                <div className="pt-3 border-t border-slate-100 flex justify-end gap-4 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOtherModal(true)}
+                                        className="font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 transition-colors uppercase text-xs border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                                    >
+                                        <FileText size={16} /> OTHER DETAILS
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
+                                    >
+                                        {saving ? <Loader2 size={18} className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </form>
                         </div>

@@ -277,16 +277,7 @@ const TaxMaster = () => {
                                     <span className="text-[10px] uppercase font-black">Add New Tax</span>
                                 </button>
                             </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-xs tracking-wide">CLOSE</span>
-                            </button>
-                        )
+                        ) : null
                     }
                 />
 
@@ -404,23 +395,12 @@ const TaxMaster = () => {
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+            </table>
                         </div>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
-                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'GST ALTERATION' : 'GST CREATION'}</h2>
-                            <button
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                            >
-                                <XCircle size={18} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
-                        </div>
-
-                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
                                     <AlertCircle size={16} />
@@ -435,7 +415,6 @@ const TaxMaster = () => {
                                         <div className="w-full mb-1">
                                             <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider">Tax Details</h3>
                                         </div>
-                                        <hr className="border-t border-orange-500 mt-1 mb-2" />
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5 relative">
                                             {/* Left Column */}
@@ -447,28 +426,12 @@ const TaxMaster = () => {
                                                             type="text"
                                                             name="name"
                                                             required
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                            placeholder="Enter GST name"
+                                                            placeholder="e.g. GST 18%"
                                                             value={formData.name}
                                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                            className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316]"
+                                                            style={{ border: '1px solid #f97316' }}
                                                         />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[14px] font-bold text-slate-800">Purchase Account <span className="text-red-500">*</span></label>
-                                                    <div className="col-span-8">
-                                                        <select
-                                                            required
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer appearance-none"
-                                                            value={formData.purchase_account_id}
-                                                            onChange={(e) => setFormData({ ...formData, purchase_account_id: e.target.value })}
-                                                        >
-                                                            <option value="">Select purchase account</option>
-                                                            {ledgers.map(l => (
-                                                                <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                            ))}
-                                                        </select>
                                                     </div>
                                                 </div>
 
@@ -667,11 +630,11 @@ const TaxMaster = () => {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 flex justify-end">
-                                    <button type="submit" form="tax-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded font-bold transition-all text-sm">
-                                        {submitting ? <Loader2 className="animate-spin" size={16} /> : (
+                                <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                        {submitting ? <Loader2 className="animate-spin" size={18} /> : (
                                             <>
-                                                <Save size={16} />
+                                                <Save size={20} />
                                                 <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
                                             </>
                                         )}
