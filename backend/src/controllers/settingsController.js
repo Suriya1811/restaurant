@@ -79,7 +79,13 @@ exports.getUserSettings = async (req, res) => {
                     table_enabled: restaurant.table_enabled !== undefined ? restaurant.table_enabled : true,
                     pay_mode_enabled: restaurant.pay_mode_enabled !== undefined ? restaurant.pay_mode_enabled : true,
                     stock_level_enabled: restaurant.stock_level_enabled !== undefined ? restaurant.stock_level_enabled : true,
-                    kot_enabled: restaurant.kot_enabled !== undefined ? restaurant.kot_enabled : true
+                    kot_enabled: restaurant.kot_enabled !== undefined ? restaurant.kot_enabled : true,
+                    party_order_enabled: restaurant.party_order_enabled !== undefined ? restaurant.party_order_enabled : true,
+                    split_rate_tax_enabled: restaurant.split_rate_tax_enabled !== undefined ? restaurant.split_rate_tax_enabled : false,
+                    data_auto_lock_enabled: restaurant.data_auto_lock_enabled !== undefined ? restaurant.data_auto_lock_enabled : false,
+                    unlock_days: restaurant.unlock_days !== undefined ? restaurant.unlock_days : null,
+                    lock_date_up_to: restaurant.lock_date_up_to || null,
+                    cards_per_row: restaurant.cards_per_row || 7
                 },
                 loyalty: {
                     enabled: restaurant.loyalty_enabled || false,
@@ -93,6 +99,11 @@ exports.getUserSettings = async (req, res) => {
                     delivery: { prefix: 'DE', next_number: 1 },
                     parcel: { prefix: 'PA', next_number: 1 },
                     party: { prefix: 'PT', next_number: 1 }
+                },
+                backupSettings: restaurant.backup_settings || {
+                    on_startup: false,
+                    on_exit: false,
+                    auto_interval: 0
                 }
             }
         });
@@ -669,6 +680,12 @@ exports.updateModuleSettings = async (req, res) => {
         if (req.body.reports_enabled !== undefined) updatePayload.reports_enabled = req.body.reports_enabled;
         if (req.body.staff_enabled !== undefined) updatePayload.staff_enabled = req.body.staff_enabled;
         if (req.body.table_enabled !== undefined) updatePayload.table_enabled = req.body.table_enabled;
+        if (req.body.party_order_enabled !== undefined) updatePayload.party_order_enabled = req.body.party_order_enabled;
+        if (req.body.split_rate_tax_enabled !== undefined) updatePayload.split_rate_tax_enabled = req.body.split_rate_tax_enabled;
+        if (req.body.data_auto_lock_enabled !== undefined) updatePayload.data_auto_lock_enabled = req.body.data_auto_lock_enabled;
+        if (req.body.unlock_days !== undefined) updatePayload.unlock_days = req.body.unlock_days;
+        if (req.body.lock_date_up_to !== undefined) updatePayload.lock_date_up_to = req.body.lock_date_up_to;
+        if (req.body.cards_per_row !== undefined) updatePayload.cards_per_row = req.body.cards_per_row;
 
         const restaurant = await Restaurant.findByIdAndUpdate(
             req.user.restaurant_id,
@@ -693,7 +710,11 @@ exports.updateModuleSettings = async (req, res) => {
                 table_enabled: restaurant.table_enabled,
                 pay_mode_enabled: restaurant.pay_mode_enabled,
                 stock_level_enabled: restaurant.stock_level_enabled,
-                kot_enabled: restaurant.kot_enabled
+                kot_enabled: restaurant.kot_enabled,
+                party_order_enabled: restaurant.party_order_enabled,
+                data_auto_lock_enabled: restaurant.data_auto_lock_enabled,
+                unlock_days: restaurant.unlock_days,
+                lock_date_up_to: restaurant.lock_date_up_to
             }
         });
     } catch (error) {
@@ -716,6 +737,76 @@ exports.verifyExtraModulesPassword = async (req, res) => {
         
         return res.status(401).json({ success: false, message: 'Invalid password' });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Change Financial Year & Reset Series Counters (KOT, Bills, Vouchers)
+// @route   PUT /api/settings/financial-year
+// @access  Private (Admin, Owner)
+exports.changeFinancialYear = async (req, res) => {
+    try {
+        const VoucherSeries = require('../models/VoucherSeries');
+        const { financial_year_start, financial_year_end } = req.body;
+        if (!financial_year_start || !financial_year_end) {
+            return res.status(400).json({ success: false, message: 'Please provide financial_year_start and financial_year_end dates.' });
+        }
+
+        const fyStart = new Date(financial_year_start);
+        const fyEnd = new Date(financial_year_end);
+        if (fyStart >= fyEnd) {
+            return res.status(400).json({ success: false, message: 'Financial year start must be before end date.' });
+        }
+
+        const restaurantId = req.user.restaurant_id;
+        const now = new Date();
+
+        // 1. Update Restaurant Financial Year dates
+        const restaurant = await Restaurant.findById(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ success: false, message: 'Restaurant not found.' });
+        }
+
+        restaurant.financial_year_start = fyStart;
+        restaurant.financial_year_end = fyEnd;
+
+        // 2. Reset Bill Series numbers (dine_in, takeaway, delivery, parcel, party) to starting_number (or 1)
+        if (restaurant.bill_series) {
+            const seriesKeys = ['dine_in', 'takeaway', 'delivery', 'parcel', 'party'];
+            seriesKeys.forEach(key => {
+                if (restaurant.bill_series[key]) {
+                    const series = restaurant.bill_series[key];
+                    const startNum = typeof series.starting_number === 'number' ? series.starting_number : 1;
+                    restaurant.bill_series[key].next_number = startNum;
+                    restaurant.bill_series[key].last_reset_date = now;
+                }
+            });
+        }
+        await restaurant.save();
+
+        // 3. Reset Voucher Series numbers for this company
+        const voucherSeriesList = await VoucherSeries.find({ company_id: restaurantId });
+        for (const vs of voucherSeriesList) {
+            const restartType = vs.restart_after || 'Never';
+            if (restartType === 'Yearly' || restartType === 'Restart Yearly' || restartType === 'Year' || restartType !== 'Never') {
+                const startNum = typeof vs.starting_number === 'number' ? vs.starting_number : 1;
+                vs.next_number = startNum;
+                vs.last_reset_date = now;
+                await vs.save();
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Financial year changed successfully and document series counters restarted from 1!',
+            data: {
+                financial_year_start: restaurant.financial_year_start,
+                financial_year_end: restaurant.financial_year_end,
+                bill_series: restaurant.bill_series
+            }
+        });
+    } catch (error) {
+        console.error('changeFinancialYear error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

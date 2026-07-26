@@ -1,1 +1,0 @@
-import{j as r}from"./index-zW_UHRZh.js";import"./react-vendor-CMsF7OE3.js";import{O as p}from"./OutstandingReportsHub-D4R9pJta.js";import"./redux-vendor-BeQS9o0a.js";import"./Header-DL3d8f8s.js";import"./ui-vendor-1l7_JuxF.js";import"./jspdf.plugin.autotable-D-qxyJKK.js";const n=({isEmbedded:t=!1})=>r.jsx(p,{defaultTab:"supplier",isEmbedded:t});export{n as default};

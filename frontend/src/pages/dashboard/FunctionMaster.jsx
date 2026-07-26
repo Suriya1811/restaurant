@@ -12,8 +12,11 @@ import {
     Loader2,
     Grid,
     AlertCircle,
-    X
-, Download, Printer} from 'lucide-react';
+    X,
+    Download,
+    Printer,
+    Save
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
@@ -273,10 +276,10 @@ const FunctionMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Function Entity</th>
                                     <th>Description</th>
                                     <th>Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -296,6 +299,9 @@ const FunctionMaster = () => {
                                     </tr>
                                 ) : filteredFunctions.map((cat) => (
                                     <tr key={cat._id} className="group">
+                                        <td className="w-10 text-center">
+                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
@@ -313,9 +319,6 @@ const FunctionMaster = () => {
                                                 {cat.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
-                                        <td>
-                                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -324,22 +327,22 @@ const FunctionMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <div className="fixed inset-0 md:pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
+                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
                         <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
-                            <h2 className="text-xl font-bold text-black tracking-tight">
-                                {isEditing ? 'Modify Function' : 'Function Creation'}
+                            <h2 className="text-xl font-black text-black tracking-tight uppercase">
+                                {isEditing ? 'FUNCTION TYPE MODIFICATION' : 'FUNCTION TYPE CREATION'}
                             </h2>
                             <button
                                 type="button"
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
-                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <X size={16} /> CLOSE
+                                <XCircle size={18} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
                             </button>
                         </div>
 
-                        <div className="px-8 py-8 w-full flex flex-col overflow-y-auto">
+                        <div className="px-8 py-8 w-full flex flex-col flex-1 overflow-y-auto relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
@@ -382,10 +385,14 @@ const FunctionMaster = () => {
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="font-bold px-8 py-2.5 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 text-white shadow-sm hover:opacity-90"
-                                        style={{ backgroundColor: '#f97316' }}
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
                                     >
-                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : 'Save'}
+                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>

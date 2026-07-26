@@ -1,17 +1,19 @@
-import { useState, useEffect, memo, useRef } from 'react';
-import { Menu, User, LogOut, XCircle, X, Bell, Mail, Phone, Building2, UserCircle } from 'lucide-react';
+import { useState, useEffect, useRef, memo } from 'react';
+import { User, LogOut, X, Minus, Square, Building2, Phone, Mail, UserCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
+import logoSidebar from '../../assets/logo_sidebar.png';
+import FinancialYearModal from '../common/FinancialYearModal';
+import { getActiveFinancialYear, checkFinancialYearActive } from '@/utils/financialYearUtils';
 
-
-const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, onClose, showClose = true }) => {
-    const { user, logout, hasModuleAccess } = useAuth();
+const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, onClose, showClose = true, showProfileControls, isMaster }) => {
+    const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isFYModalOpen, setIsFYModalOpen] = useState(false);
+    const [activeFY, setActiveFY] = useState(() => getActiveFinancialYear());
     const profileRef = useRef(null);
-
-    const isHomeScreen = location.pathname === '/dashboard/self-service/home';
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -23,118 +25,231 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Listen for Alt + F2 key press globally & FY change custom events
+    useEffect(() => {
+        const fyCheck = checkFinancialYearActive();
+        if (fyCheck.isExpired || fyCheck.isInvalid) {
+            setIsFYModalOpen(true);
+        }
+
+        const handleKeyDown = (e) => {
+            if (e.altKey && (e.key === 'F2' || e.code === 'F2' || e.keyCode === 113)) {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsFYModalOpen(true);
+            }
+        };
+
+        const handleFYChange = (e) => {
+            if (e.detail) {
+                setActiveFY(e.detail);
+            } else {
+                setActiveFY(getActiveFinancialYear());
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('financial_year_changed', handleFYChange);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('financial_year_changed', handleFYChange);
+        };
+    }, []);
+
+    const storeName = 'YUGAM SOFTWARE';
+    const isMasterHeader = isMaster || showProfileControls === false || (Boolean(actions || headerActions) && showProfileControls !== true);
+
     return (
-        <header className={`dashboard-header ${title ? 'master-header-mode' : ''}`}>
-            <div className="header-left">
+        <header
+            className={`dashboard-header ${isMasterHeader ? 'master-header' : ''}`}
+            style={{
+                height: '65px',
+                backgroundColor: isMasterHeader ? '#ffffff' : '#0F172A',
+                color: isMasterHeader ? '#0f172a' : '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 1.25rem',
+                borderBottom: isMasterHeader ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+                zIndex: 100,
+                flexShrink: 0
+            }}
+        >
+            {/* Left side */}
+            <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {title && (
-                    <h2 className="premium-page-title">{title}</h2>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: isMasterHeader ? '#0f172a' : '#ffffff', margin: 0, letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{title}</h2>
                 )}
             </div>
 
-            {!title && (
-                <div className="header-center">
-                    <span className="company-profile-name text-lg font-semibold text-slate-700 tracking-wide">
-                        {user?.businessName || user?.restaurant_name || restaurantName || 'Storefront'}
+            {/* Center: Store / Company Name in Bold White (Only on Main Dashboard Header) */}
+            {!isMasterHeader && (
+                <div className="header-center" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        {storeName}
                     </span>
                 </div>
             )}
 
-            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative' }}>
-                {actions ? (
-                    <div className="flex items-center gap-3">
-                        {actions}
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        {headerActions && (
-                            <div className="flex items-center gap-3 mr-2">
-                                {headerActions}
-                            </div>
-                        )}
-
-                        {isHomeScreen && (
-                            <div className="relative" ref={profileRef}>
-                                <div className="user-profile bg-slate-50 border border-slate-100 shadow-sm !p-1.5" onClick={() => setIsProfileOpen(!isProfileOpen)}>
-                                    <div className="user-avatar" style={{ width: '36px', height: '36px' }}>
-                                        {user?.logo_url ? (
-                                            <img src={user.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <User size={19} className="text-indigo-600" />
-                                        )}
-                                    </div>
-                                </div>
-
-                                {isProfileOpen && (
-                                    <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-200" style={{ zIndex: 9999, pointerEvents: 'auto' }}>
-                                        <div className="p-5 bg-gradient-to-br from-indigo-50 to-white border-b border-slate-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center flex-shrink-0 text-indigo-600">
-                                                    {user?.logo_url ? (
-                                                        <img src={user.logo_url} alt="Logo" className="w-full h-full object-cover rounded-xl" />
-                                                    ) : (
-                                                        <Building2 size={24} />
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-slate-800 text-lg leading-tight">{user?.businessName || user?.restaurant_name || restaurantName || 'Storefront'}</span>
-                                                    <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">{user?.role || 'Administrator'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="p-3">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                                                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0"><UserCircle size={16} /></div>
-                                                    <div className="flex flex-col overflow-hidden">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Person</span>
-                                                        <span className="text-sm font-bold text-slate-700 truncate">{user?.name || user?.contact_person || 'Not Provided'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0"><Mail size={16} /></div>
-                                                    <div className="flex flex-col overflow-hidden">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</span>
-                                                        <span className="text-sm font-bold text-slate-700 truncate">{user?.email || 'Not Provided'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0"><Phone size={16} /></div>
-                                                    <div className="flex flex-col overflow-hidden">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone Number</span>
-                                                        <span className="text-sm font-bold text-slate-700 truncate">{user?.phone || 'Not Provided'}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
-                                            <button
-                                                onMouseDown={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setIsProfileOpen(false);
-                                                    logout();
-                                                }}
-                                                className="flex-1 flex items-center justify-center gap-2 bg-white text-rose-600 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 px-4 py-2.5 rounded-xl font-black text-sm transition-all shadow-sm"
-                                            >
-                                                <LogOut size={16} pointerEvents="none" /> SIGN OUT
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-                {!isHomeScreen && showClose && (
+            {/* Right: Actions / Buttons */}
+            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative' }} ref={profileRef}>
+                {(actions || headerActions) && <div className="flex items-center gap-2.5">{actions || headerActions}</div>}
+                
+                {/* Close button for Master Page Headers (matching Ledger Master styling) */}
+                {isMasterHeader && showClose !== false && (
                     <button
+                        type="button"
                         onClick={onClose || (() => navigate('/dashboard/self-service/home'))}
-                        className="btn-action-close ml-2"
-                        title="Close and Return to Home"
+                        className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ml-1"
+                        title="Close Module"
                     >
-                        <X size={16} /> <span className="text-[10px] uppercase font-black">CLOSE</span>
+                        <X size={14} /> CLOSE
                     </button>
                 )}
+                
+                {/* Profile Circle & Window Controls ONLY on Main Dashboard Header */}
+                {!isMasterHeader && (
+                    <>
+                        <div
+                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#ffffff',
+                                transition: 'all 0.2s'
+                            }}
+                            title="Company Profile"
+                        >
+                            {user?.logo_url ? (
+                                <img src={user.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            ) : (
+                                <UserCircle size={24} color="#ffffff" />
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginLeft: '4px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {}}
+                                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
+                                title="Minimize"
+                            >
+                                <Minus size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {}}
+                                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
+                                title="Maximize"
+                            >
+                                <Square size={13} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClose || (() => navigate('/dashboard/self-service/home'))}
+                                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
+                                title="Close"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* Company Profile Popup Modal */}
+                {isProfileOpen && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            right: '0',
+                            top: 'calc(100% + 12px)',
+                            width: '320px',
+                            backgroundColor: '#ffffff',
+                            borderRadius: '16px',
+                            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.35)',
+                            border: '1px solid #e2e8f0',
+                            overflow: 'hidden',
+                            zIndex: 9999,
+                            padding: '0'
+                        }}
+                        className="animate-in slide-in-from-top-2 duration-200"
+                    >
+                        {/* Popup Header with YUGAM SOFTWARE Logo */}
+                        <div style={{ padding: '18px 20px', backgroundColor: '#0F172A', color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#ffffff', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #e2e8f0' }}>
+                                    <img src={logoSidebar} alt="YUGAM" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                </div>
+                                <div style={{ overflow: 'hidden' }}>
+                                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>
+                                        YUGAM SOFTWARE
+                                    </h3>
+                                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        Software Solutions
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Popup Body: Yugam Software Company Details */}
+                        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Building2 size={18} />
+                                </div>
+                                <div>
+                                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'block', letterSpacing: '0.05em' }}>Company Name</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>Yugam Software</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Phone size={18} />
+                                </div>
+                                <div>
+                                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'block', letterSpacing: '0.05em' }}>Contact Number</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>+91 98765 43210</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Mail size={18} />
+                                </div>
+                                <div>
+                                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'block', letterSpacing: '0.05em' }}>Email ID</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>support@yugamsoftware.com</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Popup Footer with Logout option */}
+                        <div style={{ padding: '12px 20px', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Yugam POS v2.0</span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsProfileOpen(false);
+                                    logout();
+                                }}
+                                style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <LogOut size={13} /> LOGOUT
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            <FinancialYearModal isOpen={isFYModalOpen} onClose={() => setIsFYModalOpen(false)} />
         </header>
     );
 };

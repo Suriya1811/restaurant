@@ -331,7 +331,14 @@ const ProductMaster = () => {
                 }
             }
         } else if (e.key === 'Backspace') {
-            const isCursorAtStart = e.target.selectionStart === 0 && e.target.selectionEnd === 0;
+            let isCursorAtStart = false;
+            try {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && typeof e.target.selectionStart === 'number') {
+                    isCursorAtStart = e.target.selectionStart === 0 && e.target.selectionEnd === 0;
+                }
+            } catch (err) {
+                isCursorAtStart = false;
+            }
             if (isCursorAtStart && currentIndex > 0) {
                 e.preventDefault();
                 let prevIdx = currentIndex - 1;
@@ -489,8 +496,11 @@ const ProductMaster = () => {
 
             alert(isEditing ? 'Item updated successfully!' : 'New Item created successfully in Master!');
             fetchData();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                const firstField = inputRefs.current['barcode'] || inputRefs.current['code'] || inputRefs.current['name'];
+                if (firstField) firstField.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
             alert("Error: " + err.message);
@@ -736,16 +746,33 @@ const ProductMaster = () => {
 
             if (type === 'group') {
                 url = `${import.meta.env.VITE_API_URL}/categories`;
-                payload = quickGroupData;
+                payload = {
+                    name: quickGroupData.name,
+                    hsn_code: quickGroupData.hsn_code || ''
+                };
             } else if (type === 'brand') {
                 url = `${import.meta.env.VITE_API_URL}/brands`;
-                payload = quickBrandData;
+                payload = {
+                    name: quickBrandData.name
+                };
             } else if (type === 'unit') {
                 url = `${import.meta.env.VITE_API_URL}/units`;
-                payload = quickUnitData;
+                payload = {
+                    name: quickUnitData.name,
+                    decimal_places: quickUnitData.accept_decimal ? 3 : 0
+                };
             } else if (type === 'tax') {
                 url = `${import.meta.env.VITE_API_URL}/taxes`;
-                payload = quickTaxData;
+                const rate = parseFloat(quickTaxData.percentage) || 0;
+                const half = rate / 2;
+                payload = {
+                    name: quickTaxData.name,
+                    percentage: rate,
+                    local_central: 'LOCAL',
+                    cgst_rate: half,
+                    sgst_rate: half,
+                    igst_rate: rate
+                };
             }
 
             const res = await fetchWithAuth(url, {
@@ -755,15 +782,44 @@ const ProductMaster = () => {
             });
 
             const result = await res.json();
-            if (!result.success) throw new Error(result.message);
+            if (!result.success) throw new Error(result.error || result.message || 'Operation failed');
 
             fetchData();
-            if (type === 'group') { setShowGroupModal(false); setQuickGroupData({ name: '', description: '', hsn_code: '' }); setFormData(p => ({ ...p, category: payload.name })); }
-            if (type === 'brand') { setShowBrandModal(false); setQuickBrandData({ name: '', description: '' }); setFormData(p => ({ ...p, brand: payload.name })); }
-            if (type === 'unit') { setShowUnitModal(false); setQuickUnitData({ name: '', description: '', accept_decimal: false }); setFormData(p => ({ ...p, unit: payload.name })); }
-            if (type === 'tax') { setShowTaxModal(false); setQuickTaxData({ name: '', percentage: 0 }); }
+            if (type === 'group') {
+                setShowGroupModal(false);
+                setQuickGroupData({ name: '', description: '', hsn_code: '' });
+                setFormData(p => ({
+                    ...p,
+                    category: payload.name,
+                    hsn_code: payload.hsn_code || p.hsn_code
+                }));
+            }
+            if (type === 'brand') {
+                setShowBrandModal(false);
+                setQuickBrandData({ name: '', description: '' });
+                setFormData(p => ({ ...p, brand: payload.name }));
+            }
+            if (type === 'unit') {
+                setShowUnitModal(false);
+                setQuickUnitData({ name: '', description: '', accept_decimal: false });
+                setFormData(p => ({ ...p, unit: payload.name }));
+            }
+            if (type === 'tax') {
+                setShowTaxModal(false);
+                setQuickTaxData({ name: '', percentage: 0 });
+                if (result.data) {
+                    setFormData(p => ({
+                        ...p,
+                        tax_id: result.data._id || result.data.id,
+                        gst_sales: String(payload.percentage),
+                        gst_purchase: String(payload.percentage),
+                        igst_sales: String(payload.percentage),
+                        igst_purchase: String(payload.percentage)
+                    }));
+                }
+            }
 
-            alert(`${type} created successfully!`);
+            alert(`${type.toUpperCase()} created successfully!`);
         } catch (err) {
             alert(`Failed to create ${type}: ` + err.message);
         }
@@ -884,16 +940,16 @@ const ProductMaster = () => {
                             </>
                         ) : (
                             <div className="flex items-center gap-4 ml-auto">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-bold text-slate-800">Type</span>
+                                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                    <span className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Type</span>
                                     <select
                                         name="product_type"
-                                        value={formData.product_type}
+                                        value={formData.product_type || 'GOODS'}
                                         onChange={handleInputChange}
-                                        className="px-3 py-2 bg-white border border-orange-500 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 font-bold"
+                                        className="px-3 py-1.5 bg-white text-black border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 font-bold shadow-sm cursor-pointer"
                                     >
-                                        <option value="GOODS">Goods</option>
-                                        <option value="SERVICE">Service</option>
+                                        <option value="GOODS" className="text-black bg-white">Goods</option>
+                                        <option value="SERVICE" className="text-black bg-white">Service</option>
                                     </select>
                                 </div>
                             </div>
@@ -976,6 +1032,7 @@ const ProductMaster = () => {
                             <table className="item-table-grid">
                                 <thead>
                                     <tr>
+                                        {visibleColumns.action && <th style={{ textAlign: 'center', width: '60px' }}>Action</th>}
                                         {visibleColumns.code && <th>Code</th>}
                                         {visibleColumns.barcode && <th>Barcode</th>}
                                         {visibleColumns.name && <th style={{ minWidth: '200px' }}>Item Name</th>}
@@ -994,7 +1051,6 @@ const ProductMaster = () => {
                                         {visibleColumns.gst_purchase && <th>GST Purchase (%)</th>}
                                         {visibleColumns.igst_sales && <th>IGST Sales (%)</th>}
                                         {visibleColumns.igst_purchase && <th>IGST Purchase (%)</th>}
-                                        {visibleColumns.action && <th style={{ textAlign: 'center' }}>Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1014,6 +1070,11 @@ const ProductMaster = () => {
                                         </tr>
                                     ) : filteredProducts.map(p => (
                                         <tr key={p._id} className={`group hover:bg-slate-50 transition-all ${!p.is_active ? 'opacity-60 grayscale-[0.8] bg-slate-50/50' : ''}`}>
+                                            {visibleColumns.action && (
+                                                <td style={{ textAlign: 'center', width: '40px' }} className="no-print">
+                                                    <ActionDropdown item={p} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                </td>
+                                            )}
                                             {visibleColumns.code && <td>{p.code || 'Auto'}</td>}
                                             {visibleColumns.barcode && <td>{p.barcode || '-'}</td>}
                                             {visibleColumns.name && <td className="font-black">{p.name}</td>}
@@ -1032,11 +1093,6 @@ const ProductMaster = () => {
                                             {visibleColumns.gst_purchase && <td>{p.gst_purchase || 0}%</td>}
                                             {visibleColumns.igst_sales && <td>{p.igst_sales || 0}%</td>}
                                             {visibleColumns.igst_purchase && <td>{p.igst_purchase || 0}%</td>}
-                                            {visibleColumns.action && (
-                                                <td style={{ textAlign: 'center' }} className="no-print">
-                                                    <ActionDropdown item={p} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                </td>
-                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -1044,13 +1100,14 @@ const ProductMaster = () => {
                         </div>
                     </div>
                 ) : (
-                    <section className="bg-white p-6 flex flex-col flex-1 overflow-hidden relative">
-                        {error && (
-                            <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
-                                <AlertCircle size={16} />
-                                {error}
-                            </div>
-                        )}
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
+                                    <AlertCircle size={16} />
+                                    {error}
+                                </div>
+                            )}
 
                         <form onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
                             <div className="flex-1 overflow-y-auto pr-2 space-y-5">
@@ -1795,7 +1852,8 @@ const ProductMaster = () => {
                                 </button>
                             </div>
                         </form>
-                    </section>
+                        </div>
+                    </div>
                 )}
 
                 {/* Column Settings Sidebar Drawer Panel */}

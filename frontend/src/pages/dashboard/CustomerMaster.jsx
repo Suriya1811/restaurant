@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 import './Dashboard.css';
 import {
     PlusCircle,
@@ -21,14 +22,18 @@ import {
     Contact,
     ChevronRight,
     Star,
-    X
-, Download, Printer} from 'lucide-react';
+    X, 
+    Download, 
+    Printer,
+    Save
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 
 
 const CustomerMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [customers, setCustomers] = useState([]);
@@ -120,8 +125,10 @@ const CustomerMaster = () => {
             }
 
             fetchCustomers();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -285,11 +292,11 @@ const CustomerMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Corporate Entity</th>
                                     <th>Contact Data</th>
                                     <th>Capital & Loyalty</th>
                                     <th>Registry Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -309,6 +316,9 @@ const CustomerMaster = () => {
                                     </tr>
                                 ) : filteredCustomers.map((customer) => (
                                         <tr key={customer._id} className="hover:bg-slate-50 transition-colors group">
+                                            <td className="px-4 py-3 border-b border-slate-100 text-center w-10">
+                                                <ActionDropdown item={customer} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                            </td>
                                             <td className="px-4 py-3 border-b border-slate-100">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
@@ -333,12 +343,6 @@ const CustomerMaster = () => {
                                                     {customer.is_active !== false ? 'Active' : 'Inactive'}
                                                 </button>
                                             </td>
-                                            <td className="px-4 py-3 border-b border-slate-100 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button onClick={() => handleEdit(customer)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                    <button onClick={() => handleDelete(customer)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                                </div>
-                                            </td>
                                         </tr>
                                 ))}
                             </tbody>
@@ -347,18 +351,17 @@ const CustomerMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium !max-w-2xl">
-                            <div className="drawer-header-premium !bg-slate-900 !text-white !border-none">
-                                <div>
-                                    <h3 className="text-xl font-bold text-white uppercase">{isEditing ? 'Modify Profile' : 'Onboard Profile'}</h3>
-                                    <p className="text-xs font-semibold text-indigo-400 mt-1 uppercase tracking-widest italic">Institutional CRM Registry</p>
-                                </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-lg bg-white/10 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all">
-                                    <X size={32} />
-                                </button>
-                            </div>
+                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
+                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
+                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'CUSTOMER MODIFICATION' : 'CUSTOMER CREATION'}</h2>
+                            <button
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                            >
+                                <XCircle size={18} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
                             <div className="drawer-body-premium !bg-slate-50">
                                 {error && (
                                     <div className="bg-rose-50 border-2 border-rose-100 p-6 rounded-[2rem] flex items-center gap-4 text-rose-700 font-black text-sm mb-10 shadow-xl shadow-rose-100/50">
@@ -376,7 +379,7 @@ const CustomerMaster = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="form-group-premium col-span-full">
                                                 <label>Global Personnel Label *</label>
-                                                <input type="text" name="name" required className="input-premium !text-sm" placeholder="e.g. MICHAEL SCOFIELD" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
+                                                <input ref={nameInputRef} type="text" name="name" required className="input-premium !text-sm" placeholder="e.g. MICHAEL SCOFIELD" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
                                             </div>
                                             <div className="form-group-premium">
                                                 <label>Phone Architecture *</label>
@@ -440,20 +443,18 @@ const CustomerMaster = () => {
                                         </div>
                                     </div>
                                 </form>
-                            </div>
-                            <div className="drawer-footer-premium !bg-slate-900 !border-white/5 !p-4 flex gap-4">
-                                <button type="submit" form="customer-form" disabled={submitting} className="btn-action-add !bg-white !text-slate-900 flex-1 justify-center py-3 text-sm rounded-xl font-bold hover:!bg-indigo-500 hover:!text-white transition-all">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT MODIFICATIONS' : 'INITIALIZE PROFILE')}
+                            <div className="p-6 bg-white border-t border-slate-100 flex justify-end">
+                                <button type="submit" form="customer-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                    {submitting ? <Loader2 className="animate-spin" /> : (
+                                        <>
+                                            <Save size={20} />
+                                            <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                        </>
+                                    )}
                                 </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-bold uppercase text-xs rounded-xl border border-white/10 transition-all">TERMINATE</button>
                             </div>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
-                        />
-                    </>
+                    </div>
                 )}
             </main>
         </div>

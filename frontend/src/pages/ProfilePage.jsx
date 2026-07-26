@@ -373,7 +373,7 @@ const ProfilePage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={toggleSidebar} title="Profile" restaurantName={profileForm.businessName || profileForm.store_name} />
+                <Header toggleSidebar={toggleSidebar} title="Profile" restaurantName={profileForm.businessName || profileForm.store_name} isMaster={true} />
                 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">

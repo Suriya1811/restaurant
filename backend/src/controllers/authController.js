@@ -226,11 +226,27 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Please provide all required fields' });
         }
 
-        // 2. Date Validations & Defaults
-        const currentYear = new Date().getFullYear();
-        const fyStart = financial_year_start ? new Date(financial_year_start) : new Date(`${currentYear}-04-01`);
-        const fyEnd = financial_year_end ? new Date(financial_year_end) : new Date(`${currentYear + 1}-03-31`);
-        const bkFrom = books_from ? new Date(books_from) : new Date(`${currentYear}-04-01`);
+        // 2. Date Validations & Defaults (Automatic FY calculation)
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-indexed: Jan=0, Feb=1, Mar=2, Apr=3...
+        let fyStartYear, fyEndYear;
+        if (month >= 3) {
+            // Created on or after 1st April: 01-04-CurrentYear to 31-03-NextYear
+            fyStartYear = year;
+            fyEndYear = year + 1;
+        } else {
+            // Created before 1st April: 01-04-PrevYear to 31-03-CurrentYear
+            fyStartYear = year - 1;
+            fyEndYear = year;
+        }
+
+        const defaultFyStart = new Date(`${fyStartYear}-04-01T00:00:00.000Z`);
+        const defaultFyEnd = new Date(`${fyEndYear}-03-31T23:59:59.999Z`);
+
+        const fyStart = financial_year_start ? new Date(financial_year_start) : defaultFyStart;
+        const fyEnd = financial_year_end ? new Date(financial_year_end) : defaultFyEnd;
+        const bkFrom = books_from ? new Date(books_from) : defaultFyStart;
 
         if (fyStart >= fyEnd) {
             return res.status(400).json({ message: 'Financial year start must be before end' });

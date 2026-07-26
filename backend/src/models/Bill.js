@@ -51,17 +51,17 @@ const billSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['DRAFT', 'OPEN', 'PAID', 'CANCELLED', 'DUE', 'CREDIT', 'KITCHEN_READY', 'KITCHEN_DONE', 'ADVANCE'],
+        enum: ['DRAFT', 'OPEN', 'SAVED', 'PAID', 'PARTIAL', 'CANCELLED', 'DUE', 'CREDIT', 'KITCHEN_READY', 'KITCHEN_DONE', 'ADVANCE', 'HELD', 'HOLD'],
         default: 'OPEN'
     },
     kitchen_status: {
         type: String,
-        enum: ['PENDING', 'READY', 'SERVED'],
+        enum: ['PENDING', 'READY', 'SERVED', 'DONE', 'IN_PROGRESS', 'KOT_SENT', 'CANCELLED'],
         default: 'PENDING'
     },
     type: {
         type: String,
-        enum: ['DINE_IN', 'TAKEAWAY', 'SELF_SERVICE', 'PARCEL', 'DELIVERY', 'PARTY', 'PARTY_ORDER'],
+        enum: ['DINE_IN', 'TAKEAWAY', 'SELF_SERVICE', 'PARCEL', 'DELIVERY', 'PARTY', 'PARTY_ORDER', 'COUNTER', 'ONLINE', 'EXPRESS'],
         default: 'SELF_SERVICE'
     },
     function_type: String,
@@ -103,7 +103,7 @@ const billSchema = new mongoose.Schema({
         category: String, // To help with splitting if needed
         status: {
             type: String,
-            enum: ['PENDING', 'READY'],
+            enum: ['PENDING', 'READY', 'SERVED', 'CANCELLED', 'DONE'],
             default: 'PENDING'
         },
         remarks: String,
@@ -141,7 +141,7 @@ const billSchema = new mongoose.Schema({
     },
     payment_mode: {
         type: String,
-        enum: ['CASH', 'UPI', 'CARD', 'SPLIT', 'PENDING', 'NA'],
+        enum: ['CASH', 'UPI', 'CARD', 'ONLINE', 'SPLIT', 'PENDING', 'UNPAID', 'CREDIT', 'NA'],
         default: 'PENDING'
     },
     payment_details: {
@@ -156,7 +156,7 @@ const billSchema = new mongoose.Schema({
     payment_modes: [{
         type: {
             type: String,
-            enum: ['CASH', 'UPI', 'CARD', 'ONLINE', 'SPLIT'],
+            enum: ['CASH', 'UPI', 'CARD', 'ONLINE', 'SPLIT', 'CREDIT'],
             required: true
         },
         amount: {
@@ -183,7 +183,7 @@ const billSchema = new mongoose.Schema({
     kots: [{
         kot_number: String,
         created_at: { type: Date, default: Date.now },
-        status: { type: String, enum: ['PENDING', 'READY'], default: 'PENDING' },
+        status: { type: String, enum: ['PENDING', 'READY', 'SERVED', 'CANCELLED', 'DONE', 'KOT_SENT'], default: 'PENDING' },
         items: [mongoose.Schema.Types.Mixed]
     }],
     loyalty_earned_points: { type: Number, default: 0 },

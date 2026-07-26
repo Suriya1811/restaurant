@@ -1,5 +1,38 @@
 const Printer = require('../models/Printer');
 const Bill = require('../models/Bill');
+const { exec } = require('child_process');
+
+// GET /api/printers/system-printers — list all printers installed on OS
+exports.getSystemPrinters = async (req, res) => {
+    try {
+        if (process.platform === 'win32') {
+            exec('powershell -Command "Get-Printer | Select-Object -ExpandProperty Name"', (error, stdout) => {
+                let printerList = [];
+                if (!error && stdout) {
+                    printerList = stdout.split(/\r?\n/).map(p => p.trim()).filter(Boolean);
+                }
+                if (printerList.length === 0) {
+                    printerList = ['Default System Printer', 'Sales Bill Thermal Printer (POS-80)', 'KOT Kitchen Thermal Printer (KOT-80)', 'Microsoft Print to PDF'];
+                }
+                return res.status(200).json({ success: true, data: printerList });
+            });
+        } else {
+            exec("lpstat -p | awk '{print $2}'", (error, stdout) => {
+                let printerList = [];
+                if (!error && stdout) {
+                    printerList = stdout.split(/\r?\n/).map(p => p.trim()).filter(Boolean);
+                }
+                if (printerList.length === 0) {
+                    printerList = ['Default System Printer', 'Sales Bill Thermal Printer (POS-80)', 'KOT Kitchen Thermal Printer (KOT-80)'];
+                }
+                return res.status(200).json({ success: true, data: printerList });
+            });
+        }
+    } catch (error) {
+        console.error('getSystemPrinters error:', error);
+        res.status(500).json({ success: false, data: ['Default System Printer', 'Sales Bill Thermal Printer (POS-80)', 'KOT Kitchen Thermal Printer (KOT-80)', 'Microsoft Print to PDF'] });
+    }
+};
 
 // GET /api/printers — list all printers for this company
 exports.getPrinters = async (req, res) => {

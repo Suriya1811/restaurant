@@ -117,6 +117,12 @@ const restaurantSchema = new mongoose.Schema({
     pay_mode_enabled: { type: Boolean, default: true },
     stock_level_enabled: { type: Boolean, default: true },
     kot_enabled: { type: Boolean, default: true },
+    party_order_enabled: { type: Boolean, default: true },
+    split_rate_tax_enabled: { type: Boolean, default: false },
+    data_auto_lock_enabled: { type: Boolean, default: false },
+    unlock_days: { type: Number, default: null },
+    lock_date_up_to: { type: Date, default: null },
+    cards_per_row: { type: Number, default: 7, min: 4, max: 7 },
     extra_modules_password: { type: String, default: '' },
     bill_series: {
         dine_in: { 

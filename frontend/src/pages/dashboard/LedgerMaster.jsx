@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/dashboard/Header';
 import Sidebar from '../../components/dashboard/Sidebar';
@@ -66,6 +66,7 @@ const mapStandardGroupToUI = (stdGroup) => {
 };
 
 export default function LedgerMaster({ defaultOpenCreate = false }) {
+    const nameInputRef = useRef(null);
     const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -185,9 +186,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
             });
             const data = await res.json();
             if (data.success) {
-                setShowDrawer(false);
                 resetForm();
                 fetchLedgers();
+                setTimeout(() => {
+                    if (nameInputRef.current) nameInputRef.current.focus();
+                }, 100);
             } else {
                 setError(data.error || 'Failed to save ledger');
             }
@@ -678,12 +681,13 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             <table className="table-premium">
                                 <thead>
                                     <tr className="bg-[#0b1727] border-b border-slate-200 text-[10px] font-black text-[#f97316] uppercase tracking-widest">
+                                        {columnVisible('action') && <th style={{ width: '60px', textAlign: 'center' }}>Action</th>}
                                         {columnVisible('name') && <th>Name</th>}
                                         {columnVisible('print_name') && <th>Print Name</th>}
-                                        {columnVisible('under') && <th>Under</th>}
+                                        {columnVisible('under') && <th>Group</th>}
                                         {columnVisible('opening_balance') && <th>Opening Balance</th>}
-                                        {columnVisible('mobile1') && <th>Mobile No 1</th>}
-                                        {columnVisible('mobile2') && <th>Mobile No 2</th>}
+                                        {columnVisible('mobile1') && <th>Mobile 1</th>}
+                                        {columnVisible('mobile2') && <th>Mobile 2</th>}
                                         {columnVisible('address1') && <th>Address Line 1</th>}
                                         {columnVisible('address2') && <th>Address Line 2</th>}
                                         {columnVisible('address3') && <th>Address Line 3</th>}
@@ -692,7 +696,6 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                         {columnVisible('gst') && <th>GST Number</th>}
                                         {columnVisible('reg_type') && <th>Registration Type</th>}
                                         {columnVisible('state') && <th>State</th>}
-                                        {columnVisible('action') && <th>Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -710,6 +713,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     ) : (
                                         paginatedLedgers.map((ledger) => (
                                             <tr key={ledger._id}>
+                                                {columnVisible('action') && (
+                                                    <td className="w-10 text-center">
+                                                        <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                                    </td>
+                                                )}
                                                 {columnVisible('name') && <td>{ledger.name}</td>}
                                                 {columnVisible('print_name') && <td>{ledger.print_name || ledger.name}</td>}
                                                 {columnVisible('under') && <td>{ledger.group}</td>}
@@ -737,11 +745,6 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                     </td>
                                                 )}
                                                 {columnVisible('state') && <td>{ledger.state || '—'}</td>}
-                                                {columnVisible('action') && (
-                                                    <td>
-                                                            <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
-                                                )}
                                             </tr>
                                         ))
                                     )}
@@ -807,22 +810,21 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
                 {/* Overhauled Ledger Creation Form Overlay */}
                 {showDrawer && (
-                    <div className="fixed inset-0 pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
+                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
                         {/* Header */}
-                        <div className="flex justify-between items-center px-8 py-2 border-b border-slate-100 bg-white shrink-0">
+                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="w-1 h-5 bg-[#f97316] rounded"></div>
-                                <h2 className="text-lg font-black uppercase tracking-wide text-black">
-                                    {isEditing ? 'Modify Account Details' : 'Ledger Creation'}
+                                <h2 className="text-xl font-black uppercase tracking-tight text-black">
+                                    {isEditing ? 'LEDGER ALTERATION' : 'LEDGER CREATION'}
                                 </h2>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
-                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <X size={16} /> CLOSE
+                                <XCircle size={18} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
                             </button>
                         </div>
 
@@ -844,6 +846,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 <span>:</span>
                                             </label>
                                             <input
+                                                ref={nameInputRef}
                                                 type="text"
                                                 required
                                                 value={formData.name || ''}

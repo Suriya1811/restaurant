@@ -11,16 +11,71 @@ export const AuthProvider = ({ children }) => {
     const [permissions, setPermissions] = useState(null);
     const [moduleSettings, setModuleSettings] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [backupModal, setBackupModal] = useState({
+        show: false,
+        title: '',
+        message: '',
+        loading: false,
+        onComplete: null
+    });
     const logoutRef = useRef(null);
 
-    const logout = () => {
+    const performLogout = () => {
         setUser(null);
         setPermissions(null);
         localStorage.removeItem('user');
         localStorage.removeItem('permissions');
         localStorage.removeItem('moduleSettings');
-        // Redirect to login
+        setBackupModal({ show: false, title: '', message: '', loading: false, onComplete: null });
         window.location.href = '/login';
+    };
+
+    const logout = async () => {
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                const parsedUser = JSON.parse(savedUser);
+                if (parsedUser?.token) {
+                    const apiBase = import.meta.env.VITE_API_URL;
+                    const res = await axios.get(`${apiBase}/settings/backup/status`, {
+                        headers: { 'Authorization': `Bearer ${parsedUser.token}` }
+                    });
+
+                    if (res.data?.success && res.data?.data?.settings?.on_exit) {
+                        setBackupModal({
+                            show: true,
+                            title: 'Auto Backup on Exit',
+                            message: 'Taking database backup before exit...',
+                            loading: true,
+                            onComplete: null
+                        });
+
+                        try {
+                            await axios.post(`${apiBase}/settings/backup`, {}, {
+                                headers: { 'Authorization': `Bearer ${parsedUser.token}` }
+                            });
+                        } catch (err) {
+                            console.error("Auto backup on exit error:", err);
+                        }
+
+                        setBackupModal({
+                            show: true,
+                            title: 'Backup Successful',
+                            message: 'Backup completed successfully.',
+                            loading: false,
+                            onComplete: () => {
+                                performLogout();
+                            }
+                        });
+                        return;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Logout auto-backup check failed:", err);
+        }
+
+        performLogout();
     };
 
     // Keep logoutRef in sync so the interceptor always calls the latest version
@@ -61,6 +116,7 @@ export const AuthProvider = ({ children }) => {
                     }
                     // Fetch fresh settings in background
                     fetchModuleSettings(parsedUser.token);
+                    checkStartupBackup(parsedUser.token);
                 } else {
                     localStorage.removeItem('user');
                     localStorage.removeItem('permissions');
@@ -72,6 +128,49 @@ export const AuthProvider = ({ children }) => {
         }
         setLoading(false);
     }, []);
+
+    const checkStartupBackup = async (token) => {
+        if (sessionStorage.getItem('startup_backup_done') === 'true') return;
+        sessionStorage.setItem('startup_backup_done', 'true');
+
+        try {
+            const apiBase = import.meta.env.VITE_API_URL;
+            const res = await axios.get(`${apiBase}/settings/backup/status`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.data?.success && res.data?.data?.settings?.on_startup) {
+                setBackupModal({
+                    show: true,
+                    title: 'Auto Backup on Startup',
+                    message: 'Taking database backup on startup...',
+                    loading: true,
+                    onComplete: null
+                });
+
+                try {
+                    await axios.post(`${apiBase}/settings/backup`, {}, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                } catch (err) {
+                    console.error("Startup backup failed", err);
+                }
+
+                setBackupModal({
+                    show: true,
+                    title: 'Backup Successful',
+                    message: 'Backup completed successfully.',
+                    loading: false,
+                    onComplete: () => {
+                        setBackupModal({ show: false, title: '', message: '', loading: false, onComplete: null });
+                        window.location.href = '/'; // Open Company Selection Screen
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Failed to check startup backup status", e);
+        }
+    };
 
     const fetchModuleSettings = async (token) => {
         try {
@@ -297,7 +396,9 @@ export const AuthProvider = ({ children }) => {
             loyalty: 'loyalty_enabled',
             kot: 'kot_enabled',
             pay_mode: 'pay_mode_enabled',
-            stock_level: 'stock_level_enabled'
+            stock_level: 'stock_level_enabled',
+            party_order: 'party_order_enabled',
+            party: 'party_order_enabled'
         };
         const key = map[moduleName] || `${moduleName}_enabled`;
         return moduleSettings[key] !== false;
@@ -323,6 +424,97 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={contextValue}>
             {children}
+            {backupModal.show && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1rem'
+                }}>
+                    <div style={{
+                        backgroundColor: '#ffffff',
+                        borderRadius: '24px',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        width: '100%',
+                        maxWidth: '400px',
+                        overflow: 'hidden',
+                        padding: '2rem',
+                        textAlign: 'center',
+                        border: '1px solid #e2e8f0'
+                    }}>
+                        <div style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '18px',
+                            backgroundColor: backupModal.loading ? '#fff7ed' : '#ecfdf5',
+                            border: backupModal.loading ? '1px solid #ffedd5' : '1px solid #a7f3d0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 1.25rem',
+                            color: backupModal.loading ? '#ea580c' : '#059669'
+                        }}>
+                            {backupModal.loading ? (
+                                <div style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    border: '3.5px solid #fed7aa',
+                                    borderTopColor: '#ea580c',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                }} />
+                            ) : (
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                            )}
+                        </div>
+                        
+                        <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#1e293b', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+                            {backupModal.title}
+                        </h3>
+                        
+                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#475569', marginBottom: '1.5rem' }}>
+                            {backupModal.message}
+                        </p>
+
+                        {!backupModal.loading && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (backupModal.onComplete) {
+                                        backupModal.onComplete();
+                                    } else {
+                                        setBackupModal({ show: false, title: '', message: '', loading: false, onComplete: null });
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#ea580c',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    fontSize: '14px',
+                                    fontWeight: 900,
+                                    cursor: 'pointer',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    boxShadow: '0 10px 20px -5px rgba(234, 88, 12, 0.4)'
+                                }}
+                            >
+                                OK
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </AuthContext.Provider>
     );
 };

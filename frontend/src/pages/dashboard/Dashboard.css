@@ -308,8 +308,8 @@
    ============================================================ */
 .dashboard-header {
     height: 65px;
-    background-color: #ffffff;
-    border-bottom: 1px solid #E2E8F0;
+    background-color: #0F172A;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;

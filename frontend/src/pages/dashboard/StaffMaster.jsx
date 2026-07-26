@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -20,15 +20,18 @@ import {
     CreditCard,
     Users,
     Camera,
-    X
-    , Download, Printer
+    X,
+    Download,
+    Printer,
+    Save
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
-const StaffMaster = () => {
+const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [staff, setStaff] = useState([]);
@@ -37,7 +40,7 @@ const StaffMaster = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [staffType, setStaffType] = useState('CAPTAIN'); // 'CAPTAIN' or 'WAITER'
+    const [staffType, setStaffType] = useState(defaultType); // 'CAPTAIN' or 'WAITER'
 
     const [formData, setFormData] = useState({
         name: '',
@@ -126,8 +129,10 @@ const StaffMaster = () => {
             }
 
             fetchStaff();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -268,184 +273,155 @@ const StaffMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title={staffType === 'CAPTAIN' ? 'Captain Creation' : 'Waiter Creation'}
+                    title={!showDrawer ? (staffType === 'CAPTAIN' ? 'Captain Display' : 'Waiter Display') : (isEditing ? `MODIFY ${staffType}` : `${staffType} CREATION`)}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <div className="flex items-center gap-4 ml-auto">
-                            <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
-                                <button
-                                    className={`px-6 py-1.5 rounded-lg text-[10px] font-black transition-all ${staffType === 'CAPTAIN' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                    onClick={() => setStaffType('CAPTAIN')}
-                                >
-                                    CAPTAINS
+                        !showDrawer ? (
+                            <div className="flex items-center gap-4 ml-auto">
+                                <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+                                    <button
+                                        className={`px-6 py-1.5 rounded-lg text-[10px] font-black transition-all ${staffType === 'CAPTAIN' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                        onClick={() => setStaffType('CAPTAIN')}
+                                    >
+                                        CAPTAINS
+                                    </button>
+                                    <button
+                                        className={`px-6 py-1.5 rounded-lg text-[10px] font-black transition-all ${staffType === 'WAITER' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                        onClick={() => setStaffType('WAITER')}
+                                    >
+                                        WAITERS
+                                    </button>
+                                </div>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
                                 </button>
-                                <button
-                                    className={`px-6 py-1.5 rounded-lg text-[10px] font-black transition-all ${staffType === 'WAITER' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                    onClick={() => setStaffType('WAITER')}
-                                >
-                                    WAITERS
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Register New {staffType === 'CAPTAIN' ? 'Captain' : 'Waiter'}</span>
                                 </button>
                             </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
+                        ) : (
                             <button
                                 type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                <XCircle size={18} />
+                                <span className="text-xs tracking-wide">CLOSE</span>
                             </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-                            <button className="btn-action-add" onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} />
-                                <span className="text-[10px] uppercase font-black">Register New {staffType === 'CAPTAIN' ? 'Captain' : 'Waiter'}</span>
-                            </button>
-                        </div>
+                        )
                     }
                 />
-                <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
 
-
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder={`Search ${staffType.toLowerCase()} archives...`}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder={`Search ${staffType.toLowerCase()} archives...`}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                    TOTAL : {filteredStaff.length}
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredStaff.length}
-                            </span>
-                        </div>
-                    </div>
 
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th>Personnel Identity</th>
-                                    <th>Communication Ref</th>
-                                    <th>Registry Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
                                     <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Personnel Files...</p>
-                                        </td>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Personnel Identity</th>
+                                        <th>Communication Ref</th>
+                                        <th>Registry Status</th>
                                     </tr>
-                                ) : filteredStaff.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <UserCircle size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No {staffType.toLowerCase()} records found.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredStaff.map((member) => (
-                                    <tr key={member._id} className="group">
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-slate-900/10 group-hover:bg-indigo-600 transition-all overflow-hidden">
-                                                    {member.image ? (
-                                                        <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${member.image}`} alt={member.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        member.name.charAt(0).toUpperCase()
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{member.name}</div>
-                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5 italic">
-                                                        {staffType === 'CAPTAIN' ? 'Operational Lead' : 'Service Personnel'}
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Personnel Files...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredStaff.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <UserCircle size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No {staffType.toLowerCase()} records found.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredStaff.map((member) => (
+                                        <tr key={member._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={member} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-slate-900/10 group-hover:bg-indigo-600 transition-all overflow-hidden">
+                                                        {member.image ? (
+                                                            <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${member.image}`} alt={member.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            member.name.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{member.name}</div>
+                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5 italic">
+                                                            {staffType === 'CAPTAIN' ? 'Operational Lead' : 'Service Personnel'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {member.phone ? (
-                                                <div className="flex items-center gap-2 text-slate-600 font-black tracking-widest">
-                                                    <Smartphone size={14} className="text-slate-300" />
-                                                    {member.phone}
-                                                </div>
-                                            ) : (
-                                                <span className="text-[10px] font-black text-slate-200 tracking-widest">NO COMMS REGISTERED</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge-premium ${member.is_active ? 'active' : 'disabled'}`}>
-                                                {member.is_active ? 'ACTIVE' : 'DEACTIVE'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <ActionDropdown item={member} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
-                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? `MODIFY ${staffType}` : `${staffType} CREATION`}</h2>
-                            <button 
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
-                            >
-                                <XCircle size={20} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
+                                            </td>
+                                            <td>
+                                                {member.phone ? (
+                                                    <div className="flex items-center gap-2 text-slate-600 font-black tracking-widest">
+                                                        <Smartphone size={14} className="text-slate-300" />
+                                                        {member.phone}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-black text-slate-200 tracking-widest">NO COMMS REGISTERED</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${member.is_active ? 'active' : 'disabled'}`}>
+                                                    {member.is_active ? 'ACTIVE' : 'DEACTIVE'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-
-                        <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="bg-white p-6 flex flex-col flex-1 overflow-hidden relative">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
                                     <AlertCircle size={16} className="shrink-0" /> {error}
@@ -465,6 +441,7 @@ const StaffMaster = () => {
                                                 <label className="col-span-3 text-[14px] font-bold text-slate-800">Personnel Name <span className="text-red-500">*</span></label>
                                                 <div className="col-span-9">
                                                     <input
+                                                        ref={nameInputRef}
                                                         type="text"
                                                         required
                                                         className="w-full py-1.5 px-2.5 bg-white border border-slate-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-[14px] text-slate-800"

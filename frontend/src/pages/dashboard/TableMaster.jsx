@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -24,6 +24,7 @@ import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const TableMaster = () => {
+    const numberInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [tables, setTables] = useState([]);
@@ -145,8 +146,15 @@ const TableMaster = () => {
             }
 
             fetchTables();
-            setShowDrawer(false);
-            resetForm();
+            if (isEditing) {
+                setShowDrawer(false);
+                resetForm();
+            } else {
+                resetForm();
+                setTimeout(() => {
+                    if (numberInputRef.current) numberInputRef.current.focus();
+                }, 100);
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -245,183 +253,136 @@ const TableMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title="Table Display"
+                    title={!showDrawer ? "Table Display" : (isEditing ? "TABLE ALTERATION" : "TABLE CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Add New Table</span>
+                                </button>
+                            </>
+                        ) : (
                             <button
                                 type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                <XCircle size={18} />
+                                <span className="text-xs tracking-wide">CLOSE</span>
                             </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} />
-                                <span className="text-[10px] uppercase font-black">Add New Table</span>
-                            </button>
-                        </>
+                        )
                     }
                 />
-                <div className="master-content-layout fade-in">
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search table..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search table..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                    TOTAL : {filteredTables.length}
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={tableTypeFilter} 
-                                onChange={(e) => setTableTypeFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
-                            >
-                                <option value="ALL">All Table Types</option>
-                                {tableTypes.map(type => (
-                                    <option key={type._id} value={type.name}>{type.name}</option>
-                                ))}
-                            </select>
-                            <select 
-                                value={captainFilter} 
-                                onChange={(e) => setCaptainFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
-                            >
-                                <option value="ALL">All Captains</option>
-                                {captains.map(c => (
-                                    <option key={c._id} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                            <select 
-                                value={waiterFilter} 
-                                onChange={(e) => setWaiterFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '130px' }}
-                            >
-                                <option value="ALL">All Waiters</option>
-                                {waiters.map(w => (
-                                    <option key={w._id} value={w.name}>{w.name}</option>
-                                ))}
-                            </select>
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredTables.length}
-                            </span>
+
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Table Identifier</th>
+                                        <th>Seating Capacity</th>
+                                        <th>Spatial Zone</th>
+                                        <th>Assigned Captain</th>
+                                        <th>Assigned Waiter</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="7" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Grid Data...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTables.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Grid size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No tables configured.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTables.map((table) => (
+                                        <tr key={table._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={table} onEdit={handleEdit} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                        <Grid size={18} />
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{table.table_number}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="font-bold text-slate-900">{table.seating_capacity} Persons</span>
+                                            </td>
+                                            <td>
+                                                <span className="badge-premium info">{table.table_type || 'G Floor'}</span>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-semibold text-slate-700">{table.captain || '-'}</span>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-semibold text-slate-700">{table.waiter || '-'}</span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${table.is_active !== false ? 'active' : 'disabled'}`}>
+                                                    {table.is_active !== false ? 'AVAILABLE' : 'DEACTIVE'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th>Table Name</th>
-                                    <th>Table Type</th>
-                                    <th>Persons</th>
-                                    <th>Captain</th>
-                                    <th>Waiter</th>
-                                    <th style={{ textAlign: 'right' }}>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan="6" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Archives...</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredTables.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Grid size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No tables found.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredTables.map((table) => (
-                                    <tr key={table._id} className="group">
-                                        <td>
-                                            <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{table.table_number}</span>
-                                        </td>
-                                        <td>
-                                            <span className="font-semibold text-slate-600">
-                                                {table.table_type || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="font-semibold text-slate-700">
-                                                {table.seating_capacity || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="text-xs font-semibold text-slate-700">
-                                                {table.captain || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="text-xs font-semibold text-slate-700">
-                                                {table.waiter || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <ActionDropdown 
-                                                item={table} 
-                                                onEdit={handleEdit} 
-                                                onDelete={handleDelete}
-                                                onStatusChange={handleToggleStatus}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
-                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'TABLE ALTERATION' : 'TABLE CREATION'}</h2>
-                            <button
-                                onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
-                            >
-                                <XCircle size={20} />
-                                <span className="text-sm tracking-wide">CLOSE</span>
-                            </button>
-                        </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
 
                         <div className="bg-white p-4 flex flex-col flex-1 overflow-hidden relative">
                             {error && (
@@ -438,6 +399,7 @@ const TableMaster = () => {
                                         <div className="flex flex-col md:flex-row md:items-center py-4 border-b border-slate-100/60">
                                             <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">Table Name <span className="text-red-500">*</span></label>
                                             <input
+                                                ref={numberInputRef}
                                                 type="text"
                                                 required
                                                 className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"

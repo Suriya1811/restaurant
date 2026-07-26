@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -12,6 +12,7 @@ import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const CategoryMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -20,7 +21,12 @@ const CategoryMaster = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({ name: '', type: 'FOOD', hsn_code: '', hsn_description: '' });
+    const [formData, setFormData] = useState({
+        name: '',
+        hsn_code: '',
+        hsn_description: '',
+        is_active: true
+    });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -40,6 +46,7 @@ const CategoryMaster = () => {
 
     const fetchCategories = async () => {
         try {
+            setLoading(true);
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
@@ -76,8 +83,10 @@ const CategoryMaster = () => {
             const result = await response.json();
             if (!result.success) throw new Error(result.error);
             fetchCategories();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -127,8 +136,8 @@ const CategoryMaster = () => {
     const COLS = ['#', 'Category Name', 'Type', 'HSN Code', 'Status'];
     const getRows = () => filteredCategories.map((c, i) => [i + 1, c.name, c.type || '-', c.hsn_code || '-', c.is_active ? 'Active' : 'Inactive']);
     const handleExcelExport = () => exportToCSV('Category Master', COLS, getRows(), 'Category_Master');
-    const handlePDFExport   = () => exportToPDF('Category Master', COLS, getRows(), 'Category_Master');
-    const handlePrint       = () => printTable('Category Master', `Total: ${filteredCategories.length}`, COLS, getRows());
+    const handlePDFExport = () => exportToPDF('Category Master', COLS, getRows(), 'Category_Master');
+    const handlePrint = () => printTable('Category Master', `Total: ${filteredCategories.length}`, COLS, getRows());
 
     return (
         <div className="dashboard-layout">
@@ -195,9 +204,9 @@ const CategoryMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Category Entity</th>
                                     <th>Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -217,6 +226,9 @@ const CategoryMaster = () => {
                                     </tr>
                                 ) : filteredCategories.map((cat) => (
                                     <tr key={cat._id} className="group">
+                                        <td className="w-10 text-center">
+                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
@@ -230,9 +242,6 @@ const CategoryMaster = () => {
                                                 {cat.is_active ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
-                                        <td>
-                                                            <ActionDropdown item={cat} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -244,7 +253,7 @@ const CategoryMaster = () => {
                     <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
                         <div className="flex items-center justify-between p-6 border-b border-slate-100 shadow-sm">
                             <h2 className="text-[22px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'Modify Category' : 'CATEGORY CREATION'}</h2>
-                            <button 
+                            <button
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
                                 className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
                             >
@@ -261,11 +270,12 @@ const CategoryMaster = () => {
                                     </div>
                                 )}
                                 <form id="category-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-0">
-                                    
+
                                     {/* Row 1: Group Name */}
                                     <div className="flex flex-col md:flex-row md:items-center py-6 border-b border-slate-100/60">
                                         <label className="w-48 font-black text-slate-800 text-sm mb-2 md:mb-0">GROUP NAME *</label>
                                         <input
+                                            ref={nameInputRef}
                                             type="text"
                                             required
                                             className="flex-1 input-premium !border-[#f97316] focus:ring-[#f97316]/20 rounded-lg px-4 py-3 bg-white text-slate-800"
@@ -320,10 +330,10 @@ const CategoryMaster = () => {
                     </div>
                 )}
                 <SaveConfirmationModal
-                            isOpen={showSaveConfirm}
-                            onConfirm={confirmSave}
-                            onCancel={cancelSave}
-                        />
+                    isOpen={showSaveConfirm}
+                    onConfirm={confirmSave}
+                    onCancel={cancelSave}
+                />
             </main>
         </div>
     );

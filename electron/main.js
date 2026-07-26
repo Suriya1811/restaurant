@@ -115,7 +115,7 @@ async function startBackend() {
     ...process.env,
     NODE_ENV: 'production',
     PORT: '5055',
-    MONGODB_URI: 'mongodb://127.0.0.1:27017/pos',
+    MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/restaurant_new',
     JWT_SECRET: process.env.JWT_SECRET || 'pos_jwt_secret_electron_2025',
     UPLOADS_DIR: UPLOADS_DIR,
     FRONTEND_BUILD: path.join(RESOURCES, 'frontend', 'dist'),

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import ActionDropdown from '../../components/dashboard/ActionDropdown';
 import './Dashboard.css';
 import {
     PlusCircle,
@@ -18,16 +19,20 @@ import {
     DollarSign,
     Building2,
     User,
+    Truck,
+    X,
     ChevronRight,
-    Activity,
-    X
-, Download, Printer} from 'lucide-react';
+    Download,
+    Printer,
+    Save
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 
 
 const SupplierMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [suppliers, setSuppliers] = useState([]);
@@ -40,8 +45,8 @@ const SupplierMaster = () => {
         contact_person: '',
         contact_number: '',
         email: '',
-        gst_number: '',
         address: '',
+        gst_number: '',
         opening_balance: 0
     });
     const [error, setError] = useState('');
@@ -69,6 +74,7 @@ const SupplierMaster = () => {
             const savedUser = localStorage.getItem('user');
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
+
             const response = await fetch(`${import.meta.env.VITE_API_URL}/suppliers`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -102,8 +108,10 @@ const SupplierMaster = () => {
             const result = await response.json();
             if (!result.success) throw new Error(result.error || result.message);
             fetchSuppliers();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -230,11 +238,11 @@ const SupplierMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Vendor Entity</th>
                                     <th>Contact Intelligence</th>
                                     <th>Compliance & Capital</th>
                                     <th>Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -250,6 +258,9 @@ const SupplierMaster = () => {
                                     </td></tr>
                                 ) : filteredSuppliers.map((sup) => (
                                     <tr key={sup._id} className="group">
+                                        <td className="w-10 text-center">
+                                            <ActionDropdown item={sup} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -289,15 +300,6 @@ const SupplierMaster = () => {
                                                 {sup.is_active ? 'CONTRACTED' : 'TERMINATED'}
                                             </span>
                                         </td>
-                                        <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(sup)} className="action-icon-btn edit"><Edit size={18} /></button>
-                                                <button onClick={() => handleToggleStatus(sup)} className="action-icon-btn" style={{ background: sup.is_active ? '#fff7ed' : '#f0fdf4', color: sup.is_active ? '#9a3412' : '#15803d' }}>
-                                                    {sup.is_active ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                </button>
-                                                <button onClick={() => handleDelete(sup)} className="action-icon-btn delete"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -306,111 +308,102 @@ const SupplierMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium !max-w-[820px]">
-                            <div className="drawer-header-premium !bg-amber-950 !border-none">
-                                <div>
-                                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-[0.3em] mb-1">Vendor Intelligence</p>
-                                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">{isEditing ? 'Modify Vendor' : 'Register Vendor'}</h3>
+                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
+                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
+                            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'SUPPLIER MODIFICATION' : 'SUPPLIER CREATION'}</h2>
+                            <button
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                            >
+                                <XCircle size={18} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 flex flex-col flex-1 overflow-y-auto relative bg-slate-50">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8">
+                                    <AlertCircle size={20} /> {error}
                                 </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-lg bg-white/10 hover:bg-rose-500 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-white" />
-                                </button>
-                            </div>
-                            <div className="drawer-body-premium !bg-slate-50">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8">
-                                        <AlertCircle size={20} /> {error}
+                            )}
+                            <form id="supplier-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-10 pb-10">
+                                {/* Entity Block */}
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <Building2 className="text-amber-600" size={20} />
+                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Corporate Identity</h4>
                                     </div>
-                                )}
-                                <form id="supplier-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-10 pb-10">
-                                    {/* Entity Block */}
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <Building2 className="text-amber-600" size={20} />
-                                            <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Corporate Identity</h4>
+                                    <div className="form-group-premium">
+                                        <label>Vendor Trade Name *</label>
+                                        <input ref={nameInputRef} type="text" required className="input-premium !text-xl" placeholder="e.g. RELIABLE PROVISIONS CO." value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
+                                    </div>
+                                </div>
+
+                                {/* Contact Block */}
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <User className="text-amber-600" size={20} />
+                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Communication Matrix</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="form-group-premium">
+                                            <label>Point of Contact</label>
+                                            <input type="text" className="input-premium" placeholder="e.g. JOHN DOE" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value.toUpperCase() })} />
                                         </div>
                                         <div className="form-group-premium">
-                                            <label>Vendor Trade Name *</label>
-                                            <input type="text" required className="input-premium !text-xl" placeholder="e.g. RELIABLE PROVISIONS CO." value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
+                                            <label>Direct Phone Channel</label>
+                                            <input type="text" className="input-premium" placeholder="e.g. +91 9876543210" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} />
+                                        </div>
+                                        <div className="form-group-premium col-span-full">
+                                            <label>Email Interface</label>
+                                            <input type="email" className="input-premium" placeholder="vendor@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} />
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* Contact Block */}
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <User className="text-amber-600" size={20} />
-                                            <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Communication Matrix</h4>
+                                {/* Fiscal Block */}
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <DollarSign className="text-amber-600" size={20} />
+                                        <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Fiscal & Statutory</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="form-group-premium">
+                                            <label>GSTIN Tax Identification</label>
+                                            <input type="text" className="input-premium uppercase" placeholder="22AAAAA0000A1Z5" value={formData.gst_number} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })} />
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="form-group-premium">
-                                                <label>Point of Contact</label>
-                                                <input type="text" className="input-premium" placeholder="e.g. JOHN DOE" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value.toUpperCase() })} />
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>Primary Link Number</label>
-                                                <div className="relative">
-                                                    <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                    <input type="text" className="input-premium !pl-12" placeholder="9876543210" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} />
-                                                </div>
-                                            </div>
-                                            <div className="form-group-premium md:col-span-2">
-                                                <label>Mail Protocol</label>
-                                                <div className="relative">
-                                                    <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                    <input type="email" className="input-premium !pl-12" placeholder="vendor@domain.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} />
-                                                </div>
+                                        <div className="form-group-premium">
+                                            <label>Opening Credit Balance (Dr/Cr)</label>
+                                            <input type="number" className="input-premium" value={formData.opening_balance} onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
+                                        </div>
+                                        <div className="form-group-premium col-span-full">
+                                            <label>Physical Infrastructure Address</label>
+                                            <div className="relative">
+                                                <MapPin size={18} className="absolute left-4 top-4 text-slate-400" />
+                                                <textarea className="input-premium !pl-12 !h-24 !pt-4" placeholder="Full vendor address..." value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}></textarea>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Compliance Block */}
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-100">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <Activity className="text-amber-600" size={20} />
-                                            <h4 className="text-xl font-black text-slate-800 tracking-tight uppercase">Compliance & Financials</h4>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="form-group-premium">
-                                                <label>GST Identification</label>
-                                                <div className="relative">
-                                                    <FileText size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                    <input type="text" className="input-premium !pl-12 uppercase" placeholder="27AAAAA0000A1Z5" value={formData.gst_number} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })} />
-                                                </div>
-                                            </div>
-                                            <div className="form-group-premium">
-                                                <label>Opening Payable Balance</label>
-                                                <div className="relative">
-                                                    <DollarSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                    <input type="number" className="input-premium !pl-12" value={formData.opening_balance} onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })} />
-                                                </div>
-                                            </div>
-                                            <div className="form-group-premium md:col-span-2">
-                                                <label>Geospatial Location (Address)</label>
-                                                <div className="relative">
-                                                    <MapPin size={18} className="absolute left-4 top-4 text-slate-300" />
-                                                    <textarea className="input-premium !pl-12 !h-24 !pt-4" placeholder="Full vendor address..." value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div className="drawer-footer-premium !bg-amber-950 !border-white/5 !pb-10">
-                                <button type="submit" form="supplier-form" disabled={submitting} className="btn-action-add !bg-amber-400 !text-amber-950 !flex-1 !justify-center !py-5 !text-base !rounded-[2rem] hover:!bg-white transition-all transform hover:scale-[0.98]">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT VENDOR DATA' : 'REGISTER VENDOR')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="px-10 py-5 bg-white/10 hover:bg-white/20 text-white font-black uppercase text-xs tracking-widest rounded-[2rem] border border-white/10 transition-all">CANCEL</button>
-                            </div>
+                                </div>
+                            </form>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
-                        />
-                    </>
+                        <div className="p-6 bg-white border-t border-slate-100 flex justify-end">
+                            <button type="submit" form="supplier-form" disabled={submitting} className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer">
+                                {submitting ? <Loader2 className="animate-spin" /> : (
+                                    <>
+                                        <Save size={20} />
+                                        <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 )}
+                <SaveConfirmationModal 
+                    isOpen={showSaveConfirm} 
+                    onConfirm={confirmSave} 
+                    onCancel={cancelSave} 
+                />
             </main>
         </div>
     );

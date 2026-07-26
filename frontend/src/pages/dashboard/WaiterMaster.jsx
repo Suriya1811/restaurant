@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -20,8 +20,11 @@ import {
     CreditCard,
     UserCircle,
     Users,
-    X
-    , Download, Printer
+    X,
+    Phone,
+    Download,
+    Printer,
+    Save
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
@@ -29,6 +32,7 @@ import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const WaiterMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [waiters, setWaiters] = useState([]);
@@ -40,11 +44,10 @@ const WaiterMaster = () => {
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        cell_no_2: '',
+        phone2: '',
         address: '',
-        joining_date: new Date().toISOString().split('T')[0],
-        id_proof_type: 'NONE',
-        image: ''
+        image: '',
+        is_active: true
     });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -121,8 +124,10 @@ const WaiterMaster = () => {
             }
 
             fetchWaiters();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -260,289 +265,279 @@ const WaiterMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title="Waiter Master"
+                    title={!showDrawer ? "Waiter Master" : (isEditing ? "WAITER MODIFICATION" : "WAITER CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
-
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Register New Waiter</span>
+                                </button>
+                            </>
+                        ) : (
                             <button
                                 type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                <XCircle size={18} />
+                                <span className="text-xs tracking-wide">CLOSE</span>
                             </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} />
-                                <span className="text-[10px] uppercase font-black">Register New Waiter</span>
-                            </button>
-                        </>
+                        )
                     }
                 />
-                <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search service personnel..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium w-40 !py-1.5 !px-3"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
-                            
-                        </div>
-                    </div>
-
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th>Service Identity</th>
-                                    <th>Communication Ref</th>
-                                    <th>Registry Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Personnel Files...</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredWaiters.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <UserCircle size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No personnel records found.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredWaiters.map((waiter) => (
-                                    <tr key={waiter._id} className="group">
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all overflow-hidden">
-                                                    {waiter.image ? (
-                                                        <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${waiter.image}`} alt={waiter.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        waiter.name.charAt(0).toUpperCase()
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{waiter.name}</div>
-                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5 italic">Service Personnel</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {waiter.phone ? (
-                                                <div className="flex items-center gap-2 text-slate-600 font-black tracking-widest">
-                                                    <Smartphone size={14} className="text-slate-300" />
-                                                    {waiter.phone}
-                                                </div>
-                                            ) : (
-                                                <span className="text-[10px] font-black text-slate-200 tracking-widest">NO COMMS REGISTERED</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge-premium ${waiter.is_active ? 'active' : 'disabled'}`}>
-                                                {waiter.is_active ? 'ACTIVE' : 'DEACTIVE'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <ActionDropdown item={waiter} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <>
-                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999]" onClick={() => setShowDrawer(false)}></div>
-                        <div className="drawer-premium">
-                            <div className="drawer-header-premium">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{isEditing ? 'Modify Personnel' : 'Architect Personnel'}</h3>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Service Force Registry</p>
-                                </div>
-                                <button onClick={() => { resetForm(); setShowDrawer(false); }} className="w-12 h-12 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all">
-                                    <X size={32} className="text-slate-500 hover:text-slate-800" />
-                                </button>
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search service personnel..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
-                            <div className="drawer-body-premium">
-                                {error && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
-                                        <AlertCircle size={20} /> {error}
-                                    </div>
-                                )}
-                                <form id="waiter-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Personnel Identifier Label *</label>
-                                            <div className="relative">
-                                                <UserCircle size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="input-premium !pl-12"
-                                                    placeholder="e.g. RAMESH"
-                                                    value={formData.name}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
-                                                />
-                                            </div>
-                                        </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium w-40 !py-1.5 !px-3"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                            </div>
+                        </div>
 
-                                        <div className="form-group-premium">
-                                            <label>Personnel Photo</label>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="relative group/img w-14 h-14 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-300">
-                                                    {formData.image ? (
-                                                        <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.image}`} alt="Preview" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Camera size={20} className="text-slate-300 group-hover/img:text-indigo-400" />
-                                                    )}
-                                                    <input
-                                                        type="file"
-                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                        onChange={handleImageUpload}
-                                                        accept="image/*"
-                                                    />
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Service Identity</th>
+                                        <th>Communication Ref</th>
+                                        <th>Registry Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Personnel Files...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredWaiters.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <UserCircle size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No personnel records found.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredWaiters.map((waiter) => (
+                                        <tr key={waiter._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={waiter} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all overflow-hidden">
+                                                        {waiter.image ? (
+                                                            <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${waiter.image}`} alt={waiter.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            waiter.name.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{waiter.name}</div>
+                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5 italic">Service Personnel</div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">
-                                                    Recommended<br />1:1 Aspect Ratio
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Cell No (Primary) *</label>
-                                            <div className="relative">
-                                                <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="input-premium !pl-12"
-                                                    placeholder="10-digit primary contact"
-                                                    value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>Cell No 2 (Secondary)</label>
-                                            <div className="relative">
-                                                <Smartphone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <input
-                                                    type="text"
-                                                    className="input-premium !pl-12"
-                                                    placeholder="Secondary contact"
-                                                    value={formData.cell_no_2}
-                                                    onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
-                                                />
-                                            </div>
+                                            </td>
+                                            <td>
+                                                {waiter.phone ? (
+                                                    <div className="flex items-center gap-2 text-slate-600 font-black tracking-widest">
+                                                        <Smartphone size={14} className="text-slate-300" />
+                                                        {waiter.phone}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-black text-slate-200 tracking-widest">NO COMMS REGISTERED</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${waiter.is_active ? 'active' : 'disabled'}`}>
+                                                    {waiter.is_active ? 'ACTIVE' : 'DEACTIVE'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="px-8 py-8 w-full flex flex-col flex-1 overflow-y-auto relative bg-white">
+                            {error && (
+                                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-8 animate-in fade-in duration-300">
+                                    <AlertCircle size={20} /> {error}
+                                </div>
+                            )}
+                            <form id="waiter-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="space-y-8 max-w-4xl">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="form-group-premium">
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Personnel Identifier Label *</label>
+                                        <div className="relative">
+                                            <UserCircle size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                            <input
+                                                ref={nameInputRef}
+                                                type="text"
+                                                required
+                                                className="input-premium !pl-12"
+                                                placeholder="e.g. RAMESH"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
+                                            />
                                         </div>
                                     </div>
 
                                     <div className="form-group-premium">
-                                        <label>Residential Address</label>
-                                        <div className="relative">
-                                            <MapPin size={20} className="absolute left-4 top-4 text-slate-300" />
-                                            <textarea
-                                                className="input-premium !pl-12 min-h-[100px] py-4"
-                                                placeholder="Enter full residential address..."
-                                                value={formData.address}
-                                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            ></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="form-group-premium">
-                                            <label>Joining Date</label>
-                                            <div className="relative">
-                                                <Calendar size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Personnel Photo</label>
+                                        <div className="flex items-center gap-4 ml-auto">
+                                            <div className="relative group/img w-14 h-14 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-indigo-300">
+                                                {formData.image ? (
+                                                    <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.image}`} alt="Preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Camera size={20} className="text-slate-300 group-hover/img:text-indigo-400" />
+                                                )}
                                                 <input
-                                                    type="date"
-                                                    className="input-premium !pl-12"
-                                                    value={formData.joining_date}
-                                                    onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                                                    type="file"
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                    onChange={handleImageUpload}
+                                                    accept="image/*"
                                                 />
                                             </div>
-                                        </div>
-
-                                        <div className="form-group-premium">
-                                            <label>ID Proof Verification</label>
-                                            <div className="relative">
-                                                <CreditCard size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                <select
-                                                    className="input-premium !pl-12 !appearance-none"
-                                                    value={formData.id_proof_type}
-                                                    onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
-                                                >
-                                                    <option value="NONE">SELECT ID PROOF</option>
-                                                    <option value="ADHAR CARD">ADHAR CARD</option>
-                                                    <option value="VOTER ID">VOTER ID</option>
-                                                    <option value="DRIVING LICENSE">DRIVING LICENSE</option>
-                                                </select>
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">
+                                                Recommended<br />1:1 Aspect Ratio
                                             </div>
                                         </div>
                                     </div>
-                                </form>
-                            </div>
-                            <div className="drawer-footer-premium">
-                                <button type="submit" form="waiter-form" disabled={submitting} className="btn-action-add flex-1 justify-center py-4">
-                                    {submitting ? <Loader2 className="animate-spin" /> : (isEditing ? 'COMMIT PERSONNEL' : 'DEPLOY PERSONNEL')}
-                                </button>
-                                <button type="button" onClick={() => { resetForm(); setShowDrawer(false); }} className="btn-premium-outline">Discard</button>
-                            </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="form-group-premium">
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cell No (Primary) *</label>
+                                        <div className="relative">
+                                            <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                            <input
+                                                type="text"
+                                                required
+                                                className="input-premium !pl-12"
+                                                placeholder="10-digit primary contact"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group-premium">
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Cell No 2 (Secondary)</label>
+                                        <div className="relative">
+                                            <Smartphone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                            <input
+                                                type="text"
+                                                className="input-premium !pl-12"
+                                                placeholder="Secondary contact"
+                                                value={formData.cell_no_2}
+                                                onChange={(e) => setFormData({ ...formData, cell_no_2: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="form-group-premium">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Residential Address</label>
+                                    <div className="relative">
+                                        <MapPin size={20} className="absolute left-4 top-4 text-slate-300" />
+                                        <textarea
+                                            className="input-premium !pl-12 min-h-[100px] py-4"
+                                            placeholder="Enter full residential address..."
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        ></textarea>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="form-group-premium">
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Joining Date</label>
+                                        <div className="relative">
+                                            <Calendar size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                            <input
+                                                type="date"
+                                                className="input-premium !pl-12"
+                                                value={formData.joining_date}
+                                                onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group-premium">
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-2">ID Proof Verification</label>
+                                        <div className="relative">
+                                            <CreditCard size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                            <select
+                                                className="input-premium !pl-12 !appearance-none cursor-pointer"
+                                                value={formData.id_proof_type}
+                                                onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
+                                            >
+                                                <option value="NONE">SELECT ID PROOF</option>
+                                                <option value="ADHAR CARD">ADHAR CARD</option>
+                                                <option value="VOTER ID">VOTER ID</option>
+                                                <option value="DRIVING LICENSE">DRIVING LICENSE</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end mt-12 w-full max-w-4xl pt-6">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
+                                    >
+                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                         <SaveConfirmationModal
                             isOpen={showSaveConfirm}
                             onConfirm={confirmSave}
                             onCancel={cancelSave}
                         />
-                    </>
+                    </div>
                 )}
             </main>
         </div>

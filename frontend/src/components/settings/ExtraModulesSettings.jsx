@@ -15,7 +15,8 @@ const ExtraModulesSettings = () => {
         loyalty_enabled: false,
         kot_enabled: false,
         printer_enabled: false,
-        reports_enabled: false
+        reports_enabled: false,
+        party_order_enabled: true
     });
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState('');
@@ -60,7 +61,8 @@ const ExtraModulesSettings = () => {
                     loyalty_enabled: res.data.data.modules.loyalty_enabled || false,
                     kot_enabled: res.data.data.modules.kot_enabled || false,
                     printer_enabled: res.data.data.modules.printer_enabled || false,
-                    reports_enabled: res.data.data.modules.reports_enabled || false
+                    reports_enabled: res.data.data.modules.reports_enabled || false,
+                    party_order_enabled: res.data.data.modules.party_order_enabled !== false
                 }));
             }
         } catch (err) {
@@ -188,6 +190,17 @@ const ExtraModulesSettings = () => {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={modules.reports_enabled} onChange={e => setModules({...modules, reports_enabled: e.target.checked})} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                        </label>
+                    </div>
+
+                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
+                        <div>
+                            <h4 className="font-bold text-slate-800 text-sm">Party Order Module</h4>
+                            <p className="text-xs text-slate-500 mt-1">Show Party Order in Sales Bill</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={modules.party_order_enabled !== false} onChange={e => setModules({...modules, party_order_enabled: e.target.checked})} className="sr-only peer" />
                             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                         </label>
                     </div>

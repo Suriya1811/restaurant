@@ -122,8 +122,12 @@ const KotPrintTemplate = ({
                         return (
                             <tr key={idx} style={{ verticalAlign: 'top' }}>
                                 <td style={{ padding: '4px 0', fontWeight: 700 }}>
-                                    {item.name || item.item_name}
-                                    {remarkText ? ` (${remarkText})` : ''}
+                                    <div>{item.name || item.item_name}</div>
+                                    {remarkText && (
+                                        <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#000', fontWeight: 900, marginTop: '1px' }}>
+                                            Remarks : {remarkText}
+                                        </div>
+                                    )}
                                 </td>
                                 <td style={{ textAlign: 'right', fontWeight: 900, padding: '4px 0' }}>
                                     {item.quantity}

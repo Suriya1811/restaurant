@@ -195,7 +195,7 @@ function AppRoutes() {
                                 <PermissionRoute pageKey="counters" module="counter"><CounterMaster /></PermissionRoute>
                             } />
                             <Route path="table-select" element={
-                                <PermissionRoute pageKey="kot"><TableSelectionPage /></PermissionRoute>
+                                <PermissionRoute pageKey="kot" module="kot"><TableSelectionPage /></PermissionRoute>
                             } />
                             <Route path="billing" element={
                                 <PermissionRoute pageKey="sales_bill"><BillingPage /></PermissionRoute>
@@ -267,10 +267,10 @@ function AppRoutes() {
                             <Route path="settings/integration" element={<PermissionRoute pageKey="order_integration"><OrderIntegrationSettings /></PermissionRoute>} />
 
                             {/* Kitchen & Printer Management (Combined) */}
-                            <Route path="kitchen-management" element={<PermissionRoute pageKey="kitchen_printers"><KitchenPrinterManagement /></PermissionRoute>} />
+                            <Route path="kitchen-management" element={<PermissionRoute pageKey="kitchen_printers" module="kitchen"><KitchenPrinterManagement /></PermissionRoute>} />
                             <Route path="printer-management" element={<PermissionRoute pageKey="kitchen_printers"><KitchenPrinterManagement /></PermissionRoute>} />
-                            <Route path="kitchen-display" element={<PermissionRoute pageKey="kitchen_printers"><KitchenDisplayList /></PermissionRoute>} />
-                            <Route path="kitchen-display/:kitchenId" element={<PermissionRoute pageKey="kitchen_printers"><KitchenDisplay /></PermissionRoute>} />
+                            <Route path="kitchen-display" element={<PermissionRoute pageKey="kitchen_printers" module="kitchen"><KitchenDisplayList /></PermissionRoute>} />
+                            <Route path="kitchen-display/:kitchenId" element={<PermissionRoute pageKey="kitchen_printers" module="kitchen"><KitchenDisplay /></PermissionRoute>} />
                             <Route path="printer-display" element={<PermissionRoute pageKey="kitchen_printers"><PrinterDisplayList /></PermissionRoute>} />
                             <Route path="printer-display/:id" element={<PermissionRoute pageKey="kitchen_printers"><PrinterDisplay /></PermissionRoute>} />
 

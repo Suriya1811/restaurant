@@ -13,6 +13,7 @@ import autoTable from 'jspdf-autotable';
 import './Dashboard.css';
 
 const ALL_COLUMNS = [
+    { id: 'action', label: '' },
     { id: 'sno', label: 'S.NO' },
     { id: 'type', label: 'TYPE' },
     { id: 'kot_bill_no', label: 'KOT/BILL NUMBER' },
@@ -24,8 +25,7 @@ const ALL_COLUMNS = [
     { id: 'amount', label: 'AMOUNT' },
     { id: 'cash_amount', label: 'CASH' },
     { id: 'card_amount', label: 'CARD' },
-    { id: 'upi_amount', label: 'UPI' },
-    { id: 'action', label: 'ACTION' }
+    { id: 'upi_amount', label: 'UPI' }
 ];
 
 const DisplayPage = () => {
@@ -635,6 +635,66 @@ const DisplayPage = () => {
                                         ) : (
                                             paginatedRecords.map((record, index) => (
                                                 <tr key={record.id} className="border-b border-slate-200 bg-white hover:bg-slate-50/80 transition-colors group">
+                                                    {visibleColumns.includes('action') && (
+                                                        <td className="py-3 px-4 relative text-center border-r border-slate-200 last:border-0 w-10">
+                                                            <ActionDropdown
+                                                                 item={record}
+                                                                 onView={(r) => {
+                                                                     const targetBillId = r.raw_bill_id || r._id || r.bill_id;
+                                                                     if (targetBillId) {
+                                                                         navigate('/dashboard/self-service/billing', {
+                                                                             state: {
+                                                                                 fromTable: true,
+                                                                                 billId: targetBillId,
+                                                                                 tableNo: r.table || '',
+                                                                                 tableStatus: 'OCCUPIED'
+                                                                             }
+                                                                         });
+                                                                     }
+                                                                 }}
+                                                                 onAlter={(r) => {
+                                                                     const targetBillId = r.raw_bill_id || r._id || r.bill_id;
+                                                                     if (targetBillId) {
+                                                                         navigate('/dashboard/self-service/billing', {
+                                                                             state: {
+                                                                                 fromTable: true,
+                                                                                 billId: targetBillId,
+                                                                                 tableNo: r.table || '',
+                                                                                 tableStatus: 'OCCUPIED'
+                                                                             }
+                                                                         });
+                                                                     }
+                                                                 }}
+                                                                 onStatusChange={async (r, newStatus) => {
+                                                                     const targetId = r._id || r.id;
+                                                                     try {
+                                                                         const savedUser = localStorage.getItem('user');
+                                                                         const { token } = JSON.parse(savedUser || '{}');
+                                                                         await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}/status`, {
+                                                                             method: 'PUT',
+                                                                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                             body: JSON.stringify({ is_active: newStatus })
+                                                                         });
+                                                                     } catch (err) { }
+                                                                     setRecords(prev => prev.map(x => (x._id || x.id) === targetId ? { ...x, is_active: newStatus } : x));
+                                                                 }}
+                                                                 onDelete={async (r) => {
+                                                                     const targetId = r._id || r.id;
+                                                                     if (window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) {
+                                                                         try {
+                                                                             const savedUser = localStorage.getItem('user');
+                                                                             const { token } = JSON.parse(savedUser || '{}');
+                                                                             await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}`, {
+                                                                                 method: 'DELETE',
+                                                                                 headers: { 'Authorization': `Bearer ${token}` }
+                                                                             });
+                                                                         } catch (err) { }
+                                                                         setRecords(prev => prev.filter(x => (x._id || x.id) !== targetId));
+                                                                     }
+                                                                 }}
+                                                             />
+                                                        </td>
+                                                    )}
                                                     {visibleColumns.includes('sno') && (
                                                         <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
                                                             {String((currentPage - 1) * recordsPerPage + index + 1)}
@@ -695,31 +755,6 @@ const DisplayPage = () => {
                                                     {visibleColumns.includes('upi_amount') && (
                                                         <td className="py-3 px-4 text-[13px] font-bold text-slate-800 text-center border-r border-slate-200 last:border-0">
                                                             {(record.type === 'SALES_BILL' || record.type === 'KOT_BILL') ? (record.payment_mode === 'NA' ? 'NA' : `₹ ${parseFloat(record.upiAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : '-'}
-                                                        </td>
-                                                    )}
-                                                    {visibleColumns.includes('action') && (
-                                                        <td className="py-3 px-4 relative text-center border-r border-slate-200 last:border-0">
-                                                            <ActionDropdown
-                                                                item={record}
-                                                                onView={(r) => {
-                                                                    const targetBillId = r.raw_bill_id || r._id || r.bill_id;
-                                                                    if (targetBillId) {
-                                                                        navigate('/dashboard/self-service/billing', {
-                                                                            state: {
-                                                                                fromTable: true,
-                                                                                billId: targetBillId,
-                                                                                tableNo: r.table || '',
-                                                                                tableStatus: 'OCCUPIED'
-                                                                            }
-                                                                        });
-                                                                    } else {
-                                                                        alert(`Viewing details for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}`);
-                                                                    }
-                                                                }}
-                                                                onAlter={record.canAlter ? (r) => alert(`Alter functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
-                                                                onCancel={record.canCancel ? (r) => alert(`Cancel functionality for ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)} is coming soon.`) : null}
-                                                                onDelete={record.canDelete ? (r) => { if(window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) alert('Delete functionality is coming soon.'); } : null}
-                                                            />
                                                         </td>
                                                     )}
                                                 </tr>

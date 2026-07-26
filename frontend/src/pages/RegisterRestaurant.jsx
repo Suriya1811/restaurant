@@ -12,6 +12,8 @@ import { useFormNavigation } from '../hooks/useFormNavigation';
 import SaveConfirmationModal from '../components/common/SaveConfirmationModal';
 import './RegisterRestaurant.css';
 
+import { getAutomaticFinancialYear } from '../utils/financialYearUtils';
+
 const RegisterRestaurant = () => {
     const { register } = useAuth();
     const navigate = useNavigate();
@@ -25,22 +27,25 @@ const RegisterRestaurant = () => {
 
     const { formRef, handleKeyDown } = useFormNavigation([], handleFormSubmitRequest);
 
-    const [formData, setFormData] = useState({
-        path: '',
-        company_name: '',
-        short_name: '',
-        print_name: '',
-        restaurant_type: 'DINING',
-        financial_year: '',
-        start_from: '',
-        start_to: '',
-        books_from: '',
-        address: '',
-        mobile: '',
-        email: '',
-        gstin: '',
-        fssai_no: '',
-        logo_url: ''
+    const [formData, setFormData] = useState(() => {
+        const autoFY = getAutomaticFinancialYear();
+        return {
+            path: '',
+            company_name: '',
+            short_name: '',
+            print_name: '',
+            restaurant_type: 'DINING',
+            financial_year: autoFY.label,
+            start_from: autoFY.startDate,
+            start_to: autoFY.endDate,
+            books_from: autoFY.booksFromDate,
+            address: '',
+            mobile: '',
+            email: '',
+            gstin: '',
+            fssai_no: '',
+            logo_url: ''
+        };
     });
 
     const handleChange = (e) => {

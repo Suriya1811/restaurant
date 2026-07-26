@@ -14,7 +14,8 @@ const {
     updateModuleSettings,
     createNewProfile,
     verifyExtraModulesPassword,
-    togglePasswordProtection
+    togglePasswordProtection,
+    changeFinancialYear
 } = require('../controllers/settingsController');
 const {
     createBackup,
@@ -27,6 +28,9 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // All routes require authentication and admin/owner access
 router.use(protect);
 router.use(authorize('ADMIN', 'OWNER'));
+
+// Change Financial Year
+router.put('/financial-year', changeFinancialYear);
 
 // Get all settings
 router.get('/', getUserSettings);
@@ -71,5 +75,16 @@ router.get('/backup/status', getBackupStatus);
 router.put('/backup/settings', updateBackupSettings);
 router.post('/backup', createBackup);
 router.post('/restore', restoreBackup);
+
+// Seed sample data
+router.post('/seed-sample-data', async (req, res, next) => {
+    try {
+        const seedSampleData = require('../../seeders/seed_sample_data');
+        const result = await seedSampleData(false);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+});
 
 module.exports = router;

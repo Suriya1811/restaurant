@@ -405,10 +405,12 @@ const SelfServiceDashboard = () => {
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col h-[400px]">
                                 <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest mb-2">QUICK ACTIONS</h3>
                                 <div className="flex flex-col gap-4 flex-1 justify-center">
-                                    <button onClick={() => window.location.href = '/dashboard/self-service/table-select'} className="w-full flex items-center gap-4 px-5 py-4 bg-white hover:bg-slate-50 rounded-xl transition-all text-left border border-slate-200 shadow-sm hover:shadow-md">
-                                        <Monitor size={18} className="text-slate-600" />
-                                        <span className="text-[13px] font-bold text-slate-700">KOT</span>
-                                    </button>
+                                    {hasModuleAccess('kot') && (
+                                        <button onClick={() => window.location.href = '/dashboard/self-service/table-select'} className="w-full flex items-center gap-4 px-5 py-4 bg-white hover:bg-slate-50 rounded-xl transition-all text-left border border-slate-200 shadow-sm hover:shadow-md">
+                                            <Monitor size={18} className="text-slate-600" />
+                                            <span className="text-[13px] font-bold text-slate-700">KOT</span>
+                                        </button>
+                                    )}
                                     <button onClick={() => window.location.href = '/dashboard/self-service/billing'} className="w-full flex items-center gap-4 px-5 py-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all text-left border border-blue-200 shadow-sm hover:shadow-md">
                                         <FileText size={18} className="text-blue-600" />
                                         <span className="text-[13px] font-bold text-blue-700">Sales Bill</span>

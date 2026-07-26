@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     getProducts,
+    getProductById,
     createProduct,
     updateProduct,
     toggleProductStatus,
@@ -12,6 +13,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
 router.get('/', protect, authorize('ADMIN', 'OWNER', 'BILLING'), getProducts);
+router.get('/:id', protect, authorize('ADMIN', 'OWNER', 'BILLING'), getProductById);
 router.post('/', protect, authorize('ADMIN', 'OWNER'), createProduct);
 router.post('/upload', protect, authorize('ADMIN', 'OWNER'), upload.single('image'), (req, res) => {
     if (!req.file) {

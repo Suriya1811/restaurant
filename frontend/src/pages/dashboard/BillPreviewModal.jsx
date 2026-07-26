@@ -6,6 +6,8 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
     const [restaurantData, setRestaurantData] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const printerSettings = restaurantData?.printer_settings || {};
+
     useEffect(() => {
         if (isOpen && billId) fetchBillDetails();
     }, [isOpen, billId]);
@@ -67,9 +69,22 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
     };
 
     const handlePrint = () => {
+        const selectedPrinter = localStorage.getItem('pos_sales_bill_printer') || 'Sales Bill Printer';
+        if (window.electronAPI && window.electronAPI.print) {
+            const receiptElem = document.querySelector('.bpm-receipt-area');
+            if (receiptElem) {
+                window.electronAPI.print({
+                    html: receiptElem.innerHTML,
+                    printerName: selectedPrinter,
+                    deviceName: selectedPrinter
+                });
+                return;
+            }
+        }
+        const origTitle = document.title;
+        document.title = `Sales Bill #${billData?.bill_number || ''} [Printer: ${selectedPrinter}]`;
         window.print();
-        // Since we are using @media print in the style block below, 
-        // it will automatically only print the receipt area without reloads.
+        setTimeout(() => { document.title = origTitle; }, 1000);
     };
 
     if (!isOpen) return null;
@@ -227,8 +242,13 @@ const BillPreviewModal = ({ isOpen, onClose, billId, paymentModes }) => {
                                                 <React.Fragment key={idx}>
                                                     <tr className="tr-item">
                                                         <td className="td-name">
-                                                            <div>{item.name}{item.notes ? ` (${item.notes})` : ''}</div>
+                                                            <div style={{ fontWeight: 800 }}>{item.name}</div>
                                                             {item.variation && <div className="td-var">({item.variation})</div>}
+                                                            {(item.remarks || item.notes) && (
+                                                                <div style={{ fontSize: '10px', fontStyle: 'italic', color: '#1e293b', fontWeight: 'bold', marginTop: '1px' }}>
+                                                                    Remarks : {item.remarks || item.notes}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="td-qty">{item.quantity}</td>
                                                         <td className="td-amt">₹{item.total_price.toFixed(2)}</td>

@@ -5,6 +5,7 @@ import PayModePopup from './PayModePopup';
 import './BillingPage.css';
 import BillPreviewModal from './BillPreviewModal';
 import { CardSkeleton } from '../../components/Skeleton';
+import { checkFinancialYearActive } from '@/utils/financialYearUtils';
 import {
     ShoppingBag,
     Plus,
@@ -21,6 +22,7 @@ import {
     Users,
     Save,
     Printer,
+    FileText,
     Menu as MenuIcon,
     LayoutGrid,
     Columns,
@@ -28,6 +30,8 @@ import {
     Bell,
     Settings,
     Pause,
+    ChevronsRight,
+    XCircle,
     History,
     Timer,
     Gift,
@@ -94,6 +98,9 @@ const getConsolidatedItems = (items) => {
 const BillingPage = () => {
     const navigate = useNavigate();
     const { logout, user, hasModuleAccess } = useAuth();
+    const isKotEnabled = hasModuleAccess('kot');
+    const isCouponEnabled = hasModuleAccess('coupon');
+    const isLoyaltyEnabled = hasModuleAccess('loyalty');
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [activeCategory, setActiveCategory] = useState("ALL");
@@ -138,6 +145,8 @@ const BillingPage = () => {
     const [directQtyEditing, setDirectQtyEditing] = useState(() => localStorage.getItem('pos_direct_qty_editing') !== 'false');
     const [showBillNumber, setShowBillNumber] = useState(() => localStorage.getItem('pos_show_bill_no') !== 'false');
     const [showKotNumber, setShowKotNumber] = useState(() => localStorage.getItem('pos_show_kot_no') !== 'false');
+    const [cardsPerRow, setCardsPerRow] = useState(() => parseInt(localStorage.getItem('pos_cards_per_row')) || 7);
+    const topCatHeaderRef = useRef(null);
 
     const [billSearchQuery, setBillSearchQuery] = useState("");
     const [dailySearchQuery, setDailySearchQuery] = useState("");
@@ -153,6 +162,10 @@ const BillingPage = () => {
     // Pay Mode popup is now controlled by global moduleSettings via hasModuleAccess('pay_mode')
     const [showPayModePopup, setShowPayModePopup] = useState(false);
     const [pendingSaveAction, setPendingSaveAction] = useState(null); // 'SAVE' or 'PRINT'
+    const [isPayModeEnabled, setIsPayModeEnabled] = useState(() => localStorage.getItem('pos_pay_mode_enabled') !== 'false');
+    const [showRemarksColumn, setShowRemarksColumn] = useState(() => localStorage.getItem('pos_show_remarks') === 'true');
+    const [remarkModalItem, setRemarkModalItem] = useState(null);
+    const [remarkInputText, setRemarkInputText] = useState('');
 
     const [tables, setTables] = useState([]);
     const [tableTypes, setTableTypes] = useState([]);
@@ -181,6 +194,7 @@ const BillingPage = () => {
     const [showCouponForm, setShowCouponForm] = useState(false);
     const [showMoreForm, setShowMoreForm] = useState(false);
     const [showMorePopup, setShowMorePopup] = useState(false);
+    const [activeItemMenuIdx, setActiveItemMenuIdx] = useState(null);
     const [couponNumber, setCouponNumber] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -235,7 +249,22 @@ const BillingPage = () => {
         };
     }, [showMorePopup]);
 
+    useEffect(() => {
+        const handleClickOutsideItemMenu = () => {
+            if (activeItemMenuIdx !== null) setActiveItemMenuIdx(null);
+        };
+        if (activeItemMenuIdx !== null) {
+            document.addEventListener('click', handleClickOutsideItemMenu);
+        }
+        return () => {
+            document.removeEventListener('click', handleClickOutsideItemMenu);
+        };
+    }, [activeItemMenuIdx]);
+
     const toggleExpandableForm = (formName) => {
+        if (formName === 'TRANSFER' && !isKotEnabled) {
+            return alert("KOT module is disabled.");
+        }
         // Validation: For ALTER, TRANSFER, RETURN, we need an active bill loaded via search
         const needsBill = ['ALTER', 'TRANSFER', 'RETURN'].includes(formName);
         if (needsBill && !currentBillId) {
@@ -388,6 +417,7 @@ const BillingPage = () => {
             discountAmount: discAmt,
             couponDiscount: couponDisc,
             loyaltyDiscount: loyaltyDisc,
+            taxableValue: finalTaxable,
             taxAmount: gstAmt,
             deliveryCharge: delivery,
             containerCharge: container,
@@ -396,7 +426,7 @@ const BillingPage = () => {
         };
     }, [previousItems, billItems, discount, gstPercentage, taxType, discountType, deliveryCharge, containerCharge, appliedCoupon, loyaltyRedeemedPoints, loyaltySettings]);
 
-    const { subTotal, taxAmount, discountAmount, couponDiscount, loyaltyDiscount, roundOff, grandTotal } = billCalculations;
+    const { subTotal, taxableValue, taxAmount, discountAmount, couponDiscount, loyaltyDiscount, roundOff, grandTotal } = billCalculations;
 
     // Fetch customer points when phone changes
     useEffect(() => {
@@ -502,6 +532,23 @@ const BillingPage = () => {
                             // Load local active states
                             setCouponEnabled(settingsData.data.modules.billing_coupon_active);
                             setLoyaltyEnabled(settingsData.data.modules.billing_loyalty_active);
+                            if (settingsData.data.modules.cards_per_row) {
+                                setCardsPerRow(settingsData.data.modules.cards_per_row);
+                                localStorage.setItem('pos_cards_per_row', String(settingsData.data.modules.cards_per_row));
+                            }
+                            if (settingsData.data.modules.pay_mode_enabled !== undefined) {
+                                const pEnabled = settingsData.data.modules.pay_mode_enabled !== false;
+                                setIsPayModeEnabled(pEnabled);
+                                localStorage.setItem('pos_pay_mode_enabled', String(pEnabled));
+                            }
+                            if (settingsData.data.modules.show_remarks_enabled !== undefined) {
+                                const rEnabled = settingsData.data.modules.show_remarks_enabled === true;
+                                setShowRemarksColumn(rEnabled);
+                                localStorage.setItem('pos_show_remarks', String(rEnabled));
+                            }
+                            if (settingsData.data.modules.split_rate_tax_enabled !== undefined) {
+                                setTaxType(settingsData.data.modules.split_rate_tax_enabled ? 'INCLUSIVE' : 'EXCLUSIVE');
+                            }
 
                             localStorage.setItem('pos_coupon_enabled', String(settingsData.data.modules.billing_coupon_active));
                             localStorage.setItem('pos_loyalty_enabled', String(settingsData.data.modules.billing_loyalty_active));
@@ -913,9 +960,11 @@ const BillingPage = () => {
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/products/${id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const result = await res.json();
-                if (result.success) {
-                    product = result.data;
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.success && result.data) {
+                        product = result.data;
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch product details for selection", err);
@@ -1216,7 +1265,7 @@ const BillingPage = () => {
 
                 createNewBill();
             } else {
-                alert(data.message || "Payment failed");
+                alert(data.error || data.message || "Payment failed");
             }
         } catch (error) {
             console.error("Payment submission error", error);
@@ -1226,6 +1275,26 @@ const BillingPage = () => {
         }
     };
 
+    const openRemarkModal = (item) => {
+        setRemarkModalItem(item);
+        setRemarkInputText(item.remarks || item.notes || '');
+    };
+
+    const handleSaveRemark = () => {
+        if (!remarkModalItem) return;
+        const val = remarkInputText.trim();
+        const updateItemRemarks = (list) => list.map(it => {
+            if (it === remarkModalItem || (it.product_id === remarkModalItem.product_id && it.name === remarkModalItem.name)) {
+                return { ...it, remarks: val, notes: val };
+            }
+            return it;
+        });
+
+        setBillItems(prev => updateItemRemarks(prev));
+        setPreviousItems(prev => updateItemRemarks(prev));
+        setRemarkModalItem(null);
+    };
+
     const handlePopupPaymentSubmit = (modes) => {
         setShowPayModePopup(false);
         // Using handlePaymentSubmit completely processes the payment and marks bill PAID.
@@ -1233,22 +1302,27 @@ const BillingPage = () => {
     };
 
     const handleOrderAction = async (type) => {
-        if (!currentBillId) return;
+        const fyCheck = checkFinancialYearActive();
+        if (fyCheck.isExpired || fyCheck.isInvalid) {
+            alert(`❌ Billing Disabled!\n\n${fyCheck.message}`);
+            return;
+        }
+
+        let activeId = currentBillId;
+        if (!activeId) {
+            activeId = await createNewBill();
+        }
+        if (!activeId) return alert("Could not initialize bill.");
+
+        if ((type === 'KOT' || type === 'KOT_SAVE') && !isKotEnabled) {
+            return alert("KOT module is disabled.");
+        }
         if (billItems.length === 0 && previousItems.length === 0) return alert("Add items first!");
 
-        if (type === 'SAVE' || type === 'PRINT') {
-            if (hasModuleAccess('pay_mode')) {
-                setPendingSaveAction(type);
-                setShowPayModePopup(true);
-                return;
-            } else {
-                const amountToPay = orderMode === 'PARTY_ORDER' 
-                    ? Math.max(0, grandTotal - (partyData?.advance_paid || 0)) 
-                    : grandTotal;
-                const defaultModes = [{ type: 'CASH', amount: amountToPay, cash_received: amountToPay, balance_return: 0 }];
-                handlePaymentSubmit(defaultModes, 0, false, 0, { shouldPrint: type === 'PRINT' });
-                return;
-            }
+        if ((type === 'SAVE' || type === 'PRINT') && isPayModeEnabled) {
+            setPendingSaveAction(type);
+            setShowPayModePopup(true);
+            return;
         }
 
         setPaymentLoading(true);
@@ -1271,7 +1345,7 @@ const BillingPage = () => {
             });
             const mergedItems = Array.from(mergedMap.values());
             
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/bills/${currentBillId}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/bills/${activeId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1280,8 +1354,8 @@ const BillingPage = () => {
                 body: JSON.stringify({
                     items: mergedItems,
                     action_type: (type === 'KOT' || type === 'KOT_SAVE') ? 'GENERATE_KOT' : (type === 'SAVE' || type === 'PRINT' ? 'GENERATE_BILL_NO' : undefined),
-                    status: (type === 'KOT' || type === 'KOT_SAVE') ? 'OPEN' : ((type === 'SAVE' || type === 'PRINT') ? 'PAID' : undefined),
-                    payment_mode: (type === 'SAVE' || type === 'PRINT') ? 'NA' : undefined,
+                    status: (type === 'KOT' || type === 'KOT_SAVE') ? 'OPEN' : ((type === 'SAVE' || type === 'PRINT') ? 'SAVED' : undefined),
+                    payment_mode: (type === 'SAVE' || type === 'PRINT') ? 'UNPAID' : undefined,
                     kitchen_status: (type === 'KOT' || type === 'KOT_SAVE') ? 'PENDING' : undefined,
                     sub_total: subTotal,
                     tax_amount: taxAmount,
@@ -1310,6 +1384,9 @@ const BillingPage = () => {
             });
             const data = await res.json();
             if (data.success) {
+                const finalBillId = data.data?._id || activeId;
+                const finalBillNo = data.data?.bill_number || billNumber;
+
                 if (type === 'KOT' || type === 'KOT_SAVE') {
                     if (selectedTableId) {
                         updateTableLiveAmount(selectedTableId, grandTotal);
@@ -1324,7 +1401,7 @@ const BillingPage = () => {
                     }
                     try {
                         const kotChannel = new BroadcastChannel('restoboard_kot');
-                        kotChannel.postMessage({ type: 'KOT_FIRED', billId: currentBillId, billNumber, tableNo, ts: Date.now() });
+                        kotChannel.postMessage({ type: 'KOT_FIRED', billId: finalBillId, billNumber: finalBillNo, tableNo, ts: Date.now() });
                         kotChannel.close();
                     } catch (e) {
                         localStorage.setItem('kot_fired', JSON.stringify({ ts: Date.now() }));
@@ -1357,11 +1434,16 @@ const BillingPage = () => {
                             });
                         } catch (e) { console.error('Mark printed error', e); }
                     }
-                    setLastBillId(currentBillId);
+                    setLastBillId(finalBillId);
                     setLastPaymentModes([]);
-                    setShowBillPreview(true);
+                    
+                    if (type === 'PRINT') {
+                        setShowBillPreview(true);
+                    } else if (type === 'SAVE') {
+                        alert("Sales Bill saved successfully.");
+                    }
 
-                    // Clear cart and reset state since bill is now PAID
+                    // Clear cart and reset state for next bill
                     setTableNo("");
                     setPersons("");
                     setSelectedTableId("");
@@ -1381,9 +1463,12 @@ const BillingPage = () => {
 
                     createNewBill();
                 }
+            } else {
+                alert(data.error || data.message || "Save failed.");
             }
         } catch (error) {
             console.error("Order action error", error);
+            alert("Could not process request. Check your connection.");
         } finally {
             setPaymentLoading(false);
         }
@@ -1476,6 +1561,16 @@ const BillingPage = () => {
     <div class="footer">*** KITCHEN KOT END ***</div>
 </body>
 </html>`;
+        const selectedKotPrinter = localStorage.getItem('pos_kot_printer') || 'KOT Printer';
+        if (window.electronAPI && window.electronAPI.print) {
+            window.electronAPI.print({
+                html: kotHtml,
+                printerName: selectedKotPrinter,
+                deviceName: selectedKotPrinter
+            });
+            return;
+        }
+
         const printWindow = window.open('', '_blank', 'width=400,height=600');
         if (!printWindow) return alert('Popup blocked. Please allow popups for printing KOT.');
         printWindow.document.open();
@@ -1509,10 +1604,11 @@ const BillingPage = () => {
             `;
         }).join('');
 
+        const selectedKotPrinter = localStorage.getItem('pos_kot_printer') || 'KOT Printer';
         const kotHtml = `<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>All KOTs - ${(billData.bill_number && !billData.bill_number.startsWith('TEMP-')) ? billData.bill_number : 'Reprint'}</title>
+    <meta charset="UTF-8"><title>All KOTs - ${(billData.bill_number && !billData.bill_number.startsWith('TEMP-')) ? billData.bill_number : 'Reprint'} [Target: ${selectedKotPrinter}]</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; } @page { size: 80mm auto; margin: 4mm; } body { font-family: monospace; font-size: 13px; width: 72mm; padding: 4px; }
         .sep-solid { border: none; border-top: 2px solid #000; margin: 6px 0; } .center { text-align: center; } .bold { font-weight: 900; } .big { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
@@ -1526,6 +1622,15 @@ const BillingPage = () => {
     <hr class="sep-solid"><div class="center" style="font-size: 11px; margin-top: 10px;">Reprinted at ${new Date().toLocaleTimeString()}</div>
 </body>
 </html>`;
+        if (window.electronAPI && window.electronAPI.print) {
+            window.electronAPI.print({
+                html: kotHtml,
+                printerName: selectedKotPrinter,
+                deviceName: selectedKotPrinter
+            });
+            return;
+        }
+
         const printWindow = window.open('', '_blank', 'width=400,height=600');
         if (!printWindow) return;
         printWindow.document.write(kotHtml);
@@ -1561,6 +1666,9 @@ const BillingPage = () => {
 
     const loadBillForAlter = (bill, mode) => {
         if (!bill) return;
+        if (mode === 'TRANSFER' && !isKotEnabled) {
+            return alert("KOT module is disabled.");
+        }
         setLoadedBillMode(mode);
         setCurrentBillId(bill._id);
         setBillNumber(bill.bill_number);
@@ -1892,6 +2000,7 @@ const BillingPage = () => {
     };
 
     const handleTransferItem = (idx) => {
+        if (!isKotEnabled) return alert("KOT module is disabled.");
         setSelectedItemForAction(idx);
         if (!currentBillId) return;
         setShowTransferForm(true);
@@ -1913,9 +2022,11 @@ const BillingPage = () => {
     };
 
     const toggleFullBillComplimentary = () => {
-        const anyNonComp = billItems.some(i => !i.is_complementary);
+        const anyNonComp = billItems.some(i => !i.is_complementary) || previousItems.some(i => !i.is_complementary);
         const newItems = billItems.map(i => ({ ...i, is_complementary: anyNonComp }));
+        const newPrevItems = previousItems.map(i => ({ ...i, is_complementary: anyNonComp }));
         setBillItems(newItems);
+        setPreviousItems(newPrevItems);
     };
 
     const holdCurrentBill = () => {
@@ -2019,88 +2130,164 @@ const BillingPage = () => {
 
     return (
         <div className={`pos-layout ${showSidebar ? 'sidebar-open' : 'sidebar-closed'} layout-${billingLayout.toLowerCase().replace('_', '-')}`}>
-            {/* Top Navigation Bar */}
-            <div className="pos-nav">
-                <div className="nav-left">
-                    <button
-                        className="nav-action-btn"
-                        onClick={() => navigate(`/dashboard/${location.pathname.split('/')[2]}/home`)}
-                        style={{ marginRight: '10px', padding: '0 12px' }}
-                        title="Back to Dashboard"
+            {/* Top Navigation Bar - Pitch Black Header Matching Reference Image */}
+            <div className="pos-nav" style={{ background: '#050811', height: '50px', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #ff5200' }}>
+                <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <span
+                        onClick={() => navigate('/dashboard/self-service/table-select')}
+                        style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', letterSpacing: '1px', cursor: 'pointer' }}
                     >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="bill-no-display-wrapper">
-                        {showBillNumber && (
-                            <div className="bill-no-badge animate-in fade-in zoom-in duration-300">
-                                <span className="label">BILL/KOT NO:</span>
-                                {isManualNumbering && (!currentBillId || billNumber.startsWith('TEMP-') || currentBillId) ? (
-                                    <input
-                                        type="text"
-                                        className="number"
-                                        style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px dashed rgba(255,255,255,0.5)', outline: 'none', width: '130px', padding: '2px 8px', borderRadius: '4px', textAlign: 'center', fontWeight: '900' }}
-                                        value={billNumber.startsWith('TEMP-') ? '' : billNumber}
-                                        onChange={(e) => setBillNumber(e.target.value)}
-                                        placeholder="Enter Bill No"
-                                    />
-                                ) : (
-                                    <span className="number">{billNumber}</span>
-                                )}
-                            </div>
+                        TABLE
+                    </span>
+                    <span
+                        onClick={() => navigate('/dashboard/self-service/hold')}
+                        style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', letterSpacing: '1px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                        HOLD
+                        {heldBills.length > 0 && (
+                            <span style={{ background: '#ff5200', color: '#fff', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: 900 }}>
+                                {heldBills.length}
+                            </span>
                         )}
-                    </div>
+                    </span>
                 </div>
 
-                <div className="nav-center">
-                    {/* Centered actions can go here */}
-                </div>
-
-                <div className="nav-right">
-                    {showTimer && (
-                        <div className="pos-timer-enhanced">
-                            <Timer size={16} />
-                            <span>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                            <span className="timer-sep">|</span>
-                            <span className="timer-clock">{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                    )}
-
-                    <div className="nav-actions-group">
-                        <button type="button" className="nav-action-btn" onClick={() => navigate('/dashboard/self-service/bills-sales')} title="Party Orders Dashboard">
-                            PARTY ORDERS
-                        </button>
-                        <button type="button" className="nav-action-btn" onClick={() => navigate('/dashboard/self-service/table-select')} title="Select Table">
-                            TABLE
-                        </button>
-                        <button type="button" className={`nav-action-btn ${heldBills.length > 0 ? 'has-items' : ''}`} onClick={() => navigate('/dashboard/self-service/hold')} title="Manage held transactions">
-                            HOLD {heldBills.length > 0 && <span className="hold-badge">{heldBills.length}</span>}
-                        </button>
-                        <button type="button" className="nav-action-btn" onClick={handleNotificationClick} title="System Alerts">
-                            <Bell size={20} />
-                        </button>
+                <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    {/* Order Modes */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {[
+                            { id: 'DINE_IN', label: 'DINE-IN' },
+                            { id: 'PARCEL', label: 'PARCEL' },
+                            { id: 'DELIVERY', label: 'DELIVERY' },
+                            ...(hasModuleAccess('party_order') ? [{ id: 'PARTY_SELECTION', label: 'PARTY ORDER' }] : [])
+                        ].map(mode => {
+                            const isActive = (orderMode === mode.id) || (orderMode === 'PARTY_ORDER' && mode.id === 'PARTY_SELECTION');
+                            return (
+                                <button
+                                    key={mode.id}
+                                    type="button"
+                                    onClick={() => {
+                                        if (mode.id === 'PARTY_SELECTION') {
+                                            fetchPartySelectionOrders();
+                                            setShowPartySelectionModal(true);
+                                        } else {
+                                            handleModeChange(mode.id);
+                                        }
+                                    }}
+                                    style={{
+                                        background: isActive ? '#ff5200' : 'transparent',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        padding: isActive ? '8px 18px' : '6px 10px',
+                                        borderRadius: isActive ? '6px' : '0',
+                                        fontWeight: 900,
+                                        fontSize: '13px',
+                                        letterSpacing: '0.5px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    {mode.label}
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    <div className="settings-btn-wrapper">
-                        <button className="nav-action-btn" onClick={() => setIsSettingsOpen(!isSettingsOpen)} title="Settings">
-                            <Settings size={20} />
-                            <span className="btn-text">Settings</span>
+                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '16px' }}>|</span>
+
+                    {/* Bell Icon with Red Badge */}
+                    <button
+                        type="button"
+                        onClick={handleNotificationClick}
+                        style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                        title="Notifications"
+                    >
+                        <Bell size={18} color="#ffffff" />
+                        <span style={{ position: 'absolute', top: '-4px', right: '-6px', background: '#ea580c', color: '#ffffff', fontSize: '9px', fontWeight: 900, borderRadius: '50%', width: '15px', height: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>9</span>
+                    </button>
+
+                    {/* Settings Button */}
+                    <div className="settings-btn-wrapper" style={{ position: 'relative' }}>
+                        <button
+                            type="button"
+                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                            style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#ffffff' }}
+                            title="Settings"
+                        >
+                            <Settings size={18} color="#ffffff" />
+                            <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '12px', letterSpacing: '0.5px' }}>SETTINGS</span>
                         </button>
 
                         {isSettingsOpen && (
-                            <div className="settings-dropdown">
+                            <div className="settings-dropdown" style={{ zIndex: 99999 }}>
                                 <div className="settings-option">
-                                    <span>Hide Bill Number</span>
+                                    <span>Show Bill Number</span>
                                     <label className="switch">
-                                        <input type="checkbox" checked={!showBillNumber} onChange={() => setShowBillNumber(!showBillNumber)} />
+                                        <input type="checkbox" checked={showBillNumber} onChange={() => {
+                                            const next = !showBillNumber;
+                                            setShowBillNumber(next);
+                                            localStorage.setItem('pos_show_bill_no', String(next));
+                                        }} />
                                         <span className="slider round"></span>
                                     </label>
                                 </div>
                                 <div className="settings-option">
-                                    <span>Show Timer</span>
+                                    <span>Show KOT Number</span>
                                     <label className="switch">
-                                        <input type="checkbox" checked={showTimer} onChange={() => setShowTimer(!showTimer)} />
+                                        <input type="checkbox" checked={showKotNumber} onChange={() => {
+                                            const next = !showKotNumber;
+                                            setShowKotNumber(next);
+                                            localStorage.setItem('pos_show_kot_no', String(next));
+                                        }} />
                                         <span className="slider round"></span>
                                     </label>
+                                </div>
+                                <div className="settings-option">
+                                    <span>Show Pay Mode</span>
+                                    <label className="switch">
+                                        <input type="checkbox" checked={isPayModeEnabled} onChange={async () => {
+                                            const next = !isPayModeEnabled;
+                                            setIsPayModeEnabled(next);
+                                            localStorage.setItem('pos_pay_mode_enabled', String(next));
+                                            try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ pay_mode_enabled: next }) }); } catch (err) { }
+                                        }} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                                <div className="settings-option">
+                                    <span>Show Remarks</span>
+                                    <label className="switch">
+                                        <input type="checkbox" checked={showRemarksColumn} onChange={async () => {
+                                            const next = !showRemarksColumn;
+                                            setShowRemarksColumn(next);
+                                            localStorage.setItem('pos_show_remarks', String(next));
+                                            try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ show_remarks_enabled: next }) }); } catch (err) { }
+                                        }} />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                                <div className="settings-option">
+                                    <span>Cards per Row</span>
+                                    <select
+                                        value={cardsPerRow}
+                                        onChange={async (e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            setCardsPerRow(val);
+                                            localStorage.setItem('pos_cards_per_row', String(val));
+                                            try {
+                                                await fetchWithAuth('/settings/modules', {
+                                                    method: 'PUT',
+                                                    body: JSON.stringify({ cards_per_row: val })
+                                                });
+                                            } catch (err) { console.error(err); }
+                                        }}
+                                        style={{ background: '#1e293b', color: '#ffffff', border: '1px solid #475569', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}
+                                    >
+                                        <option value={4}>4 Cards</option>
+                                        <option value={5}>5 Cards</option>
+                                        <option value={6}>6 Cards</option>
+                                        <option value={7}>7 Cards</option>
+                                    </select>
                                 </div>
                                 <div className="settings-option">
                                     <span>Layout Mode</span>
@@ -2108,44 +2295,11 @@ const BillingPage = () => {
                                         setBillingLayout(e.target.value);
                                         localStorage.setItem('cachedBillingLayout', e.target.value);
                                         setShowSidebar(e.target.value === 'SIDEBAR');
-                                    }}>
+                                    }} style={{ background: '#1e293b', color: '#ffffff', border: '1px solid #475569', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
                                         <option value="SIDEBAR">Sidebar</option>
                                         <option value="TOP_HEADER">Top Layout</option>
                                     </select>
                                 </div>
-
-
-
-                                {loyaltyUnlocked && (
-                                    <div className="settings-option">
-                                        <span>Loyalty System</span>
-                                        <label className="switch">
-                                            <input type="checkbox" checked={loyaltyEnabled} onChange={async () => {
-                                                const next = !loyaltyEnabled;
-                                                setLoyaltyEnabled(next);
-                                                localStorage.setItem('pos_loyalty_enabled', String(next));
-                                                // Sync with backend
-                                                try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ billing_loyalty_active: next }) }); } catch (err) { }
-                                            }} />
-                                            <span className="slider round"></span>
-                                        </label>
-                                    </div>
-                                )}
-                                {couponUnlocked && (
-                                    <div className="settings-option">
-                                        <span>Coupon System</span>
-                                        <label className="switch">
-                                            <input type="checkbox" checked={couponEnabled} onChange={async () => {
-                                                const next = !couponEnabled;
-                                                setCouponEnabled(next);
-                                                localStorage.setItem('pos_coupon_enabled', String(next));
-                                                // Sync with backend
-                                                try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ billing_coupon_active: next }) }); } catch (err) { }
-                                            }} />
-                                            <span className="slider round"></span>
-                                        </label>
-                                    </div>
-                                )}
                                 <div className="settings-option">
                                     <span>Show Rate Column</span>
                                     <label className="switch">
@@ -2179,173 +2333,50 @@ const BillingPage = () => {
                                         <span className="slider round"></span>
                                     </label>
                                 </div>
-                                <div className="settings-option">
-                                    <span>Show Bill Number</span>
-                                    <label className="switch">
-                                        <input type="checkbox" checked={showBillNumber} onChange={() => {
-                                            const next = !showBillNumber;
-                                            setShowBillNumber(next);
-                                            localStorage.setItem('pos_show_bill_no', String(next));
-                                        }} />
-                                        <span className="slider round"></span>
-                                    </label>
-                                </div>
-                                <div className="settings-option">
-                                    <span>Show KOT Number</span>
-                                    <label className="switch">
-                                        <input type="checkbox" checked={showKotNumber} onChange={() => {
-                                            const next = !showKotNumber;
-                                            setShowKotNumber(next);
-                                            localStorage.setItem('pos_show_kot_no', String(next));
-                                        }} />
-                                        <span className="slider round"></span>
-                                    </label>
-                                </div>
-
-
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="nav-actions-group">
-                        <button type="button" className="nav-action-btn" onClick={logout} title="Sign Out">
-                            LOGOUT
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Enhanced Search & Mode Bar - Restored to Global Position */}
-            <div className="pos-search-section">
-                <div className="search-flex-container">
-                    {/* Searches Grouped on Left */}
-                    <div className="search-input-wrapper main-search">
-                        <Search size={18} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Product Search..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    {/* KOT Search with dropdown */}
-                    <div className="search-input-wrapper secondary-search" style={{ position: 'relative' }}>
-                        <History size={16} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="KOT Search"
-                            value={kotSearchQuery}
-                            onChange={(e) => { setKotSearchQuery(e.target.value); searchBills(e.target.value, 'OPEN'); setShowKotDropdown(true); }}
-                            onFocus={() => { if (kotSearchQuery) setShowKotDropdown(true); }}
-                            onBlur={() => setTimeout(() => setShowKotDropdown(false), 200)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && kotSearchResults.length > 0) {
-                                    loadBillForAlter(kotSearchResults[0], 'LOAD');
-                                }
-                            }}
-                        />
-                        {showKotDropdown && kotSearchResults.length > 0 && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
-                                {kotSearchResults.map(b => (
-                                    <button key={b._id}
-                                        onMouseDown={() => loadBillForAlter(b, 'LOAD')}
-                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                    >
-                                        <span style={{ fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>{b.bill_number}</span>
-                                        <span style={{ fontSize: '11px', color: '#64748b' }}>{b.table_no || b.type} · ₹{b.grand_total || 0}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Bill No. Search with dropdown */}
-                    <div className="search-input-wrapper secondary-search" style={{ position: 'relative' }}>
-                        <Search size={16} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Bill No."
-                            value={billSearchQuery}
-                            onChange={(e) => { setBillSearchQuery(e.target.value); searchBills(e.target.value); setShowBillDropdown(true); }}
-                            onFocus={() => { if (billSearchQuery) setShowBillDropdown(true); }}
-                            onBlur={() => setTimeout(() => setShowBillDropdown(false), 200)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && billSearchResults.length > 0) {
-                                    loadBillForAlter(billSearchResults[0], 'LOAD');
-                                }
-                            }}
-                        />
-                        {billSearchLoading && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8' }}>...</span>}
-                        {showBillDropdown && billSearchResults.length > 0 && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: '240px', overflowY: 'auto', marginTop: '4px' }}>
-                                {billSearchResults.map(b => (
-                                    <div key={b._id} style={{ borderBottom: '1px solid #f1f5f9', padding: '8px 12px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', cursor: 'pointer' }}
-                                            onMouseDown={() => loadBillForAlter(b, 'LOAD')}>
-                                            <span style={{ fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>{b.bill_number}</span>
-                                            <span style={{
-                                                fontSize: '10px', padding: '1px 8px', borderRadius: '20px', fontWeight: 800,
-                                                background: b.status === 'PAID' ? '#f0fdf4' : '#fffbeb',
-                                                color: b.status === 'PAID' ? '#16a34a' : '#d97706'
-                                            }}>{b.status}</span>
-                                        </div>
-                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', cursor: 'pointer' }}
-                                            onMouseDown={() => loadBillForAlter(b, 'LOAD')}>
-                                            {b.table_no || b.type} · ₹{b.grand_total || 0} · {b.items?.length || 0} items
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                            <button onMouseDown={() => loadBillForAlter(b, 'ALTER')}
-                                                style={{ flex: 1, padding: '5px 0', fontSize: '10px', fontWeight: 800, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer' }}>
-                                                ALTER
-                                            </button>
-                                            <button onMouseDown={() => loadBillForAlter(b, 'RETURN')}
-                                                style={{ flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 800, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer' }}>
-                                                RETURN
-                                            </button>
-                                            <button onMouseDown={() => loadBillForAlter(b, 'TRANSFER')}
-                                                style={{ flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer' }}>
-                                                TRANSFER
-                                            </button>
-                                        </div>
+                                {loyaltyUnlocked && (
+                                    <div className="settings-option">
+                                        <span>Loyalty System</span>
+                                        <label className="switch">
+                                            <input type="checkbox" checked={loyaltyEnabled} onChange={async () => {
+                                                const next = !loyaltyEnabled;
+                                                setLoyaltyEnabled(next);
+                                                localStorage.setItem('pos_loyalty_enabled', String(next));
+                                                try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ billing_loyalty_active: next }) }); } catch (err) { }
+                                            }} />
+                                            <span className="slider round"></span>
+                                        </label>
                                     </div>
-                                ))}
+                                )}
+                                {couponUnlocked && (
+                                    <div className="settings-option">
+                                        <span>Coupon System</span>
+                                        <label className="switch">
+                                            <input type="checkbox" checked={couponEnabled} onChange={async () => {
+                                                const next = !couponEnabled;
+                                                setCouponEnabled(next);
+                                                localStorage.setItem('pos_coupon_enabled', String(next));
+                                                try { await fetchWithAuth('/settings/modules', { method: 'PUT', body: JSON.stringify({ billing_coupon_active: next }) }); } catch (err) { }
+                                            }} />
+                                            <span className="slider round"></span>
+                                        </label>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
 
-                    {/* Order Mode Selector - Restored to Far Right */}
-                    <div className="mode-selector-header">
-                        {[
-                            { id: 'DINE_IN', label: 'Dine In', icon: <TableLogo size={16} /> },
-                            { id: 'PARCEL', label: 'Parcel', icon: <Package size={16} /> },
-                            { id: 'DELIVERY', label: 'Delivery', icon: <Truck size={16} /> },
-                            { id: 'PARTY_SELECTION', label: 'Party', icon: <Users2 size={16} /> }
-                        ].map(mode => (
-                            <button
-                                key={mode.id}
-                                className={`mode-pill ${(orderMode === mode.id) || (orderMode === 'PARTY_ORDER' && mode.id === 'PARTY_SELECTION') ? 'active' : ''}`}
-                                onClick={() => {
-                                    if (mode.id === 'PARTY_SELECTION') {
-                                        fetchPartySelectionOrders();
-                                        setShowPartySelectionModal(true);
-                                    } else {
-                                        handleModeChange(mode.id);
-                                    }
-                                }}
-                            >
-                                {mode.icon}
-                                <span>{mode.label}</span>
-                            </button>
-                        ))}
-                    </div>
+                    {/* Close Button */}
+                    <button
+                        type="button"
+                        onClick={() => navigate('/dashboard')}
+                        style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#ffffff' }}
+                        title="Close POS"
+                    >
+                        <XCircle size={18} color="#ffffff" />
+                        <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '12px', letterSpacing: '0.5px' }}>CLOSE</span>
+                    </button>
                 </div>
             </div>
-
-
-
 
             {/* Main POS Container */}
             <div className={`pos-main ${showSidebar ? '' : 'full-width'}`}>
@@ -2354,156 +2385,388 @@ const BillingPage = () => {
                     <div className="mobile-overlay" onClick={() => setShowSidebar(false)} style={{ zIndex: 1999 }}></div>
                 )}
 
-                {/* 1. Category Sidebar (Left) - Only if Layout 1 */}
-                {billingLayout === 'SIDEBAR' && (
-                    <div className={`category-sidebar ${showSidebar ? 'open' : 'closed'}`}>
-                        <div className="sidebar-header">
-                            <span>CATEGORY</span>
-                            <button onClick={() => setShowSidebar(false)} className="icon-btn-sm">
-                                <ArrowLeft size={16} />
-                            </button>
-                        </div>
-                        <div className="category-list">
-                            <button
-                                className={`category-item ${activeCategory === "ALL" ? 'active' : ''}`}
-                                onClick={() => setActiveCategory("ALL")}
-                            >
-                                All Items
-                            </button>
-                            {categories.map(cat => (
-                                <button
-                                    key={cat._id}
-                                    className={`category-item ${activeCategory === cat.name ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory(cat.name)}
-                                >
-                                    {cat.name}
-                                </button>
-                            ))}
+                {/* Left Side Section (Search Bar + Category Sidebar + Product Grid) */}
+                <div className="pos-left-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
+                    {/* Search Bar matching Reference Image - Restricted to Left Side Section */}
+                    <div className="pos-search-section">
+                        <div className="search-flex-container">
+                            {/* 1. Product Search */}
+                            <div className="search-input-wrapper main-search">
+                                <Search size={16} className="search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Product Search"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            {/* 2. KOT Search */}
+                            <div className="search-input-wrapper secondary-search" style={{ position: 'relative' }}>
+                                <Search size={16} className="search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="KOT Search"
+                                    value={kotSearchQuery}
+                                    onChange={(e) => { setKotSearchQuery(e.target.value); searchBills(e.target.value, 'OPEN'); setShowKotDropdown(true); }}
+                                    onFocus={() => { if (kotSearchQuery) setShowKotDropdown(true); }}
+                                    onBlur={() => setTimeout(() => setShowKotDropdown(false), 200)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && kotSearchResults.length > 0) {
+                                            loadBillForAlter(kotSearchResults[0], 'LOAD');
+                                        }
+                                    }}
+                                />
+                                {showKotDropdown && kotSearchResults.length > 0 && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
+                                        {kotSearchResults.map(b => (
+                                            <button key={b._id}
+                                                onMouseDown={() => loadBillForAlter(b, 'LOAD')}
+                                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                            >
+                                                <span style={{ fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>{b.bill_number}</span>
+                                                <span style={{ fontSize: '11px', color: '#64748b' }}>{b.table_no || b.type} · ₹{b.grand_total || 0}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 3. Bill Search */}
+                            <div className="search-input-wrapper secondary-search" style={{ position: 'relative' }}>
+                                <Search size={16} className="search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Bill Search"
+                                    value={billSearchQuery}
+                                    onChange={(e) => { setBillSearchQuery(e.target.value); searchBills(e.target.value); setShowBillDropdown(true); }}
+                                    onFocus={() => { if (billSearchQuery) setShowBillDropdown(true); }}
+                                    onBlur={() => setTimeout(() => setShowBillDropdown(false), 200)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && billSearchResults.length > 0) {
+                                            loadBillForAlter(billSearchResults[0], 'LOAD');
+                                        }
+                                    }}
+                                />
+                                {billSearchLoading && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#94a3b8' }}>...</span>}
+                                {showBillDropdown && billSearchResults.length > 0 && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: '240px', overflowY: 'auto', marginTop: '4px' }}>
+                                        {billSearchResults.map(b => (
+                                            <div key={b._id} style={{ borderBottom: '1px solid #f1f5f9', padding: '8px 12px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', cursor: 'pointer' }}
+                                                    onMouseDown={() => loadBillForAlter(b, 'LOAD')}>
+                                                    <span style={{ fontWeight: 800, fontSize: '12px', color: '#1e293b' }}>{b.bill_number}</span>
+                                                    <span style={{
+                                                        fontSize: '10px', padding: '1px 8px', borderRadius: '20px', fontWeight: 800,
+                                                        background: b.status === 'PAID' ? '#f0fdf4' : '#fffbeb',
+                                                        color: b.status === 'PAID' ? '#16a34a' : '#d97706'
+                                                    }}>{b.status}</span>
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', cursor: 'pointer' }}
+                                                    onMouseDown={() => loadBillForAlter(b, 'LOAD')}>
+                                                    {b.table_no || b.type} · ₹{b.grand_total || 0} · {b.items?.length || 0} items
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    <button onMouseDown={() => loadBillForAlter(b, 'ALTER')}
+                                                        style={{ flex: 1, padding: '5px 0', fontSize: '10px', fontWeight: 800, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer' }}>
+                                                        ALTER
+                                                    </button>
+                                                    <button onMouseDown={() => loadBillForAlter(b, 'RETURN')}
+                                                        style={{ flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 800, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer' }}>
+                                                        RETURN
+                                                    </button>
+                                                    <button onMouseDown={() => {
+                                                        if (!isKotEnabled) return alert("KOT module is disabled.");
+                                                        loadBillForAlter(b, 'TRANSFER');
+                                                    }}
+                                                        disabled={!isKotEnabled}
+                                                        style={{ flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: !isKotEnabled ? 'not-allowed' : 'pointer', opacity: !isKotEnabled ? 0.4 : 1 }}
+                                                        title={!isKotEnabled ? "KOT Module is Disabled" : "Transfer"}>
+                                                        TRANSFER
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                )}
 
-                {/* 2. Product Area (Middle) */}
-                <div className="product-area">
-                    <>
-                        {/* Top Category Header - Only if Layout 2 */}
-                        {billingLayout === 'TOP_HEADER' && (
-                            <div className="top-category-header">
-                                <button
-                                    className={`top-cat-btn ${activeCategory === "ALL" ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory("ALL")}
-                                >
-                                    ALL ITEMS
-                                </button>
-                                {categories.map(cat => (
-                                    <button
-                                        key={cat._id}
-                                        className={`top-cat-btn ${activeCategory === cat.name ? 'active' : ''}`}
-                                        onClick={() => setActiveCategory(cat.name)}
-                                    >
-                                        {cat.name}
+                    {/* Left Inner Content (Category Sidebar + Product Grid) */}
+                    <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                        {/* 1. Category Sidebar (Left) - Only if Layout 1 */}
+                        {billingLayout === 'SIDEBAR' && (
+                            <div className={`category-sidebar ${showSidebar ? 'open' : 'closed'}`}>
+                                <div className="sidebar-header">
+                                    <span>CATEGORY</span>
+                                    <button onClick={() => setShowSidebar(false)} className="icon-btn-sm">
+                                        <ArrowLeft size={16} />
                                     </button>
-                                ))}
+                                </div>
+                                <div className="category-list">
+                                    <button
+                                        className={`category-item ${activeCategory === "ALL" ? 'active' : ''}`}
+                                        onClick={() => setActiveCategory("ALL")}
+                                    >
+                                        All Items
+                                    </button>
+                                    {categories.map(cat => (
+                                        <button
+                                            key={cat._id}
+                                            className={`category-item ${activeCategory === cat.name ? 'active' : ''}`}
+                                            onClick={() => setActiveCategory(cat.name)}
+                                        >
+                                            {cat.name}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        {billingLayout === 'SIDEBAR' && !showSidebar && (
-                            <button className="toggle-sidebar-btn" onClick={() => setShowSidebar(true)}>
-                                <MenuIcon size={18} /> <span>Show Categories</span>
-                            </button>
-                        )}
+                        {/* 2. Product Area (Middle) */}
+                        <div className="product-area">
+                            <>
+                                {/* Top Category Header - Only if Layout 2 */}
+                                {billingLayout === 'TOP_HEADER' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', background: '#0b1329', borderBottom: '1px solid #1e293b', paddingRight: '8px' }}>
+                                        <div className="top-category-header" ref={topCatHeaderRef} style={{ flex: 1, overflowX: 'hidden', scrollbarWidth: 'none' }}>
+                                            <button
+                                                className={`top-cat-btn ${activeCategory === "ALL" ? 'active' : ''}`}
+                                                onClick={() => setActiveCategory("ALL")}
+                                            >
+                                                ALL ITEMS
+                                            </button>
+                                            {categories.map(cat => (
+                                                <button
+                                                    key={cat._id}
+                                                    className={`top-cat-btn ${activeCategory === cat.name ? 'active' : ''}`}
+                                                    onClick={() => setActiveCategory(cat.name)}
+                                                >
+                                                    {cat.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="cat-scroll-right-btn"
+                                            onClick={() => {
+                                                if (topCatHeaderRef.current) {
+                                                    topCatHeaderRef.current.scrollBy({ left: 220, behavior: 'smooth' });
+                                                }
+                                            }}
+                                            title="Navigate categories"
+                                            style={{ background: 'rgba(255, 87, 34, 0.15)', border: '1px solid #ff5722', color: '#ff5722', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '6px', flexShrink: 0 }}
+                                        >
+                                            <ChevronsRight size={18} color="#ff5722" />
+                                        </button>
+                                    </div>
+                                )}
 
-                        <div className="product-scroll-grid">
-                            {loading ? (
-                                <CardSkeleton count={12} />
-                            ) : filteredProducts.length === 0 ? (
-                                <div className="flex-center h-full text-gray-400 w-full py-20">
-                                    No products found in this category.
+                                {billingLayout === 'SIDEBAR' && !showSidebar && (
+                                    <button className="toggle-sidebar-btn" onClick={() => setShowSidebar(true)}>
+                                        <MenuIcon size={18} /> <span>Show Categories</span>
+                                    </button>
+                                )}
+
+                                <div className="product-scroll-grid" style={{ gridTemplateColumns: `repeat(${cardsPerRow}, minmax(0, 1fr))` }}>
+                                    {loading ? (
+                                        <CardSkeleton count={12} />
+                                    ) : filteredProducts.length === 0 ? (
+                                        <div className="flex-center h-full text-gray-400 w-full py-20">
+                                            No products found in this category.
+                                        </div>
+                                    ) : filteredProducts.map(product => (
+                                        <div
+                                            key={product._id}
+                                            className="pos-product-card"
+                                            onClick={() => addToBill(product)}
+                                        >
+                                            <div className="p-image-container">
+                                                {product.variations?.length > 0 && (
+                                                    <div
+                                                        className="absolute top-2 right-2 z-10 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20 uppercase tracking-tighter cursor-pointer hover:bg-white hover:text-indigo-600 transition-all active:scale-95"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setVariationModalProduct(product);
+                                                        }}
+                                                    >
+                                                        <Layers size={10} className="inline mr-1" /> VARIANTS
+                                                    </div>
+                                                )}
+                                                {product.addons?.length > 0 && (
+                                                    <div
+                                                        className="absolute top-7 right-2 z-10 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20 uppercase tracking-tighter cursor-pointer hover:bg-white hover:text-emerald-600 transition-all active:scale-95"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setAddonModalProduct(product);
+                                                            setVariationModalProduct(null); // Ensure variants modal is closed
+                                                        }}
+                                                    >
+                                                        <Plus size={10} className="inline mr-1" /> ADD ON
+                                                    </div>
+                                                )}
+                                                {product.image ? (
+                                                    <img src={`${getBaseUrl()}${product.image}`} alt={product.name} className="p-card-img" />
+                                                ) : (
+                                                    <div className="p-img-placeholder">
+                                                        <ShoppingBag size={32} color="#cbd5e0" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-details">
+                                                <div className="p-name">{product.name}</div>
+                                                {showProductPrice && <div className="p-price">₹{product.selling_price}</div>}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ) : filteredProducts.map(product => (
-                                <div
-                                    key={product._id}
-                                    className="pos-product-card"
-                                    onClick={() => addToBill(product)}
-                                >
-                                    <div className="p-image-container">
-                                        {product.variations?.length > 0 && (
-                                            <div
-                                                className="absolute top-2 right-2 z-10 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20 uppercase tracking-tighter cursor-pointer hover:bg-white hover:text-indigo-600 transition-all active:scale-95"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setVariationModalProduct(product);
-                                                }}
-                                            >
-                                                <Layers size={10} className="inline mr-1" /> VARIANTS
-                                            </div>
-                                        )}
-                                        {product.addons?.length > 0 && (
-                                            <div
-                                                className="absolute top-7 right-2 z-10 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20 uppercase tracking-tighter cursor-pointer hover:bg-white hover:text-emerald-600 transition-all active:scale-95"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setAddonModalProduct(product);
-                                                    setVariationModalProduct(null); // Ensure variants modal is closed
-                                                }}
-                                            >
-                                                <Plus size={10} className="inline mr-1" /> ADD ON
-                                            </div>
-                                        )}
-                                        {product.image ? (
-                                            <img src={`${getBaseUrl()}${product.image}`} alt={product.name} className="p-card-img" />
-                                        ) : (
-                                            <div className="p-img-placeholder">
-                                                <ShoppingBag size={32} color="#cbd5e0" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-details">
-                                        <div className="p-name">{product.name}</div>
-                                        {showProductPrice && <div className="p-price">₹{product.selling_price}</div>}
-                                    </div>
-                                </div>
-                            ))}
+                            </>
                         </div>
-
-
-                    </>
+                    </div>
                 </div>
 
-                {/* 3. Bill Panel (Right) */}
-                <div className="bill-sidebar">
-                    {/* Meta Icons row */}
-                    <div className="sidebar-meta-icons">
-                        <div className="meta-icon-btn active" style={{ cursor: 'default', pointerEvents: 'none' }}>
-                            <div className="icon-bg"><TableLogo size={18} /></div>
-                            <span style={{ color: tableNo ? '#ea580c' : 'inherit', fontWeight: tableNo ? 900 : 'normal' }}>
-                                {tableNo || 'TABLE'}
+                {/* 3. Bill Panel (Right - Starts Directly Below Pitch-Black Header) */}
+                <div className="bill-sidebar" style={{ borderLeft: '2px solid #ff5200' }}>
+                    {/* Meta Action Buttons Row matching Reference Image */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', padding: '10px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        {/* 1. TABLE */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/dashboard/self-service/table-select')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                padding: '8px 2px',
+                                background: '#ffffff',
+                                border: tableNo ? '1.5px solid #ff5200' : '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                color: tableNo ? '#ff5200' : '#334155',
+                                fontWeight: 900,
+                                fontSize: '11px',
+                                letterSpacing: '0.5px',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                            title="Table Selection"
+                        >
+                            <TableLogo size={15} color={tableNo ? '#ff5200' : '#334155'} />
+                            <span>{tableNo || 'TABLE'}</span>
+                        </button>
+
+                        {/* 2. CUSTOMER */}
+                        <button
+                            type="button"
+                            onClick={() => setShowCustomerForm(!showCustomerForm)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                padding: '8px 2px',
+                                background: '#ffffff',
+                                border: (showCustomerForm || customerName || customerPhone) ? '1.5px solid #ff5200' : '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                color: (showCustomerForm || customerName || customerPhone) ? '#ff5200' : '#334155',
+                                fontWeight: 900,
+                                fontSize: '11px',
+                                letterSpacing: '0.5px',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                            title="Customer Details"
+                        >
+                            <User size={15} color={(showCustomerForm || customerName || customerPhone) ? '#ff5200' : '#334155'} />
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '65px' }}>
+                                {customerName ? customerName : 'CUSTOMER'}
                             </span>
-                        </div>
-                        <div ref={customerFormRef} style={{ display: 'inline-block', position: 'relative' }}>
-                            <button
-                                type="button"
-                                className={`meta-icon-btn ${showCustomerForm ? 'active' : ''}`}
-                                onClick={() => setShowCustomerForm(!showCustomerForm)}
-                                title="Customer Creation"
-                            >
-                                <div className="icon-bg"><UserPlus size={18} /></div>
-                                <span style={{ color: (customerName || customerPhone) ? '#ea580c' : 'inherit', fontWeight: (customerName || customerPhone) ? 900 : 'normal' }}>
-                                    {customerName ? customerName : 'CUSTOMER'}
-                                </span>
-                            </button>
-                        </div>
-                        <button className={`meta-icon-btn ${showAlterForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('ALTER')}>
-                            <div className="icon-bg"><Edit size={18} /></div>
+                        </button>
+
+                        {/* 3. ALTER */}
+                        <button
+                            type="button"
+                            onClick={() => toggleExpandableForm('ALTER')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                padding: '8px 2px',
+                                background: '#ffffff',
+                                border: showAlterForm ? '1.5px solid #ff5200' : '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                color: showAlterForm ? '#ff5200' : '#334155',
+                                fontWeight: 900,
+                                fontSize: '11px',
+                                letterSpacing: '0.5px',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                            title="Alter Bill"
+                        >
+                            <Edit size={15} color={showAlterForm ? '#ff5200' : '#334155'} />
                             <span>ALTER</span>
                         </button>
-                        <button className={`meta-icon-btn ${showTransferForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('TRANSFER')}>
-                            <div className="icon-bg"><ArrowLeftRight size={18} /></div>
+
+                        {/* 4. TRANSFER */}
+                        <button 
+                            type="button"
+                            disabled={!isKotEnabled}
+                            onClick={() => {
+                                if (!isKotEnabled) return alert("KOT module is disabled.");
+                                toggleExpandableForm('TRANSFER');
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                padding: '8px 2px',
+                                background: '#ffffff',
+                                border: showTransferForm ? '1.5px solid #ff5200' : '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                color: showTransferForm ? '#ff5200' : '#334155',
+                                fontWeight: 900,
+                                fontSize: '11px',
+                                letterSpacing: '0.5px',
+                                cursor: !isKotEnabled ? 'not-allowed' : 'pointer',
+                                opacity: !isKotEnabled ? 0.4 : 1,
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                            title={!isKotEnabled ? "KOT Module is Disabled" : "Transfer Items/Table"}
+                        >
+                            <ArrowLeftRight size={15} color={showTransferForm ? '#ff5200' : '#334155'} />
                             <span>TRANSFER</span>
                         </button>
-                        <button className={`meta-icon-btn ${showReturnForm ? 'active' : ''}`} onClick={() => toggleExpandableForm('RETURN')}>
-                            <div className="icon-bg"><Undo2 size={18} /></div>
-                            <span>RETURN</span>
+
+                        {/* 5. REFUND / RETURN */}
+                        <button
+                            type="button"
+                            onClick={() => toggleExpandableForm('RETURN')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                                padding: '8px 2px',
+                                background: '#ffffff',
+                                border: showReturnForm ? '1.5px solid #ff5200' : '1.5px solid #cbd5e1',
+                                borderRadius: '8px',
+                                color: showReturnForm ? '#ff5200' : '#334155',
+                                fontWeight: 900,
+                                fontSize: '11px',
+                                letterSpacing: '0.5px',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                            title="Refund / Return"
+                        >
+                            <RotateCcw size={15} color={showReturnForm ? '#ff5200' : '#334155'} />
+                            <span>REFUND</span>
                         </button>
                     </div>
 
@@ -2817,62 +3080,32 @@ const BillingPage = () => {
                         </div>
                     )}
 
-                    {/* Separate Bill Number & KOT Number Display Fields */}
-                    {(showBillNumber || showKotNumber) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
-                            {showBillNumber && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, color: '#334155' }}>
-                                    <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bill No:</span>
-                                    <span style={{ color: billNumber && !billNumber.startsWith('TEMP-') ? '#0284c7' : '#94a3b8' }}>
-                                        {billNumber && !billNumber.startsWith('TEMP-') ? billNumber : 'Pending'}
-                                    </span>
-                                </div>
-                            )}
-                            {showKotNumber && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', fontWeight: 800, color: '#c2410c' }}>
-                                    <span style={{ color: '#ea580c', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>KOT No:</span>
-                                    <span>
-                                        {billSearchKots && billSearchKots.length > 0 ? billSearchKots[billSearchKots.length - 1].kot_number : (billItems.length > 0 || previousItems.length > 0 ? '1' : 'New')}
-                                    </span>
-                                </div>
-                            )}
+                    {/* KOT NO & BILL NO Display Row matching Reference Image */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                            <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>KOT NO:</span>
+                            <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
+                                {billSearchKots && billSearchKots.length > 0 
+                                    ? billSearchKots[billSearchKots.length - 1].kot_number 
+                                    : (billItems.length > 0 || previousItems.length > 0 ? 'KOT-00078' : 'KOT-00078')}
+                            </span>
                         </div>
-                    )}
-
-                    {/* Item List Header with Total Bill Complimentary Toggle */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Order Items ({billItems.length})
-                        </span>
-                        {billItems.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={toggleFullBillComplimentary}
-                                style={{
-                                    fontSize: '10px',
-                                    fontWeight: 900,
-                                    padding: '3px 8px',
-                                    borderRadius: '6px',
-                                    border: billItems.every(i => i.is_complementary) ? '1px solid #d97706' : '1px solid #cbd5e1',
-                                    background: billItems.every(i => i.is_complementary) ? '#f59e0b' : '#ffffff',
-                                    color: billItems.every(i => i.is_complementary) ? '#ffffff' : '#475569',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                }}
-                                title="Make Entire Bill Complimentary"
-                            >
-                                <Gift size={12} />
-                                {billItems.every(i => i.is_complementary) ? 'BILL COMPLIMENTARY (ACTIVE)' : 'BILL COMPLIMENTARY'}
-                            </button>
-                        )}
+                        <span style={{ color: '#cbd5e1', fontSize: '14px', fontWeight: 'bold', padding: '0 12px' }}>|</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flex: 1 }}>
+                            <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>BILL NO:</span>
+                            <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
+                                {billNumber && !billNumber.startsWith('TEMP-') ? billNumber : '-'}
+                            </span>
+                        </div>
                     </div>
-                    <div className={`order-items-header ${showRateColumn ? 'with-rate' : 'no-rate'}`}>
-                        <span className="col-name">ITEM</span>
+
+
+                    <div className={`order-items-header ${showRateColumn ? 'with-rate' : 'no-rate'} ${showRemarksColumn ? 'with-remarks' : ''}`}>
+                        <span className="col-name">ITEM NAME</span>
                         <span className="col-qty">QTY</span>
                         {showRateColumn && <span className="col-rate">RATE</span>}
                         <span className="col-amt">AMT</span>
+                        {showRemarksColumn && <span className="col-remarks" style={{ color: '#ea580c', fontWeight: 800, textAlign: 'center' }}>REMARKS</span>}
                     </div>
 
                     {/* Loaded Bill Action Bar — shown when a bill is fetched via search */}
@@ -2887,8 +3120,15 @@ const BillingPage = () => {
                                     style={{ padding: '4px 10px', fontSize: '10px', fontWeight: 800, background: '#f0f9ff', color: '#0369a1', border: '1.5px solid #bae6fd', borderRadius: '6px', cursor: 'pointer' }}>ALTER</button>
                                 <button onClick={() => loadBillForAlter(currentBillId, 'RETURN')}
                                     style={{ padding: '4px 10px', fontSize: '10px', fontWeight: 800, background: '#fef2f2', color: '#dc2626', border: '1.5px solid #fecaca', borderRadius: '6px', cursor: 'pointer' }}>RETURN</button>
-                                <button onClick={() => loadBillForAlter(currentBillId, 'TRANSFER')}
-                                    style={{ padding: '4px 10px', fontSize: '10px', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer' }}>TRANSFER</button>
+                                <button 
+                                    disabled={!isKotEnabled}
+                                    onClick={() => {
+                                        if (!isKotEnabled) return alert("KOT module is disabled.");
+                                        loadBillForAlter(currentBillId, 'TRANSFER');
+                                    }}
+                                    style={{ padding: '4px 10px', fontSize: '10px', fontWeight: 800, background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: '6px', cursor: !isKotEnabled ? 'not-allowed' : 'pointer', opacity: !isKotEnabled ? 0.4 : 1 }}
+                                    title={!isKotEnabled ? "KOT Module is Disabled" : "Transfer"}
+                                >TRANSFER</button>
                             </div>
                         )
                     ) : null}
@@ -2906,18 +3146,15 @@ const BillingPage = () => {
                                     {showConsolidatedView ? (
                                         // CONSOLIDATED VIEW
                                         getConsolidatedItems([...previousItems, ...billItems]).map((item, idx) => (
-                                            <div key={`cons-${idx}`} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff', borderLeft: '3px solid #e2e8f0' }}>
+                                            <div key={`cons-${idx}`} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${showRemarksColumn ? 'with-remarks' : ''} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff', borderLeft: '3px solid #e2e8f0' }}>
                                                 <div className="item-name-cell">
                                                     <div
                                                         className="cursor-pointer hover:text-orange-600 transition-colors flex-1"
-                                                        onClick={() => {
-                                                            setNoteModalIdx(idx);
-                                                            setTempNote(item.notes || '');
-                                                        }}
+                                                        onClick={() => openRemarkModal(item)}
                                                         title="Click item to add/edit remarks"
                                                     >
-                                                        <span style={{ fontWeight: 700, color: '#1e293b' }}>
-                                                            {item.name} {item.notes ? <span style={{ color: '#ea580c', fontWeight: 800, fontSize: '11px', marginLeft: '4px' }}>({item.notes})</span> : ''}
+                                                        <span style={{ fontWeight: 700, color: (item.remarks || item.notes) ? '#ea580c' : '#1e293b' }}>
+                                                            {item.name}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -2930,6 +3167,16 @@ const BillingPage = () => {
                                                     </div>
                                                 )}
                                                 <div className="item-amt">{item.is_complementary ? 0 : item.total_price}</div>
+                                                {showRemarksColumn && (
+                                                    <div
+                                                        className="item-remarks-cell cursor-pointer"
+                                                        onClick={() => openRemarkModal(item)}
+                                                        style={{ color: (item.remarks || item.notes) ? '#ea580c' : '#94a3b8', fontWeight: (item.remarks || item.notes) ? 800 : 500, fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 4px' }}
+                                                        title="Click to view/edit remark"
+                                                    >
+                                                        {(item.remarks || item.notes) || '-'}
+                                                    </div>
+                                                )}
                                                 <div className="item-actions-cell" style={{ justifyContent: 'center' }}>
                                                     <CheckCircle2 size={16} color="#64748b" opacity={0.5} />
                                                 </div>
@@ -2951,28 +3198,29 @@ const BillingPage = () => {
 
                                             {/* NEW ITEMS (Unsaved KOT) */}
                                     {billItems.map((item, idx) => (
-                                        <div key={idx} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff' }}>
-                                            <div className="item-name-cell">
+                                        <div key={idx} className={`order-item-row ${showRateColumn ? 'with-rate' : 'no-rate'} ${showRemarksColumn ? 'with-remarks' : ''} ${item.is_complementary ? 'complementary' : ''}`} style={{ background: '#ffffff', padding: '0.35rem 0.5rem' }}>
+                                            <div className="item-name-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', minWidth: '14px' }}>{idx + 1}</span>
                                                 <div
                                                     className="cursor-pointer hover:text-orange-600 transition-colors flex-1"
-                                                    onClick={() => {
-                                                        setNoteModalIdx(idx);
-                                                        setTempNote(item.notes || '');
-                                                    }}
-                                                    title="Click item to add/edit remarks"
+                                                    style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                                    onClick={() => openRemarkModal(item)}
+                                                    title={`${item.name} - Click to add/edit remarks`}
                                                 >
-                                                    <span style={{ fontWeight: 700, color: '#1e293b' }}>
-                                                        {item.name} {item.notes ? <span style={{ color: '#ea580c', fontWeight: 800, fontSize: '11px', marginLeft: '4px' }}>({item.notes})</span> : ''}
+                                                    <span style={{ fontWeight: 800, color: (item.remarks || item.notes) ? '#ea580c' : '#1e293b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                                        {item.name}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="item-qty-cell" style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
+
+                                            {/* Quantity (+ / - with Qty Edit in center) */}
+                                            <div className="item-qty-cell" style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, -1)}
                                                     style={{
-                                                        width: '24px',
-                                                        height: '24px',
+                                                        width: '22px',
+                                                        height: '22px',
                                                         borderRadius: '4px',
                                                         border: '1px solid #cbd5e1',
                                                         background: '#ffffff',
@@ -2984,48 +3232,34 @@ const BillingPage = () => {
                                                     }}
                                                     title="Decrease Quantity"
                                                 >
-                                                    <Minus size={12} />
+                                                    <Minus size={11} />
                                                 </button>
-                                                {directQtyEditing ? (
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        value={item.quantity}
-                                                        onChange={(e) => handleDirectQtyChange(idx, e.target.value)}
-                                                        style={{
-                                                            width: '46px',
-                                                            height: '24px',
-                                                            textAlign: 'center',
-                                                            border: '1px solid #cbd5e1',
-                                                            borderRadius: '4px',
-                                                            padding: '0 2px',
-                                                            fontSize: '12px',
-                                                            fontWeight: 800,
-                                                            color: '#1e293b',
-                                                            background: '#f8fafc',
-                                                            outline: 'none'
-                                                        }}
-                                                        title="Type quantity directly"
-                                                    />
-                                                ) : (
-                                                    <span
-                                                        style={{
-                                                            minWidth: '28px',
-                                                            textAlign: 'center',
-                                                            fontWeight: 800,
-                                                            fontSize: '12px',
-                                                            color: '#1e293b'
-                                                        }}
-                                                    >
-                                                        {item.quantity}
-                                                    </span>
-                                                )}
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleDirectQtyChange(idx, e.target.value)}
+                                                    style={{
+                                                        width: '36px',
+                                                        height: '22px',
+                                                        textAlign: 'center',
+                                                        border: '1px solid #cbd5e1',
+                                                        borderRadius: '4px',
+                                                        padding: '0 1px',
+                                                        fontSize: '11px',
+                                                        fontWeight: 800,
+                                                        color: '#1e293b',
+                                                        background: '#f8fafc',
+                                                        outline: 'none'
+                                                    }}
+                                                    title="Edit Quantity"
+                                                />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleQtyChange(idx, 1)}
                                                     style={{
-                                                        width: '24px',
-                                                        height: '24px',
+                                                        width: '22px',
+                                                        height: '22px',
                                                         borderRadius: '4px',
                                                         border: '1px solid #cbd5e1',
                                                         background: '#ffffff',
@@ -3037,55 +3271,166 @@ const BillingPage = () => {
                                                     }}
                                                     title="Increase Quantity"
                                                 >
-                                                    <Plus size={12} />
+                                                    <Plus size={11} />
                                                 </button>
                                             </div>
+
                                             {showRateColumn && (
-                                                <div className="item-rate">
+                                                <div className="item-rate" style={{ fontSize: '11px', fontWeight: 700 }}>
                                                     {orderMode === 'PARTY_ORDER' ? (
                                                         <input
                                                             type="number"
                                                             value={item.unit_price}
                                                             onChange={e => updateItemRate(idx, e.target.value)}
-                                                            style={{ width: '55px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px', fontSize: '12px', fontWeight: 800 }}
+                                                            style={{ width: '50px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px', fontSize: '11px', fontWeight: 800 }}
                                                         />
                                                     ) : (
                                                         item.is_complementary ? 0 : item.unit_price
                                                     )}
                                                 </div>
                                             )}
-                                            <div className="item-amt">{item.is_complementary ? 0 : item.total_price}</div>
-                                            <div className="item-actions-cell" style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+
+                                            <div className="item-amt" style={{ fontSize: '11px', fontWeight: 800 }}>
+                                                {item.is_complementary ? 0 : item.total_price}
+                                            </div>
+
+                                            {showRemarksColumn && (
+                                                <div
+                                                    className="item-remarks-cell cursor-pointer"
+                                                    onClick={() => openRemarkModal(item)}
+                                                    style={{ color: (item.remarks || item.notes) ? '#ea580c' : '#94a3b8', fontWeight: (item.remarks || item.notes) ? 800 : 500, fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 4px' }}
+                                                    title="Click to view/edit remark"
+                                                >
+                                                    {(item.remarks || item.notes) || '-'}
+                                                </div>
+                                            )}
+
+                                            {/* 3-Dot (More) Action Menu */}
+                                            <div className="item-actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' }}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => toggleComplementary(idx)}
-                                                    title={item.is_complementary ? "Complementary Active" : "Make Item Complementary"}
-                                                    style={{
-                                                        padding: '4px 6px',
-                                                        borderRadius: '6px',
-                                                        border: 'none',
-                                                        background: item.is_complementary ? '#f59e0b' : '#f1f5f9',
-                                                        color: item.is_complementary ? '#fff' : '#64748b',
-                                                        cursor: 'pointer'
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveItemMenuIdx(activeItemMenuIdx === idx ? null : idx);
                                                     }}
-                                                >
-                                                    <Gift size={14} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeFromBill(idx)}
-                                                    title="Delete Item"
                                                     style={{
-                                                        padding: '4px 6px',
+                                                        width: '26px',
+                                                        height: '26px',
                                                         borderRadius: '6px',
-                                                        border: 'none',
-                                                        background: '#fef2f2',
-                                                        color: '#ef4444',
-                                                        cursor: 'pointer'
+                                                        border: '1.5px solid #ff5200',
+                                                        background: activeItemMenuIdx === idx ? '#ff5200' : '#ffffff',
+                                                        color: activeItemMenuIdx === idx ? '#ffffff' : '#ff5200',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                                                     }}
+                                                    title="Item Options (Transfer, Delete, Complimentary)"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <MoreVertical size={14} />
                                                 </button>
+
+                                                {activeItemMenuIdx === idx && (
+                                                    <div
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '100%',
+                                                            right: 0,
+                                                            marginTop: '4px',
+                                                            width: '135px',
+                                                            background: '#ffffff',
+                                                            border: '1.5px solid #cbd5e1',
+                                                            borderRadius: '10px',
+                                                            boxShadow: '0 10px 25px -5px rgba(15,23,42,0.2)',
+                                                            zIndex: 9999,
+                                                            overflow: 'hidden',
+                                                            padding: '4px'
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="animate-in zoom-in-95 duration-150"
+                                                    >
+                                                        {/* Transfer Option */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveItemMenuIdx(null);
+                                                                if (!isKotEnabled) return alert("KOT module is disabled.");
+                                                                handleTransferItem(idx);
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '6px 8px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 700,
+                                                                color: !isKotEnabled ? '#94a3b8' : '#334155',
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                cursor: !isKotEnabled ? 'not-allowed' : 'pointer',
+                                                                textAlign: 'left'
+                                                            }}
+                                                            title={!isKotEnabled ? "KOT Module is Disabled" : "Transfer item"}
+                                                        >
+                                                            <ArrowLeftRight size={13} style={{ color: '#4f46e5' }} /> Transfer
+                                                        </button>
+
+                                                        {/* Delete Option */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveItemMenuIdx(null);
+                                                                removeFromBill(idx);
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '6px 8px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 700,
+                                                                color: '#dc2626',
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left'
+                                                            }}
+                                                        >
+                                                            <Trash2 size={13} style={{ color: '#dc2626' }} /> Delete
+                                                        </button>
+
+                                                        {/* Complimentary Option */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveItemMenuIdx(null);
+                                                                toggleComplementary(idx);
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '6px 8px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 700,
+                                                                color: item.is_complementary ? '#d97706' : '#475569',
+                                                                background: item.is_complementary ? '#fffbeb' : 'none',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left'
+                                                            }}
+                                                        >
+                                                            <Gift size={13} style={{ color: '#d97706' }} /> {item.is_complementary ? 'Remove Comp.' : 'Complimentary'}
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -3095,400 +3440,74 @@ const BillingPage = () => {
                             )}
                         </div>
 
-                        {/* Scrollable Summary Section */}
-                        <div className="order-summary-scrollable">
-                            <div className="summary-section">
-                                {showMoreForm && (
-                                    <div className={`collapsible-summary-area`}>
-                                        <div className="sum-row" style={{ padding: '5px 0', borderBottom: '1px dashed #e2e8f0' }}>
-                                            <span>Subtotal ({billItems.length} items)</span>
-                                            <span className="mono">₹{subTotal.toFixed(2)}</span>
-                                        </div>
-
-                                        <div className="summary-details-grid">
-                                            <div className="sum-detail-row">
-                                                <label>Discount</label>
-                                                <div className="discount-inputs-flex">
-                                                    <div className="input-with-toggle">
-                                                        <span>₹</span>
-                                                        <input
-                                                            type="number"
-                                                            value={discountType === 'FIXED' ? discount : (subTotal > 0 ? (discount * subTotal / 100).toFixed(2) : 0)}
-                                                            onChange={(e) => { setDiscount(e.target.value); setDiscountType('FIXED'); }}
-                                                        />
-                                                    </div>
-                                                    <div className="input-with-toggle">
-                                                        <span>%</span>
-                                                        <input
-                                                            type="number"
-                                                            value={discountType === 'PERCENT' ? discount : (subTotal > 0 ? (discount / subTotal * 100).toFixed(2) : 0)}
-                                                            onChange={(e) => { setDiscount(e.target.value); setDiscountType('PERCENT'); }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <span className="calc-val">- ₹{billCalculations.discountAmount.toFixed(2)}</span>
-                                            </div>
-
-                                            <div className="sum-detail-row">
-                                                <label>Deliv. Chg</label>
-                                                <input type="number" value={deliveryCharge} onChange={(e) => setDeliveryCharge(e.target.value)} />
-                                                <span className="calc-val">+ ₹{billCalculations.deliveryCharge.toFixed(2)}</span>
-                                            </div>
-
-                                            <div className="sum-detail-row">
-                                                <label>Pack. Chg</label>
-                                                <input type="number" value={containerCharge} onChange={(e) => setContainerCharge(e.target.value)} />
-                                                <span className="calc-val">+ ₹{billCalculations.containerCharge.toFixed(2)}</span>
-                                            </div>
-
-                                            <div className="sum-detail-row">
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    Tax ({gstPercentage}%)
-                                                    <select
-                                                        value={taxType}
-                                                        onChange={e => setTaxType(e.target.value)}
-                                                        className="tax-selector">
-                                                        <option value="EXCLUSIVE">Exclusive</option>
-                                                        <option value="INCLUSIVE">Inclusive</option>
-                                                    </select>
-                                                </label>
-                                                <div className="empty-input"></div>
-                                                <span className="calc-val">{taxType === 'EXCLUSIVE' ? '+' : '(Inc)'} ₹{taxAmount.toFixed(2)}</span>
-                                            </div>
-
-                                            {loyaltyRedeemedPoints > 0 && (
-                                                <div className="sum-detail-row">
-                                                    <label>Loyalty ({loyaltyRedeemedPoints} Pts)</label>
-                                                    <div className="empty-input"></div>
-                                                    <span className="calc-val">- ₹{loyaltyDiscount.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                            {appliedCoupon && (
-                                                <div className="sum-detail-row">
-                                                    <label>Coupon ({appliedCoupon.coupon_name})</label>
-                                                    <div className="empty-input"></div>
-                                                    <span className="calc-val">- ₹{couponDiscount.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                            <div className="sum-detail-row">
-                                                <label>Round Off</label>
-                                                <div className="empty-input"></div>
-                                                <span className="calc-val">{roundOff > 0 ? '+' : ''}₹{roundOff.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {showLoyaltyForm && loyaltyEnabled && (
-                                    <div className="customer-expandable-form animate-in slide-in-from-bottom-2 duration-300">
-                                        <div className="loyalty-form-internal" style={{ padding: '15px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', display: 'block' }}>CUSTOMER WALLET</span>
-                                                    <span style={{ fontSize: '14px', fontWeight: '900', color: '#4f46e5' }}>{customerPoints} Points</span>
-                                                </div>
-                                                {loyaltySettings.target_points > 0 && (
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#94a3b8', display: 'block' }}>TARGET FOR REDEEM</span>
-                                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: customerPoints >= loyaltySettings.target_points ? '#166534' : '#94a3b8' }}>
-                                                            {loyaltySettings.target_points} PTS
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Points to redeem"
-                                                    value={redeemPointsInput}
-                                                    onChange={(e) => setRedeemPointsInput(e.target.value)}
-                                                    className="input-premium"
-                                                    style={{ flex: 1, height: '38px', fontSize: '12px' }}
-                                                    disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                                />
-                                                <button
-                                                    onClick={() => {
-                                                        const pts = parseInt(redeemPointsInput);
-                                                        if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
-                                                        if (pts > customerPoints) return alert('Insufficient points');
-                                                        if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
-
-                                                        setLoyaltyRedeemedPoints(pts);
-                                                        setRedeemPointsInput('');
-                                                        alert(`${pts} Points applied for redemption!`);
-                                                    }}
-                                                    className="btn-premium-primary"
-                                                    style={{ height: '38px', padding: '0 15px', fontSize: '11px', fontWeight: '900' }}
-                                                    disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                                >
-                                                    REDEEM
-                                                </button>
-                                            </div>
-
-                                            {loyaltyRedeemedPoints > 0 && (
-                                                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#eef2ff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #c7d2fe' }}>
-                                                    <span style={{ fontSize: '11px', color: '#3730a3', fontWeight: 'bold' }}>
-                                                        Redeeming: {loyaltyRedeemedPoints} Pts (Value: ₹{loyaltyRedeemedPoints * loyaltySettings.point_value})
-                                                    </span>
-                                                    <button onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {showCouponForm && (
-                                    <div className="customer-expandable-form animate-in slide-in-from-bottom-2 duration-300">
-                                        <div className="coupon-form-internal" style={{ padding: '15px' }}>
-                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <select
-                                                        value={couponSearchName}
-                                                        onChange={(e) => setCouponSearchName(e.target.value)}
-                                                        className="input-premium"
-                                                        style={{ width: '100%', height: '38px', fontSize: '12px' }}
-                                                    >
-                                                        <option value="">Select Coupon</option>
-                                                        {availableCoupons.map(c => (
-                                                            <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <input
-                                                        type="number"
-                                                        placeholder="Coupon Number"
-                                                        value={couponNumber}
-                                                        onChange={(e) => setCouponNumber(e.target.value)}
-                                                        className="input-premium"
-                                                        style={{ width: '100%', height: '38px', fontSize: '12px' }}
-                                                    />
-                                                </div>
-                                                <button
-                                                    onClick={handleApplyCoupon}
-                                                    style={{ background: '#4f46e5', color: 'white', border: 'none', padding: '0 16px', borderRadius: '8px', height: '38px', fontWeight: '900', fontSize: '0.75rem' }}
-                                                >
-                                                    APPLY
-                                                </button>
-                                            </div>
-                                            {appliedCoupon && (
-                                                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                                                    <span style={{ fontSize: '11px', color: '#166534', fontWeight: 'bold' }}>
-                                                        Applied: {appliedCoupon.coupon_name}
-                                                        ({appliedCoupon.type === 'DISCOUNT' ? (appliedCoupon.discount_type === 'PERCENT' ? `${appliedCoupon.discount_value}%` : `₹${appliedCoupon.discount_value}`) : 'BOGO'})
-                                                    </span>
-                                                    <button onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </div>
-                    </div>
 
                     <div className="order-footer-fixed relative">
-                        <div className="summary-section" style={{ padding: '10px 12px', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', marginBottom: '8px', marginTop: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL PAYABLE</span>
-                                        <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '900' }}>
-                                            {previousItems.reduce((sum, item) => sum + item.quantity, 0) + billItems.reduce((sum, item) => sum + item.quantity, 0)} QTY
+                        <div className="summary-section" style={{ padding: '12px 16px', background: '#ffffff', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', marginBottom: '8px', marginTop: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                {/* Left: ITEMS count & QUANTITY total */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ITEMS</span>
+                                        <span style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
+                                            {billItems.length + previousItems.length}
                                         </span>
                                     </div>
-                                    {orderMode === 'PARTY_ORDER' && partyData?.advance_paid > 0 && (
-                                        <span style={{ fontSize: '10px', color: '#f97316', fontWeight: 'bold', marginTop: '2px' }}>
-                                            (Total: ₹{grandTotal.toFixed(2)} - Adv: ₹{partyData.advance_paid.toFixed(2)})
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '22px', fontWeight: '900', color: '#ea580c', letterSpacing: '-0.5px' }}>₹{(orderMode === 'PARTY_ORDER' ? Math.max(0, grandTotal - (partyData?.advance_paid || 0)) : grandTotal).toFixed(2)}</span>
 
-                                    {/* More (⋮) Icon Button with Expandable Popup Panel */}
+                                    <span style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: 'light' }}>|</span>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>QUANTITY</span>
+                                        <span style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
+                                            {previousItems.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0) + billItems.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <span style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: 'light' }}>|</span>
+
+                                {/* Right: TOTAL AMOUNT & More (⋮) Icon Button */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL AMOUNT</span>
+                                        <span style={{ fontSize: '28px', fontWeight: 900, color: '#ff5200', letterSpacing: '-0.5px', lineHeight: 1 }}>
+                                            ₹{(orderMode === 'PARTY_ORDER' ? Math.max(0, grandTotal - (partyData?.advance_paid || 0)) : grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                        {orderMode === 'PARTY_ORDER' && partyData?.advance_paid > 0 && (
+                                            <span style={{ fontSize: '10px', color: '#ff5200', fontWeight: 'bold', marginTop: '2px' }}>
+                                                (Total: ₹{grandTotal.toFixed(2)} - Adv: ₹{partyData.advance_paid.toFixed(2)})
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* More (⋮) Icon Button */}
                                     <div ref={morePanelRef} style={{ position: 'relative', display: 'inline-block' }}>
                                         <button
                                             type="button"
-                                            onClick={() => { const next = !showMoreForm; setShowMoreForm(next); setShowMorePopup(next); }}
-                                            title="More Options (Discount, Coupon, Loyalty)"
+                                            onClick={() => setShowMorePopup(!showMorePopup)}
+                                            title="More Options (Discount, Charges, Tax, Coupon, Loyalty)"
                                             style={{
-                                                padding: '8px 10px',
-                                                borderRadius: '10px',
-                                                border: showMoreForm ? '2px solid #ea580c' : '1.5px solid #cbd5e1',
-                                                background: showMoreForm ? '#ea580c' : '#f8fafc',
-                                                color: showMoreForm ? '#ffffff' : '#334155',
+                                                width: '38px',
+                                                height: '38px',
+                                                borderRadius: '8px',
+                                                border: showMorePopup ? '1.5px solid #ff5200' : '1.5px solid #ff5200',
+                                                background: showMorePopup ? '#ff5200' : '#ffffff',
+                                                color: showMorePopup ? '#ffffff' : '#ff5200',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                boxShadow: showMoreForm ? '0 4px 12px rgba(234,88,12,0.3)' : '0 2px 4px rgba(0,0,0,0.04)',
-                                                transition: 'all 0.2s'
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                                transition: 'all 0.15s'
                                             }}
                                         >
-                                            <MoreVertical size={18} />
+                                            <MoreVertical size={20} />
                                         </button>
-
-                                        {/* Expandable Popup Panel (Opens above More button) */}
-                                        {showMorePopup && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                bottom: 'calc(100% + 8px)',
-                                                right: 0,
-                                                width: '310px',
-                                                background: '#ffffff',
-                                                border: '1.5px solid #cbd5e1',
-                                                borderRadius: '16px',
-                                                boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
-                                                padding: '14px',
-                                                zIndex: 999,
-                                                color: '#1e293b'
-                                            }} className="animate-in zoom-in-95 duration-200">
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', marginBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <SlidersHorizontal size={15} color="#ea580c" /> More Options
-                                                    </span>
-                                                    <button type="button" onClick={() => setShowMorePopup(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>✕</button>
-                                                </div>
-
-                                                {/* 1. DISCOUNT SECTION */}
-                                                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Discount</label>
-                                                        <div style={{ display: 'flex', background: '#fff', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '2px' }}>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setDiscountType('PERCENT')}
-                                                                style={{
-                                                                    padding: '2px 6px', fontSize: '10px', fontWeight: 800, borderRadius: '4px', border: 'none', cursor: 'pointer',
-                                                                    background: discountType === 'PERCENT' ? '#ea580c' : 'none',
-                                                                    color: discountType === 'PERCENT' ? '#fff' : '#64748b'
-                                                                }}
-                                                            >
-                                                                % (Percent)
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setDiscountType('FIXED')}
-                                                                style={{
-                                                                    padding: '2px 6px', fontSize: '10px', fontWeight: 800, borderRadius: '4px', border: 'none', cursor: 'pointer',
-                                                                    background: discountType === 'FIXED' ? '#ea580c' : 'none',
-                                                                    color: discountType === 'FIXED' ? '#fff' : '#64748b'
-                                                                }}
-                                                            >
-                                                                ₹ (Amount)
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <div style={{ position: 'relative', flex: 1 }}>
-                                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>
-                                                                {discountType === 'PERCENT' ? '%' : '₹'}
-                                                            </span>
-                                                            <input
-                                                                type="number"
-                                                                placeholder="Discount value"
-                                                                value={discount}
-                                                                onChange={(e) => setDiscount(e.target.value)}
-                                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 700 }}
-                                                            />
-                                                        </div>
-                                                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#ea580c', minWidth: '65px', textAlign: 'right' }}>
-                                                            - ₹{billCalculations.discountAmount.toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* 2. COUPON SECTION (Show ONLY IF couponEnabled is true) */}
-                                                {couponEnabled && (
-                                                    <div style={{ background: '#f5f3ff', padding: '10px', borderRadius: '12px', border: '1px solid #ddd6fe', marginBottom: '10px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#5b21b6', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                                                            <Ticket size={12} color="#7c3aed" /> Apply Coupon
-                                                        </label>
-                                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                                            <select
-                                                                value={couponSearchName}
-                                                                onChange={(e) => setCouponSearchName(e.target.value)}
-                                                                style={{ flex: 1, padding: '5px 8px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', outline: 'none', background: '#fff', fontWeight: 700 }}
-                                                            >
-                                                                <option value="">Select Coupon</option>
-                                                                {availableCoupons.map(c => (
-                                                                    <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
-                                                                ))}
-                                                            </select>
-                                                            <input
-                                                                type="number"
-                                                                placeholder="No."
-                                                                value={couponNumber}
-                                                                onChange={(e) => setCouponNumber(e.target.value)}
-                                                                style={{ width: '50px', padding: '5px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', outline: 'none', background: '#fff', fontWeight: 700 }}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleApplyCoupon}
-                                                                style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 900, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                                            >
-                                                                APPLY
-                                                            </button>
-                                                        </div>
-                                                        {appliedCoupon && (
-                                                            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#166534' }}>
-                                                                <span>Coupon: {appliedCoupon.coupon_name} (-₹{couponDiscount.toFixed(2)})</span>
-                                                                <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* 3. LOYALTY SECTION (Show ONLY IF loyaltyEnabled is true) */}
-                                                {loyaltyEnabled && (
-                                                    <div style={{ background: '#fffbeb', padding: '10px', borderRadius: '12px', border: '1px solid #fde68a' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                                            <label style={{ fontSize: '10px', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <Gift size={12} color="#d97706" /> Loyalty Points
-                                                            </label>
-                                                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#b45309' }}>{customerPoints} Pts Available</span>
-                                                        </div>
-                                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                                            <input
-                                                                type="number"
-                                                                placeholder="Points to redeem"
-                                                                value={redeemPointsInput}
-                                                                onChange={(e) => setRedeemPointsInput(e.target.value)}
-                                                                disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                                                style={{ flex: 1, padding: '5px 8px', fontSize: '11px', borderRadius: '6px', border: '1px solid #fcd34d', outline: 'none', background: '#fff', fontWeight: 700 }}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const pts = parseInt(redeemPointsInput);
-                                                                    if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
-                                                                    if (pts > customerPoints) return alert('Insufficient points');
-                                                                    if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
-                                                                    setLoyaltyRedeemedPoints(pts);
-                                                                    setRedeemPointsInput('');
-                                                                }}
-                                                                disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                                                style={{ padding: '5px 10px', fontSize: '11px', fontWeight: 900, background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                                            >
-                                                                REDEEM
-                                                            </button>
-                                                        </div>
-                                                        {loyaltyRedeemedPoints > 0 && (
-                                                            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#92400e' }}>
-                                                                <span>Redeemed {loyaltyRedeemedPoints} Pts (-₹{loyaltyDiscount.toFixed(2)})</span>
-                                                                <button type="button" onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
-                        </div>
+
+
 
                         {/* Integrated Sidebar Payment Flow */}
                         {stepProceeded && (
@@ -3511,19 +3530,38 @@ const BillingPage = () => {
                             ) : (
                                 <>
                                     <button type="button" className="action-btn save-bill" onClick={() => handleOrderAction('SAVE')} title="Save draft bill">
-                                        SAVE
+                                        <Save size={15} className="shrink-0" />
+                                        <span>SAVE</span>
                                     </button>
-                                    <button type="button" className="action-btn" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
-                                        SAVE &<br/>PRINT
+                                    <button type="button" className="action-btn save-print-bill" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
+                                        <Printer size={15} className="shrink-0" />
+                                        <span>SAVE & PRINT</span>
                                     </button>
-                                    <button type="button" className="action-btn kot-print" onClick={() => handleOrderAction('KOT_SAVE')} title="Save KOT">
-                                        KOT
+                                    <button 
+                                        type="button" 
+                                        disabled={!isKotEnabled}
+                                        className={`action-btn kot-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
+                                        onClick={() => isKotEnabled && handleOrderAction('KOT_SAVE')} 
+                                        title={!isKotEnabled ? "KOT Module is Disabled" : "Save KOT"}
+                                        style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
+                                    >
+                                        <FileText size={15} className="shrink-0" />
+                                        <span>KOT</span>
                                     </button>
-                                    <button type="button" className="action-btn" onClick={() => handleOrderAction('KOT')} title="Send KOT to kitchen">
-                                        KOT<br/>PRINT
+                                    <button 
+                                        type="button" 
+                                        disabled={!isKotEnabled}
+                                        className={`action-btn kot-print-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
+                                        onClick={() => isKotEnabled && handleOrderAction('KOT')} 
+                                        title={!isKotEnabled ? "KOT Module is Disabled" : "Send KOT to kitchen"}
+                                        style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
+                                    >
+                                        <Printer size={15} className="shrink-0" />
+                                        <span>KOT & PRINT</span>
                                     </button>
                                     <button type="button" className="action-btn hold-bill" onClick={holdCurrentBill} title="Hold this bill for later">
-                                        HOLD
+                                        <Pause size={15} className="shrink-0" />
+                                        <span>HOLD</span>
                                     </button>
                                 </>
                             )}
@@ -3531,8 +3569,305 @@ const BillingPage = () => {
                     </div>
                 </div>
             </div>
+            </div>
 
             {/* Modals */}
+            {/* SINGLE CENTERED POPUP MODAL FOR MORE OPTIONS */}
+            {showMorePopup && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 999999,
+                        padding: '24px 16px'
+                    }}
+                    onClick={() => setShowMorePopup(false)}
+                >
+                    <div
+                        ref={morePanelRef}
+                        style={{
+                            width: '100%',
+                            maxWidth: '460px',
+                            maxHeight: '82vh',
+                            overflowY: 'auto',
+                            background: '#ffffff',
+                            borderRadius: '20px',
+                            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
+                            border: '1.5px solid #cbd5e1',
+                            padding: '20px',
+                            color: '#1e293b',
+                            position: 'relative'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="animate-in zoom-in-95 duration-150"
+                    >
+                        {/* Modal Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', marginBottom: '16px', borderBottom: '1.5px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <SlidersHorizontal size={18} color="#ea580c" /> More Options
+                            </span>
+                            <button type="button" onClick={() => setShowMorePopup(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', color: '#64748b', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {/* 1. DISCOUNT */}
+                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Discount</span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                                    {/* % input */}
+                                    <div>
+                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '4px' }}>% Input (Percent)</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>%</span>
+                                            <input
+                                                type="number"
+                                                placeholder="0"
+                                                value={discountType === 'PERCENT' ? discount : (subTotal > 0 ? ((discount * 100) / subTotal).toFixed(2) : 0)}
+                                                onChange={(e) => {
+                                                    setDiscountType('PERCENT');
+                                                    setDiscount(e.target.value);
+                                                }}
+                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '8px', border: discountType === 'PERCENT' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* AMT input */}
+                                    <div>
+                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '4px' }}>AMT Input (Fixed ₹)</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                            <input
+                                                type="number"
+                                                placeholder="0"
+                                                value={discountType === 'FIXED' ? discount : (subTotal > 0 ? ((discount * subTotal) / 100).toFixed(2) : 0)}
+                                                onChange={(e) => {
+                                                    setDiscountType('FIXED');
+                                                    setDiscount(e.target.value);
+                                                }}
+                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '8px', border: discountType === 'FIXED' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Value (calculated) */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b' }}>Value (calculated):</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#ea580c' }}>- ₹{billCalculations.discountAmount.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            {/* 2. DELIVERY CHARGES */}
+                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Delivery Charges</label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={deliveryCharge}
+                                        onChange={(e) => setDeliveryCharge(e.target.value)}
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 24px', fontSize: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 3. PACKING CHARGES */}
+                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Packing Charges</label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={containerCharge}
+                                        onChange={(e) => setContainerCharge(e.target.value)}
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 24px', fontSize: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 4. TAX SUMMARY */}
+                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Tax Summary</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700 }}>
+                                        <span>Taxable Value:</span>
+                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{(taxableValue || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700 }}>
+                                        <span>Tax %:</span>
+                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{gstPercentage}% ({taxType})</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700, paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                                        <span>GST Amount:</span>
+                                        <span style={{ fontWeight: 900, color: '#ea580c' }}>₹{taxAmount.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 5. ROUNDED OFF */}
+                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rounded Off</span>
+                                <span style={{ fontSize: '12px', fontWeight: 900, color: roundOff >= 0 ? '#166534' : '#dc2626' }}>
+                                    {roundOff >= 0 ? `+ ₹${roundOff.toFixed(2)}` : `- ₹${Math.abs(roundOff).toFixed(2)}`}
+                                </span>
+                            </div>
+
+                            {/* 6. COUPON (Visible ONLY if enabled in Extra Modules) */}
+                            {isCouponEnabled && (
+                                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#5b21b6', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                                        <Ticket size={14} color="#7c3aed" /> Coupon
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <select
+                                                value={couponSearchName}
+                                                onChange={(e) => setCouponSearchName(e.target.value)}
+                                                style={{ width: '100%', height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #c4b5fd', padding: '0 8px', fontWeight: 700, background: '#ffffff' }}
+                                            >
+                                                <option value="">Select Coupon</option>
+                                                {availableCoupons.map(c => (
+                                                    <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <input
+                                                type="number"
+                                                placeholder="Coupon No"
+                                                value={couponNumber}
+                                                onChange={(e) => setCouponNumber(e.target.value)}
+                                                style={{ width: '100%', height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #c4b5fd', padding: '0 8px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleApplyCoupon}
+                                            style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '0 12px', borderRadius: '8px', height: '34px', fontWeight: 900, fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                            APPLY
+                                        </button>
+                                    </div>
+                                    {appliedCoupon && (
+                                        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '6px 10px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                                            <span style={{ fontSize: '10px', color: '#166534', fontWeight: 800 }}>
+                                                Applied: {appliedCoupon.coupon_name} (- ₹{couponDiscount.toFixed(2)})
+                                            </span>
+                                            <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 7. LOYALTY (Visible ONLY if enabled in Extra Modules) */}
+                            {isLoyaltyEnabled && (
+                                <div style={{ background: '#fffbeb', padding: '12px', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Gift size={14} color="#d97706" /> Loyalty Points
+                                        </span>
+                                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#b45309' }}>Available: {customerPoints} Pts</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input
+                                            type="number"
+                                            placeholder="Points to redeem"
+                                            value={redeemPointsInput}
+                                            onChange={(e) => setRedeemPointsInput(e.target.value)}
+                                            style={{ flex: 1, height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #fcd34d', padding: '0 8px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
+                                            disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const pts = parseInt(redeemPointsInput);
+                                                if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
+                                                if (pts > customerPoints) return alert('Insufficient points');
+                                                if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
+                                                setLoyaltyRedeemedPoints(pts);
+                                                setRedeemPointsInput('');
+                                                alert(`${pts} Points applied for redemption!`);
+                                            }}
+                                            style={{ height: '34px', padding: '0 12px', fontSize: '11px', fontWeight: 900, background: '#d97706', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: customerPoints < (loyaltySettings.target_points || 0) ? 'not-allowed' : 'pointer', opacity: customerPoints < (loyaltySettings.target_points || 0) ? 0.5 : 1 }}
+                                            disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                        >
+                                            REDEEM
+                                        </button>
+                                    </div>
+
+                                    {loyaltyRedeemedPoints > 0 && (
+                                        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', padding: '6px 10px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                                            <span style={{ fontSize: '10px', color: '#92400e', fontWeight: 800 }}>
+                                                Redeeming: {loyaltyRedeemedPoints} Pts (Value: ₹{loyaltyRedeemedPoints * loyaltySettings.point_value})
+                                            </span>
+                                            <button type="button" onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowMorePopup(false)}
+                            style={{ width: '100%', marginTop: '16px', padding: '10px', background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                        >
+                            DONE
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showPayModePopup && (
+                <PayModePopup
+                    grandTotal={grandTotal}
+                    onPaymentSubmit={handlePopupPaymentSubmit}
+                    onCancel={() => setShowPayModePopup(false)}
+                    loading={paymentLoading}
+                />
+            )}
+            {/* Remarks Modal Popup - Matching Reference Image Design */}
+            {remarkModalItem && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-[3500] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-100 animate-in zoom-in duration-200">
+                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ff5200', marginBottom: '8px' }}>Remarks</h3>
+                        <div style={{ fontSize: '13px', fontWeight: 900, color: '#ff5200', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {remarkModalItem.name}
+                        </div>
+                        <div style={{ marginBottom: '20px' }}>
+                            <input
+                                type="text"
+                                value={remarkInputText}
+                                onChange={(e) => setRemarkInputText(e.target.value)}
+                                placeholder="Enter remarks (e.g. Extra toppings)..."
+                                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #3b82f6', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#0f172a', outline: 'none' }}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveRemark();
+                                }}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleSaveRemark}
+                            style={{ width: '100%', padding: '10px', background: '#ff5200', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
             {variationModalProduct && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[1000] flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/20 animate-in zoom-in duration-200">

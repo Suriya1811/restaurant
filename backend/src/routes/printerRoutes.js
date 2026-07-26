@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     getPrinters,
+    getSystemPrinters,
     createPrinter,
     updatePrinter,
     deletePrinter,
@@ -10,6 +11,9 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.use(protect);
+
+// System Printers Endpoint
+router.get('/system-printers', getSystemPrinters);
 
 // CRUD
 router.get('/', getPrinters);

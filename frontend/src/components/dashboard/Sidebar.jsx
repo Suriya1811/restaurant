@@ -79,7 +79,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                     icon: <Monitor size={16} />,
                     route: "/dashboard/self-service/kitchen-management",
                     pageKey: "kitchen_printers",
-                    module: "kot"
+                    module: ["kot", "kitchen"]
                 },
                 {
                     label: "Sales Bill",
@@ -236,7 +236,10 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
 
     const checkIsVisible = (menuItem) => {
         // Module visibility check
-        if (menuItem.module && !hasModuleAccess(menuItem.module)) return false;
+        if (menuItem.module) {
+            const mods = Array.isArray(menuItem.module) ? menuItem.module : [menuItem.module];
+            if (mods.some(m => !hasModuleAccess(m))) return false;
+        }
 
         const hasSubItems = menuItem.subItems && menuItem.subItems.length > 0;
 
@@ -324,7 +327,9 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
                 {hasSubItems && isExpanded && !isCollapsed && (
                     <div className="sub-menu">
                         {item.subItems.map(subItem => {
-                            const isSubModuleAvailable = subItem.module ? hasModuleAccess(subItem.module) : true;
+                            const isSubModuleAvailable = subItem.module 
+                                ? (Array.isArray(subItem.module) ? subItem.module.every(m => hasModuleAccess(m)) : hasModuleAccess(subItem.module)) 
+                                : true;
                             if (!isSubModuleAvailable) return null;
                             return renderMenuItem(subItem, true);
                         })}

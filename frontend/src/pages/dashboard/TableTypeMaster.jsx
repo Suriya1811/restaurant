@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -13,14 +13,18 @@ import {
     AlertCircle,
     Activity,
     Layers,
-    X
-, Download, Printer} from 'lucide-react';
+    X,
+    Download,
+    Printer,
+    Save
+} from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const TableTypeMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [tableTypes, setTableTypes] = useState([]);
@@ -28,6 +32,7 @@ const TableTypeMaster = () => {
     const [waiters, setWaiters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -61,30 +66,12 @@ const TableTypeMaster = () => {
             if (!savedUser) return;
             const { token } = JSON.parse(savedUser);
 
-            const [typesRes, captRes, waitRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/table-types`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${import.meta.env.VITE_API_URL}/captains`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${import.meta.env.VITE_API_URL}/waiters`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-            ]);
-
-            const typesData = await typesRes.json();
-            const captData = await captRes.json();
-            const waitData = await waitRes.json();
-
-            if (typesData.success) {
-                setTableTypes(typesData.data);
-            }
-            if (captData.success) {
-                setCaptains(captData.data);
-            }
-            if (waitData.success) {
-                setWaiters(waitData.data);
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/table-types`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setTableTypes(data.data);
             }
         } catch (err) {
             console.error("Failed to fetch table types", err);
@@ -93,8 +80,30 @@ const TableTypeMaster = () => {
         }
     };
 
+    const fetchStaff = async () => {
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+
+            const [captainsRes, waitersRes] = await Promise.all([
+                fetch(`${import.meta.env.VITE_API_URL}/captains`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${import.meta.env.VITE_API_URL}/waiters`, { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+
+            const captainsData = await captainsRes.json();
+            const waitersData = await waitersRes.json();
+
+            if (captainsData.success) setCaptains(captainsData.data);
+            if (waitersData.success) setWaiters(waitersData.data);
+        } catch (err) {
+            console.error("Failed to fetch staff for table types", err);
+        }
+    };
+
     useEffect(() => {
         fetchTableTypes();
+        fetchStaff();
     }, []);
 
     const handleSubmit = async (e) => {
@@ -128,8 +137,10 @@ const TableTypeMaster = () => {
             }
 
             fetchTableTypes();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -186,15 +197,17 @@ const TableTypeMaster = () => {
     };
 
     const filteredTableTypes = tableTypes.filter(t => {
-        return t.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (t.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' ? true : (statusFilter === 'ACTIVE' ? t.is_active !== false : t.is_active === false);
+        return matchesSearch && matchesStatus;
     });
 
 
     const exportCols = ['#', 'Table Type Name'];
     const getExportRows = () => filteredTableTypes.map((t, i) => [i + 1, t.name]);
     const handleExcelExport = () => exportToCSV('Table Type Master', exportCols, getExportRows(), 'TableType_Master');
-    const handlePDFExport   = () => exportToPDF('Table Type Master', exportCols, getExportRows(), 'TableType_Master');
-    const handlePrint       = () => printTable('Table Type Master', `Total: ${filteredTableTypes.length}`, exportCols, getExportRows());
+    const handlePDFExport = () => exportToPDF('Table Type Master', exportCols, getExportRows(), 'TableType_Master');
+    const handlePrint = () => printTable('Table Type Master', `Total: ${filteredTableTypes.length}`, exportCols, getExportRows());
 
     return (
         <div className="dashboard-layout">
@@ -205,133 +218,123 @@ const TableTypeMaster = () => {
             )}
 
             <main className="dashboard-main">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                    title="Table Type Creation"
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title={!showDrawer ? "Table Type Master" : (isEditing ? "TABLE TYPE MODIFICATION" : "TABLE TYPE CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
-
-                            <button
-                                type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-<button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                            <PlusCircle size={18} /> 
-                            <span className="text-[10px] uppercase font-black">Create New TableType</span>
-                        </button>
-                    </>
-}
-                />
-                <div className="master-content-layout fade-in">
-                    {/* Header relocated */}
-
-
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search spatial zones..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredTableTypes.length}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th>Zone Identity</th>
-                                    <th>Asset Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Data...</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredTableTypes.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Grid size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No spatial zones defined.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredTableTypes.map((type) => (
-                                    <tr key={type._id} className="group">
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                                                    <Layers size={18} />
-                                                </div>
-                                                <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{type.name}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`badge-premium ${type.is_active !== false ? 'active' : 'disabled'}`}>
-                                                {type.is_active !== false ? 'Operational' : 'Restricted'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                                            <ActionDropdown item={type} onEdit={handleEdit} onDelete={handleDelete} />
-                                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="fixed inset-0 md:pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
-                        <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
-                            <h2 className="text-xl font-bold text-black tracking-tight">
-                                {isEditing ? 'Modify Zone' : 'Table Type Creation'}
-                            </h2>
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Create New TableType</span>
+                                </button>
+                            </>
+                        ) : (
                             <button
                                 type="button"
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
-                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <X size={16} /> CLOSE
+                                <XCircle size={18} />
+                                <span className="text-xs tracking-wide">CLOSE</span>
                             </button>
+                        )
+                    }
+                />
+
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search spatial zones..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                    TOTAL : {filteredTableTypes.length}
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="px-8 py-8 w-full flex flex-col overflow-y-auto">
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>Zone Identifier</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Database...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTableTypes.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Layers size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No spatial zones defined.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTableTypes.map((type) => (
+                                        <tr key={type._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={type} onEdit={handleEdit} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                        <Layers size={18} />
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{type.name}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`badge-premium ${type.is_active !== false ? 'active' : 'disabled'}`}>
+                                                    {type.is_active !== false ? 'Operational' : 'Restricted'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
+                        <div className="px-8 py-8 w-full flex flex-col flex-1 overflow-y-auto relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
@@ -345,6 +348,7 @@ const TableTypeMaster = () => {
                                             Zone Name <span className="text-[#f97316]">*</span>
                                         </label>
                                         <input
+                                            ref={nameInputRef}
                                             type="text"
                                             required
                                             placeholder="e.g. GARDEN / AC HALL"
@@ -392,18 +396,22 @@ const TableTypeMaster = () => {
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="font-bold px-8 py-2.5 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 text-white shadow-sm hover:opacity-90"
-                                        style={{ backgroundColor: '#f97316' }}
+                                        className="flex items-center gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-[#f97316]/20 transition-all cursor-pointer"
                                     >
-                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : 'Save'}
+                                        {submitting ? <Loader2 size={18} className="animate-spin" /> : (
+                                            <>
+                                                <Save size={20} />
+                                                <span className="uppercase tracking-wider">{isEditing ? 'UPDATE' : 'SAVE'}</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>
                         </div>
-                        <SaveConfirmationModal 
-                            isOpen={showSaveConfirm} 
-                            onConfirm={confirmSave} 
-                            onCancel={cancelSave} 
+                        <SaveConfirmationModal
+                            isOpen={showSaveConfirm}
+                            onConfirm={confirmSave}
+                            onCancel={cancelSave}
                         />
                     </div>
                 )}

@@ -246,11 +246,11 @@ const CounterMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Terminal Identity</th>
                                     <th>Link Code</th>
                                     <th>Classification</th>
                                     <th>Network Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -270,6 +270,11 @@ const CounterMaster = () => {
                                     </tr>
                                 ) : filteredCounters.map((counter) => (
                                     <tr key={counter._id} className="group">
+                                        <td>
+                                            <div className="flex justify-center gap-2">
+                                                <button onClick={() => handleEdit(counter)} className="action-icon-btn edit"><Edit size={18} /></button>
+                                            </div>
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-md shadow-slate-900/10 group-hover:bg-indigo-600 transition-all">
@@ -300,11 +305,6 @@ const CounterMaster = () => {
                                                 <span className={`text-[10px] font-black uppercase tracking-widest ${counter.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
                                                     {counter.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                                 </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(counter)} className="action-icon-btn edit"><Edit size={18} /></button>
                                             </div>
                                         </td>
                                     </tr>

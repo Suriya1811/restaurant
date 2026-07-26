@@ -8,6 +8,7 @@ import './ProfilePage.css';
 import VoucherSeriesSettings from '@/components/settings/VoucherSeriesSettings';
 import UserRightsSettings from '@/components/settings/UserRightsSettings';
 import ExtraModulesSettings from '@/components/settings/ExtraModulesSettings';
+import { fetchSystemPrinters } from '@/utils/printerUtils';
 import {
     User, Key, Printer, FileText, Eye, EyeOff,
     Save, CheckCircle, Palette, AlertCircle, Loader2,
@@ -23,15 +24,15 @@ const SYSTEM_MODULES_CONFIG = [
 ];
 
 const GENERAL_SETTINGS_ITEMS = [
-    { key: 'pay_mode_enabled', label: 'Show Pay Mode', type: 'module' },
-    { key: 'show_salesman_enabled', label: 'Show Salesman in Sales', type: 'module' },
-    { key: 'show_discount_enabled', label: 'Show Discount in Sales', type: 'module' },
-    { key: 'show_item_code_enabled', label: 'Show Item Code', type: 'module' },
+    { key: 'pay_mode_enabled', label: 'Pay Mode in Sales', type: 'module' },
     { key: 'confirm_delete_enabled', label: 'Confirm Before Delete', type: 'module' },
     { key: 'allow_edit_after_save_enabled', label: 'Allow Edit After Save', type: 'module' },
     { key: 'direct_quantity_edit_enabled', label: 'Direct Quantity Edit', type: 'module' },
-    { key: 'on_exit', label: 'Auto Backup (On Exit)', type: 'backup' },
-    { key: 'on_startup', label: 'Auto Backup (On Startup)', type: 'backup' }
+    { key: 'split_rate_tax_enabled', label: 'Split Rate from Tax', type: 'module' },
+    { key: 'party_order_enabled', label: 'Party Order Module', type: 'module' },
+    { key: 'show_remarks_enabled', label: 'Show Remarks in Sales Bill', type: 'module' },
+    { key: 'on_exit', label: 'Auto Backup on Exit', type: 'backup' },
+    { key: 'on_startup', label: 'Auto Backup on Startup', type: 'backup' }
 ];
 
 const SettingsPage = () => {
@@ -46,6 +47,13 @@ const SettingsPage = () => {
     // Read initial tab from URL or default to general
     const initialTab = new URLSearchParams(location.search).get('tab') || 'general';
     const [activeTab, setActiveTab] = useState(initialTab);
+
+    // System Printers state
+    const [systemPrinters, setSystemPrinters] = useState([]);
+
+    useEffect(() => {
+        fetchSystemPrinters().then(printers => setSystemPrinters(printers));
+    }, []);
 
     // Sync tab changes when URL changes (e.g., clicking sidebar link)
     useEffect(() => {
@@ -311,8 +319,10 @@ const SettingsPage = () => {
             const result = await response.json();
             if (result.success) { 
                 localStorage.setItem('pos_printer_settings', JSON.stringify(printerForm));
-                setSuccess(prev => ({ ...prev, printer: true })); 
-                setTimeout(() => setSuccess(prev => ({ ...prev, printer: false })), 3000); 
+                if (printerForm.sales_bill_printer) localStorage.setItem('pos_sales_bill_printer', printerForm.sales_bill_printer);
+                if (printerForm.kot_printer) localStorage.setItem('pos_kot_printer', printerForm.kot_printer);
+                setSuccess(prev => ({ ...prev, printer: true, general: true })); 
+                setTimeout(() => setSuccess(prev => ({ ...prev, printer: false, general: false })), 3000); 
             }
             else { setErrors(prev => ({ ...prev, printer: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, printer: 'Failed to update printer settings' })); }
@@ -489,7 +499,7 @@ const SettingsPage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={toggleSidebar} title="Settings" />
+                <Header toggleSidebar={toggleSidebar} title="Settings" isMaster={true} />
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">
                         
@@ -528,7 +538,7 @@ const SettingsPage = () => {
                                             {GENERAL_SETTINGS_ITEMS.map((setting) => {
                                                 const isEnabled = setting.type === 'backup'
                                                     ? !!backupForm[setting.key]
-                                                    : (moduleForm[setting.key] !== false);
+                                                    : (setting.key === 'split_rate_tax_enabled' ? !!moduleForm[setting.key] : moduleForm[setting.key] !== false);
 
                                                 const handleToggle = async () => {
                                                     if (setting.type === 'backup') {
@@ -584,6 +594,220 @@ const SettingsPage = () => {
                                                     </div>
                                                 );
                                             })}
+
+                                            <div className="py-4 flex items-center justify-between border-t border-slate-100">
+                                                <div>
+                                                    <span className="font-semibold text-slate-800 text-sm block">Number of Cards per Row</span>
+                                                    <span className="text-xs text-slate-500 font-medium">Choose grid card density (Min: 4, Max: 7)</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <select
+                                                        value={moduleForm.cards_per_row || 7}
+                                                        onChange={async (e) => {
+                                                            const val = parseInt(e.target.value, 10);
+                                                            const updated = { ...moduleForm, cards_per_row: val };
+                                                            setModuleForm(updated);
+                                                            setModuleSettings(updated);
+                                                            localStorage.setItem('moduleSettings', JSON.stringify(updated));
+                                                            localStorage.setItem('pos_cards_per_row', String(val));
+                                                            try {
+                                                                const savedUser = localStorage.getItem('user');
+                                                                const { token } = JSON.parse(savedUser);
+                                                                await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                                                                    method: 'PUT',
+                                                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                    body: JSON.stringify(updated)
+                                                                });
+                                                                setSuccess(prev => ({ ...prev, general: true }));
+                                                                setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+                                                            } catch (err) { console.error(err); }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                                                    >
+                                                         <option value={4}>4 Cards / Row</option>
+                                                        <option value={5}>5 Cards / Row</option>
+                                                        <option value={6}>6 Cards / Row</option>
+                                                        <option value={7}>7 Cards / Row</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Data Auto Lock Settings under General Settings */}
+                                        <div className="mt-8 pt-6 border-t border-slate-200">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                                        <Lock size={16} className="text-orange-600" /> Data Auto Lock
+                                                    </h3>
+                                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">
+                                                        Lock historical entries from alteration or deletion
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!moduleForm.data_auto_lock_enabled}
+                                                            onChange={async (e) => {
+                                                                const isChecked = e.target.checked;
+                                                                const updated = { ...moduleForm, data_auto_lock_enabled: isChecked };
+                                                                setModuleForm(updated);
+                                                                setModuleSettings(updated);
+                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
+                                                                try {
+                                                                    const savedUser = localStorage.getItem('user');
+                                                                    const { token } = JSON.parse(savedUser);
+                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                                                                        method: 'PUT',
+                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                        body: JSON.stringify(updated)
+                                                                    });
+                                                                    setSuccess(prev => ({ ...prev, general: true }));
+                                                                    setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                            className="sr-only peer"
+                                                        />
+                                                        <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
+                                                    </label>
+                                                    <span className={`text-sm font-semibold min-w-[50px] ${moduleForm.data_auto_lock_enabled ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                                        {moduleForm.data_auto_lock_enabled ? 'Enable' : 'Disable'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {moduleForm.data_auto_lock_enabled && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-200 animate-in fade-in duration-200">
+                                                    <div className="form-group-premium">
+                                                        <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1.5">
+                                                            Unlock Days
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            placeholder="e.g. 3"
+                                                            value={moduleForm.unlock_days !== null && moduleForm.unlock_days !== undefined ? moduleForm.unlock_days : ''}
+                                                            onChange={async (e) => {
+                                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                                                const updated = { ...moduleForm, unlock_days: val };
+                                                                setModuleForm(updated);
+                                                                setModuleSettings(updated);
+                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
+                                                                try {
+                                                                    const savedUser = localStorage.getItem('user');
+                                                                    const { token } = JSON.parse(savedUser);
+                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                                                                        method: 'PUT',
+                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                        body: JSON.stringify(updated)
+                                                                    });
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                            className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 shadow-sm"
+                                                        />
+                                                        <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
+                                                            Enter the number of days. (e.g., 3 means users can alter entries only for the last 3 days).
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="form-group-premium">
+                                                        <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1.5">
+                                                            Lock Date Up To
+                                                        </label>
+                                                        <input
+                                                            type="date"
+                                                            value={moduleForm.lock_date_up_to ? new Date(moduleForm.lock_date_up_to).toISOString().split('T')[0] : ''}
+                                                            onChange={async (e) => {
+                                                                const val = e.target.value || null;
+                                                                const updated = { ...moduleForm, lock_date_up_to: val };
+                                                                setModuleForm(updated);
+                                                                setModuleSettings(updated);
+                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
+                                                                try {
+                                                                    const savedUser = localStorage.getItem('user');
+                                                                    const { token } = JSON.parse(savedUser);
+                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                                                                        method: 'PUT',
+                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                        body: JSON.stringify(updated)
+                                                                    });
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                            className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 shadow-sm"
+                                                        />
+                                                        <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
+                                                            If Unlock Days is left blank, select a manual date to lock all entries up to that date.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Printer Settings under General Settings */}
+                                        <div className="mt-8 pt-6 border-t border-slate-200">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                                        <Printer size={16} className="text-orange-600" /> System Printer Settings
+                                                    </h3>
+                                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">
+                                                        Assign installed printers for Sales Bills and Kitchen KOTs
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={savePrinterSettings}
+                                                    disabled={saving.printer}
+                                                    className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5 cursor-pointer"
+                                                >
+                                                    {saving.printer ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} SAVE PRINTERS
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                                                <div className="form-group-premium">
+                                                    <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5 mb-1.5">
+                                                        <Printer size={14} className="text-orange-600" /> Sales Bill Printer
+                                                    </label>
+                                                    <select
+                                                        className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 cursor-pointer shadow-sm"
+                                                        value={printerForm.sales_bill_printer || ''}
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            setPrinterForm(prev => ({ ...prev, sales_bill_printer: val }));
+                                                            localStorage.setItem('pos_sales_bill_printer', val);
+                                                        }}
+                                                    >
+                                                        <option value="">-- Select Installed System Printer --</option>
+                                                        {systemPrinters.map(p => (
+                                                            <option key={p} value={p}>{p}</option>
+                                                        ))}
+                                                    </select>
+                                                    <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">Selected printer will be used for customer sales bills & receipts</p>
+                                                </div>
+
+                                                <div className="form-group-premium">
+                                                    <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5 mb-1.5">
+                                                        <Printer size={14} className="text-orange-600" /> KOT Printer
+                                                    </label>
+                                                    <select
+                                                        className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 cursor-pointer shadow-sm"
+                                                        value={printerForm.kot_printer || ''}
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            setPrinterForm(prev => ({ ...prev, kot_printer: val }));
+                                                            localStorage.setItem('pos_kot_printer', val);
+                                                        }}
+                                                    >
+                                                        <option value="">-- Select Installed System Printer --</option>
+                                                        {systemPrinters.map(p => (
+                                                            <option key={p} value={p}>{p}</option>
+                                                        ))}
+                                                    </select>
+                                                    <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">Selected printer will be used for kitchen order tickets (KOT)</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -632,35 +856,44 @@ const SettingsPage = () => {
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">Sales Bill Printer</label>
-                                                            <input 
-                                                                type="text" 
-                                                                className="pef-f-input !h-10 font-bold"
-                                                                placeholder="e.g. POS-80 Sales Printer"
+                                                            <select 
+                                                                className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.sales_bill_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, sales_bill_printer: e.target.value })}
-                                                            />
+                                                            >
+                                                                <option value="">-- Select Installed System Printer --</option>
+                                                                {systemPrinters.map(p => (
+                                                                    <option key={p} value={p}>{p}</option>
+                                                                ))}
+                                                            </select>
                                                             <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for customer billing receipts</p>
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">KOT Printer</label>
-                                                            <input 
-                                                                type="text" 
-                                                                className="pef-f-input !h-10 font-bold"
-                                                                placeholder="e.g. KOT Kitchen Printer"
+                                                            <select 
+                                                                className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.kot_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, kot_printer: e.target.value })}
-                                                            />
+                                                            >
+                                                                <option value="">-- Select Installed System Printer --</option>
+                                                                {systemPrinters.map(p => (
+                                                                    <option key={p} value={p}>{p}</option>
+                                                                ))}
+                                                            </select>
                                                             <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for kitchen order tickets</p>
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">Delivery Printer</label>
-                                                            <input 
-                                                                type="text" 
-                                                                className="pef-f-input !h-10 font-bold"
-                                                                placeholder="e.g. Delivery Counter Printer"
+                                                            <select 
+                                                                className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.delivery_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, delivery_printer: e.target.value })}
-                                                            />
+                                                            >
+                                                                <option value="">-- Select Installed System Printer --</option>
+                                                                {systemPrinters.map(p => (
+                                                                    <option key={p} value={p}>{p}</option>
+                                                                ))}
+                                                            </select>
                                                             <p className="text-[10px] text-slate-400 mt-1 font-semibold">Assigned for parcel & delivery notes</p>
                                                         </div>
                                                     </div>
@@ -834,8 +1067,8 @@ const SettingsPage = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <label className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-orange-300 transition-all">
                                                     <div>
-                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">On Startup Backup Prompt</span>
-                                                        <span className="text-[11px] font-bold text-slate-400">Ask to take backup before login on startup</span>
+                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">Take Backup on Startup</span>
+                                                        <span className="text-[11px] font-bold text-slate-400">Automatically take backup on startup then open company selection</span>
                                                     </div>
                                                     <input 
                                                         type="checkbox" 
@@ -847,8 +1080,8 @@ const SettingsPage = () => {
 
                                                 <label className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-orange-300 transition-all">
                                                     <div>
-                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">On Exit Backup Prompt</span>
-                                                        <span className="text-[11px] font-bold text-slate-400">Ask to take backup before closing software on exit</span>
+                                                        <span className="font-extrabold text-xs text-slate-800 uppercase block">Take Auto Backup on open / exit</span>
+                                                        <span className="text-[11px] font-bold text-slate-400">Take backup on exit before closing software</span>
                                                     </div>
                                                     <input 
                                                         type="checkbox" 

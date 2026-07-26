@@ -255,172 +255,167 @@ const TaxMaster = () => {
             <main className="dashboard-main">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title="Tax Master"
+                    title={!showDrawer ? "Tax Master" : (isEditing ? "GST ALTERATION" : "GST CREATION")}
+                    onClose={!showDrawer ? undefined : () => { resetForm(); setShowDrawer(false); }}
                     actions={
-                        <>
-
+                        !showDrawer ? (
+                            <>
+                                <button type="button" className="btn-export excel" onClick={handleExcelExport} title="Export to Excel">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                </button>
+                                <button type="button" className="btn-export pdf" onClick={handlePDFExport} title="Export to PDF">
+                                    <Download size={14} />
+                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                </button>
+                                <button type="button" className="btn-export print" onClick={handlePrint} title="Print">
+                                    <Printer size={14} />
+                                    <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
+                                </button>
+                                <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
+                                    <PlusCircle size={18} />
+                                    <span className="text-[10px] uppercase font-black">Add New Tax</span>
+                                </button>
+                            </>
+                        ) : (
                             <button
                                 type="button"
-                                className="btn-export excel"
-                                onClick={handleExcelExport}
-                                title="Export to Excel"
+                                onClick={() => { resetForm(); setShowDrawer(false); }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                <XCircle size={18} />
+                                <span className="text-xs tracking-wide">CLOSE</span>
                             </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={handlePDFExport}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={handlePrint}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-                            <button className="btn-action-add " onClick={() => { resetForm(); setShowDrawer(true); }}>
-                                <PlusCircle size={18} />
-                                <span className="text-[10px] uppercase font-black">Add New Tax</span>
-                            </button>
-                        </>
+                        )
                     }
                 />
-                <div className="master-content-layout fade-in">
-                    <div className="toolbar-premium">
-                        <div className="search-premium">
-                            <Search size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search taxes..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
-                                style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="DEACTIVE">Deactive</option>
-                            </select>
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredTaxes.length}
-                            </span>
-                        </div>
-                    </div>
 
-                    <div className="table-container-premium">
-                        <table className="table-premium">
-                            <thead>
-                                <tr>
-                                    <th>GST Name</th>
-                                    <th>GST %</th>
-                                    <th>Sales Account</th>
-                                    <th>Purchase Account</th>
-                                    <th>Taxable / Exempted</th>
-                                    <th>Local Tax / Central Tax</th>
-                                    <th>GST Classification</th>
-                                    <th>CGST %</th>
-                                    <th>SGST %</th>
-                                    <th>IGST %</th>
-                                    <th style={{ textAlign: 'right' }}>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
+                {!showDrawer ? (
+                    <div className="master-content-layout fade-in">
+                        <div className="toolbar-premium">
+                            <div className="search-premium">
+                                <Search size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Search taxes..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-4 ml-auto">
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
+                                >
+                                    <option value="ALL">All Status</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="DEACTIVE">Deactive</option>
+                                </select>
+                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
+                                    TOTAL : {filteredTaxes.length}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="table-container-premium">
+                            <table className="table-premium">
+                                <thead>
                                     <tr>
-                                        <td colSpan="11" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
-                                            <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Archives...</p>
-                                        </td>
+                                        <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
+                                        <th>GST Name</th>
+                                        <th>GST %</th>
+                                        <th>Sales Account</th>
+                                        <th>Purchase Account</th>
+                                        <th>Taxable / Exempted</th>
+                                        <th>Local Tax / Central Tax</th>
+                                        <th>GST Classification</th>
+                                        <th>CGST %</th>
+                                        <th>SGST %</th>
+                                        <th>IGST %</th>
                                     </tr>
-                                ) : filteredTaxes.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="11" style={{ textAlign: 'center', padding: '100px 0' }}>
-                                            <Percent size={64} className="text-slate-100 mx-auto mb-4" />
-                                            <p className="font-bold text-slate-400">No taxes found.</p>
-                                        </td>
-                                    </tr>
-                                ) : filteredTaxes.map((tax) => (
-                                    <tr key={tax._id} className="group">
-                                        <td>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                                                    <Percent size={18} />
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="11" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Database...</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTaxes.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="11" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                                <Percent size={64} className="text-slate-100 mx-auto mb-4" />
+                                                <p className="font-bold text-slate-400">No tax rates defined.</p>
+                                            </td>
+                                        </tr>
+                                    ) : filteredTaxes.map((tax) => (
+                                        <tr key={tax._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <ActionDropdown item={tax} onEdit={handleEdit} onDelete={handleDelete} />
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                        <Percent size={18} />
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{tax.name}</span>
                                                 </div>
-                                                <span className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none group-hover:text-indigo-600 transition-colors">{tax.name}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className="font-semibold text-slate-600">
-                                                {tax.percentage}%
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="text-xs font-semibold text-slate-700">
-                                                {tax.sales_account_id?.name || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="text-xs font-semibold text-slate-700">
-                                                {tax.purchase_account_id?.name || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.tax_type === 'TAXABLE'
-                                                ? 'bg-green-50 text-green-700 border border-green-100'
-                                                : 'bg-slate-50 text-slate-700 border border-slate-100'
-                                                }`}>
-                                                {tax.tax_type === 'TAXABLE' ? 'Taxable' : 'Exempted'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.local_central === 'LOCAL'
-                                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                                                : 'bg-purple-50 text-purple-700 border border-purple-100'
-                                                }`}>
-                                                {tax.local_central === 'LOCAL' ? 'Local Tax' : 'Central Tax'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="text-xs font-bold text-slate-600">
-                                                {tax.local_central === 'LOCAL' ? 'Regular GST' : 'IGST'}
-                                            </span>
-                                        </td>
-                                        <td>{tax.local_central === 'LOCAL' ? `${tax.cgst_rate || 0}%` : '-'}</td>
-                                        <td>{tax.local_central === 'LOCAL' ? `${tax.sgst_rate || 0}%` : '-'}</td>
-                                        <td>{tax.local_central === 'CENTRAL' ? `${tax.igst_rate || 0}%` : '-'}</td>
-                                        <td>
-                                            <ActionDropdown item={tax} onEdit={handleEdit} onDelete={handleDelete} />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            </td>
+                                            <td>
+                                                <span className="font-bold text-slate-900">{tax.rate}%</span>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-semibold text-slate-700">
+                                                    {tax.sales_account_id?.name || '-'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-semibold text-slate-700">
+                                                    {tax.purchase_account_id?.name || '-'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.tax_type === 'TAXABLE'
+                                                    ? 'bg-green-50 text-green-700 border border-green-100'
+                                                    : 'bg-slate-50 text-slate-700 border border-slate-100'
+                                                    }`}>
+                                                    {tax.tax_type === 'TAXABLE' ? 'Taxable' : 'Exempted'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`px-2 py-1 text-[10px] font-bold rounded-lg ${tax.local_central === 'LOCAL'
+                                                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                                    : 'bg-purple-50 text-purple-700 border border-purple-100'
+                                                    }`}>
+                                                    {tax.local_central === 'LOCAL' ? 'Local Tax' : 'Central Tax'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className="text-xs font-bold text-slate-600">
+                                                    {tax.local_central === 'LOCAL' ? 'Regular GST' : 'IGST'}
+                                                </span>
+                                            </td>
+                                            <td>{tax.local_central === 'LOCAL' ? `${tax.cgst_rate || 0}%` : '-'}</td>
+                                            <td>{tax.local_central === 'LOCAL' ? `${tax.sgst_rate || 0}%` : '-'}</td>
+                                            <td>{tax.local_central === 'CENTRAL' ? `${tax.igst_rate || 0}%` : '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-
-                {showDrawer && (
-                    <div className="absolute inset-0 bg-white z-[999] flex flex-col overflow-hidden animate-in fade-in duration-200">
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
                         <div className="flex items-center justify-between p-4 border-b border-slate-100 shadow-sm">
                             <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase">{isEditing ? 'GST ALTERATION' : 'GST CREATION'}</h2>
                             <button
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 px-5 py-2.5 rounded-xl font-bold transition-colors"
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <XCircle size={20} />
+                                <XCircle size={18} />
                                 <span className="text-sm tracking-wide">CLOSE</span>
                             </button>
                         </div>

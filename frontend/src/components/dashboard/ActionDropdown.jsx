@@ -1,12 +1,49 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Edit, XCircle, CheckCircle, Trash2, Eye } from 'lucide-react';
+import { MoreVertical, X, Edit, XCircle, CheckCircle, Trash2, Eye } from 'lucide-react';
+import { checkDataLock } from '@/utils/dataLockUtils';
 
 const ActionDropdown = ({ item, onView, onEdit, onAlter, onCancel, onStatusChange, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
     const hasStatusChange = !!onStatusChange;
     const isActive = item.is_active !== false;
     const handleAlter = onAlter || onEdit;
+
+    const handleAlterAction = (e) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        const itemDate = item?.createdAt || item?.created_at || item?.date || item?.bill_date;
+        const lockCheck = checkDataLock(itemDate);
+        if (lockCheck.isLocked) {
+            alert(`❌ Cannot Alter Entry!\n\n${lockCheck.message}`);
+            return;
+        }
+        if (handleAlter) handleAlter(item);
+    };
+
+    const handleDeleteAction = (e) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        const itemDate = item?.createdAt || item?.created_at || item?.date || item?.bill_date;
+        const lockCheck = checkDataLock(itemDate);
+        if (lockCheck.isLocked) {
+            alert(`❌ Cannot Delete Entry!\n\n${lockCheck.message}`);
+            return;
+        }
+        if (onDelete) onDelete(item);
+    };
+
+    const handleCancelAction = (e) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        const itemDate = item?.createdAt || item?.created_at || item?.date || item?.bill_date;
+        const lockCheck = checkDataLock(itemDate);
+        if (lockCheck.isLocked) {
+            alert(`❌ Cannot Cancel Entry!\n\n${lockCheck.message}`);
+            return;
+        }
+        if (onCancel) onCancel(item);
+    };
 
     return (
         <div className="relative inline-block text-left">
@@ -16,9 +53,10 @@ const ActionDropdown = ({ item, onView, onEdit, onAlter, onCancel, onStatusChang
                     e.stopPropagation();
                     setIsOpen(true);
                 }}
-                className="min-w-[90px] px-3 py-1 border border-slate-200 !rounded-md bg-white text-[12px] font-bold text-slate-800 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors mx-auto shadow-sm"
+                className="w-7 h-7 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center transition-colors mx-auto shadow-sm focus:outline-none"
+                title="Actions"
             >
-                Actions <ChevronDown size={14} className={`transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <MoreVertical size={16} />
             </button>
 
             {isOpen && createPortal(
@@ -55,7 +93,7 @@ const ActionDropdown = ({ item, onView, onEdit, onAlter, onCancel, onStatusChang
                             {handleAlter && (
                                 <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); handleAlter(item); }}
+                                    onClick={handleAlterAction}
                                     className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
                                     <Edit size={18} className="text-orange-500" /> Alter
@@ -65,7 +103,7 @@ const ActionDropdown = ({ item, onView, onEdit, onAlter, onCancel, onStatusChang
                             {onCancel && (
                                 <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onCancel(item); }}
+                                    onClick={handleCancelAction}
                                     className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
                                     <XCircle size={18} className="text-orange-500" /> Cancel
@@ -74,35 +112,30 @@ const ActionDropdown = ({ item, onView, onEdit, onAlter, onCancel, onStatusChang
 
                             {hasStatusChange && (
                                 <>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, false); }}
-                                        disabled={!isActive}
-                                        className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${isActive
-                                                ? 'text-slate-700 hover:bg-orange-50 hover:text-orange-600'
-                                                : 'text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed'
-                                            }`}
-                                    >
-                                        <XCircle size={18} className={isActive ? 'text-orange-500' : 'text-slate-400'} /> Deactivate
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, true); }}
-                                        disabled={isActive}
-                                        className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 rounded-lg transition-colors outline-none ${isActive
-                                                ? 'text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed'
-                                                : 'text-slate-700 hover:bg-green-50 hover:text-green-600'
-                                            }`}
-                                    >
-                                        <CheckCircle size={18} className={isActive ? 'text-slate-400' : 'text-green-500'} /> Activate
-                                    </button>
+                                    {isActive ? (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, false); }}
+                                            className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
+                                        >
+                                            <XCircle size={18} className="text-amber-500" /> Deactivate
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setIsOpen(false); onStatusChange(item, true); }}
+                                            className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
+                                        >
+                                            <CheckCircle size={18} className="text-emerald-500" /> Activate
+                                        </button>
+                                    )}
                                 </>
                             )}
 
                             {onDelete && (
                                 <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onDelete(item); }}
+                                    onClick={handleDeleteAction}
                                     className="w-full px-4 py-3 text-sm font-bold text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 rounded-lg transition-colors outline-none"
                                 >
                                     <Trash2 size={18} className="text-red-500" /> Delete

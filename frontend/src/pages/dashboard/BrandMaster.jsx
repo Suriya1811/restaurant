@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import './Dashboard.css';
@@ -23,6 +23,7 @@ import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
 const BrandMaster = () => {
+    const nameInputRef = useRef(null);
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [brands, setBrands] = useState([]);
@@ -31,7 +32,7 @@ const BrandMaster = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [showDrawer, setShowDrawer] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({ name: '' });
+    const [formData, setFormData] = useState({ name: '', is_active: true });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -87,8 +88,10 @@ const BrandMaster = () => {
             const result = await response.json();
             if (!result.success) throw new Error(result.error || result.message);
             fetchBrands();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current) nameInputRef.current.focus();
+            }, 100);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -140,8 +143,8 @@ const BrandMaster = () => {
     const COLS = ['#', 'Brand Name', 'Status'];
     const getRows = () => filteredBrands.map((b, i) => [i + 1, b.name, b.is_active ? 'Active' : 'Inactive']);
     const handleExcelExport = () => exportToCSV('Brand Master', COLS, getRows(), 'Brand_Master');
-    const handlePDFExport   = () => exportToPDF('Brand Master', COLS, getRows(), 'Brand_Master');
-    const handlePrint       = () => printTable('Brand Master', `Total: ${filteredBrands.length}`, COLS, getRows());
+    const handlePDFExport = () => exportToPDF('Brand Master', COLS, getRows(), 'Brand_Master');
+    const handlePrint = () => printTable('Brand Master', `Total: ${filteredBrands.length}`, COLS, getRows());
 
     return (
         <div className="dashboard-layout">
@@ -188,8 +191,8 @@ const BrandMaster = () => {
                             />
                         </div>
                         <div className="flex items-center gap-4 ml-auto">
-                            <select 
-                                value={statusFilter} 
+                            <select
+                                value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="input-premium !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
                                 style={{ height: '32px', minHeight: '32px', fontSize: '12px', minWidth: '110px' }}
@@ -208,9 +211,9 @@ const BrandMaster = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                     <th>Brand Identity</th>
                                     <th>Registry Status</th>
-                                    <th style={{ textAlign: 'right' }}>Management</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -230,6 +233,9 @@ const BrandMaster = () => {
                                     </tr>
                                 ) : filteredBrands.map((brand) => (
                                     <tr key={brand._id} className="group">
+                                        <td className="w-10 text-center">
+                                            <ActionDropdown item={brand} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-4 ml-auto">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
@@ -243,9 +249,6 @@ const BrandMaster = () => {
                                                 {brand.is_active ? 'ACTIVE' : 'DEACTIVE'}
                                             </span>
                                         </td>
-                                        <td>
-                                                            <ActionDropdown item={brand} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
-                                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -254,18 +257,18 @@ const BrandMaster = () => {
                 </div>
 
                 {showDrawer && (
-                    <div className="fixed inset-0 md:pl-[260px] bg-white z-50 overflow-hidden flex flex-col animate-in fade-in duration-200">
+                    <div className="fixed inset-0 bg-white z-[999] overflow-hidden flex flex-col animate-in fade-in duration-200">
                         <div className="flex justify-between items-center px-8 py-4 border-b border-slate-100 bg-white shrink-0">
-                            <h2 className="text-xl font-bold text-black tracking-tight">
-                                {isEditing ? 'Modify Brand' : 'Brand Creation'}
+                            <h2 className="text-xl font-bold text-black tracking-tight uppercase">
+                                {isEditing ? 'BRAND MODIFICATION' : 'BRAND CREATION'}
                             </h2>
                             <button
                                 type="button"
                                 onClick={() => { resetForm(); setShowDrawer(false); }}
-                                className="px-4 py-1.5 rounded flex items-center gap-2 font-bold hover:bg-red-50 text-sm outline-none transition-colors"
-                                style={{ border: '1px solid #ef4444', color: '#ef4444' }}
+                                className="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                             >
-                                <X size={16} /> CLOSE
+                                <XCircle size={18} />
+                                <span className="text-sm tracking-wide">CLOSE</span>
                             </button>
                         </div>
 
@@ -283,6 +286,7 @@ const BrandMaster = () => {
                                             Brand Name <span className="text-[#f97316]">*</span>
                                         </label>
                                         <input
+                                            ref={nameInputRef}
                                             type="text"
                                             name="name"
                                             required
