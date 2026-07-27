@@ -34,6 +34,11 @@ const taxSchema = new mongoose.Schema({
         enum: ['LOCAL', 'CENTRAL'],
         default: 'LOCAL'
     },
+    registration_type: {
+        type: String,
+        enum: ['REGULAR', 'COMPOSITION'],
+        default: 'REGULAR'
+    },
     cgst_rate: {
         type: Number,
         default: 0
@@ -43,6 +48,30 @@ const taxSchema = new mongoose.Schema({
         default: 0
     },
     igst_rate: {
+        type: Number,
+        default: 0
+    },
+    sales_cgst_rate: {
+        type: Number,
+        default: 0
+    },
+    sales_sgst_rate: {
+        type: Number,
+        default: 0
+    },
+    purchase_cgst_rate: {
+        type: Number,
+        default: 0
+    },
+    purchase_sgst_rate: {
+        type: Number,
+        default: 0
+    },
+    sales_igst_rate: {
+        type: Number,
+        default: 0
+    },
+    purchase_igst_rate: {
         type: Number,
         default: 0
     },

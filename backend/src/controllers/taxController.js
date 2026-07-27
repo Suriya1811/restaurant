@@ -30,12 +30,19 @@ exports.createTax = async (req, res) => {
         }
 
         // Calculate total percentage for backward compatibility
+        const salesCgst = req.body.sales_cgst_rate !== undefined ? req.body.sales_cgst_rate : cgst_rate;
+        const salesSgst = req.body.sales_sgst_rate !== undefined ? req.body.sales_sgst_rate : sgst_rate;
+        const salesIgst = req.body.sales_igst_rate !== undefined ? req.body.sales_igst_rate : igst_rate;
+
         const calculatedPercentage = local_central === 'LOCAL' 
-            ? (Number(cgst_rate || 0) + Number(sgst_rate || 0)) 
-            : Number(igst_rate || 0);
+            ? (Number(salesCgst || 0) + Number(salesSgst || 0)) 
+            : Number(salesIgst || 0);
 
         const tax = await Tax.create({
             ...req.body,
+            cgst_rate: Number(salesCgst || 0),
+            sgst_rate: Number(salesSgst || 0),
+            igst_rate: Number(salesIgst || 0),
             percentage: calculatedPercentage,
             company_id: req.user.restaurant_id
         });
@@ -57,15 +64,17 @@ exports.updateTax = async (req, res) => {
             if (duplicate) return res.status(400).json({ success: false, error: 'Tax name already exists' });
         }
 
-        if (req.body.local_central || req.body.cgst_rate || req.body.sgst_rate || req.body.igst_rate) {
-            const lc = req.body.local_central || 'LOCAL';
-            const cgst = req.body.cgst_rate !== undefined ? req.body.cgst_rate : 0;
-            const sgst = req.body.sgst_rate !== undefined ? req.body.sgst_rate : 0;
-            const igst = req.body.igst_rate !== undefined ? req.body.igst_rate : 0;
-            req.body.percentage = lc === 'LOCAL' 
-                ? (Number(cgst) + Number(sgst)) 
-                : Number(igst);
-        }
+        const lc = req.body.local_central || 'LOCAL';
+        const cgst = req.body.sales_cgst_rate !== undefined ? req.body.sales_cgst_rate : (req.body.cgst_rate !== undefined ? req.body.cgst_rate : 0);
+        const sgst = req.body.sales_sgst_rate !== undefined ? req.body.sales_sgst_rate : (req.body.sgst_rate !== undefined ? req.body.sgst_rate : 0);
+        const igst = req.body.sales_igst_rate !== undefined ? req.body.sales_igst_rate : (req.body.igst_rate !== undefined ? req.body.igst_rate : 0);
+        
+        req.body.cgst_rate = Number(cgst || 0);
+        req.body.sgst_rate = Number(sgst || 0);
+        req.body.igst_rate = Number(igst || 0);
+        req.body.percentage = lc === 'LOCAL' 
+            ? (Number(cgst) + Number(sgst)) 
+            : Number(igst);
 
         const tax = await Tax.findOneAndUpdate(
             { _id: req.params.id, company_id: req.user.restaurant_id },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { User, LogOut, X, Minus, Square, Building2, Phone, Mail, UserCircle, Calendar } from 'lucide-react';
+import { User, LogOut, X, Minus, Square, Building2, Phone, Mail, UserCircle, Calendar, HelpCircle, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import logoSidebar from '../../assets/logo_sidebar.png';
@@ -11,6 +11,7 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
     const location = useLocation();
     const navigate = useNavigate();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [isFYModalOpen, setIsFYModalOpen] = useState(false);
     const [activeFY, setActiveFY] = useState(() => getActiveFinancialYear());
     const profileRef = useRef(null);
@@ -19,13 +20,14 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
                 setIsProfileOpen(false);
+                setIsHelpOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Listen for Alt + F2 key press globally & FY change custom events
+    // Listen for keyboard shortcuts globally & FY change custom events
     useEffect(() => {
         const fyCheck = checkFinancialYearActive();
         if (fyCheck.isExpired || fyCheck.isInvalid) {
@@ -33,10 +35,55 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
         }
 
         const handleKeyDown = (e) => {
+            const tag = e.target?.tagName;
+            const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable;
+
             if (e.altKey && (e.key === 'F2' || e.code === 'F2' || e.keyCode === 113)) {
                 e.preventDefault();
                 e.stopPropagation();
                 setIsFYModalOpen(true);
+                return;
+            }
+
+            if (!isInput) {
+                if (e.ctrlKey) {
+                    if (e.key === 'F2' || e.code === 'F2') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/display');
+                    } else if (e.key === 'F5' || e.code === 'F5') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/ledgers');
+                    } else if (e.key === 'F6' || e.code === 'F6') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/products');
+                    } else if (e.key === 'F9' || e.code === 'F9') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/vouchers');
+                    } else if (e.key === 'F12' || e.code === 'F12') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/purchase-history');
+                    }
+                } else if (!e.altKey && !e.shiftKey) {
+                    if (e.key === 'F2' || e.code === 'F2') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/billing');
+                    } else if (e.key === 'F3' || e.code === 'F3') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/table-select');
+                    } else if (e.key === 'F5' || e.code === 'F5') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/ledgers/create');
+                    } else if (e.key === 'F6' || e.code === 'F6') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/products');
+                    } else if (e.key === 'F9' || e.code === 'F9') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/vouchers');
+                    } else if (e.key === 'F12' || e.code === 'F12') {
+                        e.preventDefault();
+                        navigate('/dashboard/self-service/purchase');
+                    }
+                }
             }
         };
 
@@ -54,7 +101,7 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('financial_year_changed', handleFYChange);
         };
-    }, []);
+    }, [navigate]);
 
     const storeName = 'YUGAM SOFTWARE';
     const isMainDashboardRoute = location.pathname === '/dashboard/self-service/home' || 
@@ -115,8 +162,40 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                 {/* Profile Circle & Window Controls ONLY on Main Dashboard Header */}
                 {!isMasterHeader && (
                     <>
+                        {/* Help Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsHelpOpen(!isHelpOpen);
+                                setIsProfileOpen(false);
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                height: '36px',
+                                padding: '0 14px',
+                                borderRadius: '18px',
+                                border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                                backgroundColor: isHelpOpen ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                                color: '#ffffff',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                transition: 'all 0.2s',
+                                marginRight: '4px'
+                            }}
+                            title="Keyboard Shortcuts & Help"
+                        >
+                            <HelpCircle size={16} />
+                            <span>Help</span>
+                        </button>
+
                         <div
-                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            onClick={() => {
+                                setIsProfileOpen(!isProfileOpen);
+                                setIsHelpOpen(false);
+                            }}
                             style={{
                                 width: '36px',
                                 height: '36px',
@@ -166,6 +245,73 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                             </button>
                         </div>
                     </>
+                )}
+
+                {/* Help / Keyboard Shortcuts Modal */}
+                {isHelpOpen && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            right: '0',
+                            top: 'calc(100% + 8px)',
+                            width: '320px',
+                            backgroundColor: '#ffffff',
+                            borderRadius: '16px',
+                            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+                            border: '1px solid #e2e8f0',
+                            overflow: 'hidden',
+                            zIndex: 9999,
+                            padding: '0'
+                        }}
+                        className="animate-in slide-in-from-top-2 duration-200"
+                    >
+                        {/* Header */}
+                        <div style={{ padding: '16px 18px 12px 18px' }}>
+                            <h3 style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>
+                                SHORTCUT KEYS
+                            </h3>
+                        </div>
+
+                        {/* Shortcuts Table */}
+                        <div style={{ padding: '0 16px 12px 16px', maxHeight: '380px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '12px' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#0F172A', color: '#ffffff' }}>
+                                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em', borderTopLeftRadius: '6px', borderBottomLeftRadius: '6px', width: '40%' }}>KEY</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em', borderTopRightRadius: '6px', borderBottomRightRadius: '6px', width: '60%' }}>FUNCTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[
+                                        { key: 'F2', func: 'Sales Bill' },
+                                        { key: 'F3', func: 'KOT' },
+                                        { key: 'F5', func: 'Ledger Creation' },
+                                        { key: 'F6', func: 'Item Creation' },
+                                        { key: 'F9', func: 'Voucher' },
+                                        { key: 'F12', func: 'Purchase Entry' },
+                                        { key: 'Ctrl + F2', func: 'Sales Display', isGroupHeader: true },
+                                        { key: 'Ctrl + F5', func: 'Ledger Display' },
+                                        { key: 'Ctrl + F6', func: 'Item Display' },
+                                        { key: 'Ctrl + F9', func: 'Voucher Display' },
+                                        { key: 'Ctrl + F12', func: 'Purchase Display' }
+                                    ].map((item, index) => (
+                                        <tr key={index} style={{ borderBottom: '1px solid #f1f5f9', borderTop: item.isGroupHeader ? '2px solid #e2e8f0' : 'none' }} className="hover:bg-slate-50 transition-colors">
+                                            <td style={{ padding: '8px 12px', fontWeight: 800, color: '#2563eb', whiteSpace: 'nowrap' }}>{item.key}</td>
+                                            <td style={{ padding: '8px 12px', fontWeight: 600, color: '#1e293b' }}>{item.func}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Footer Note */}
+                        <div style={{ padding: '10px 16px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Info size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>
+                                Use these shortcuts to work faster
+                            </span>
+                        </div>
+                    </div>
                 )}
 
                 {/* Company Profile Popup Modal */}
