@@ -23,14 +23,36 @@ const emptyItem = () => ({
     mrp: 0, hsn_code: ''
 });
 
+const COL_TO_FIELD = {
+    "BARCODE": "barcode",
+    "CODE": "code",
+    "ITEM_NAME": "item_name",
+    "UNIT": "unit",
+    "QTY": "quantity",
+    "RATE": "purchase_rate",
+    "RATE+TAX": "rate_tax",
+    "DIS%": "discount_percent",
+    "CD%": "cd_percent",
+    "PUR_RATE": "purchase_rate",
+    "COST": "cost_rate",
+    "SALES_RATE": "sales_rate",
+    "MRP": "mrp",
+    "HSN_CODE": "hsn_code"
+};
+
 const calcItem = (item) => {
     const qty = parseFloat(item.quantity) || 0;
-    const rate = parseFloat(item.purchase_rate) || 0;
+    let rate = parseFloat(item.purchase_rate) || 0;
     const disP = parseFloat(item.discount_percent) || 0;
     const cdP = parseFloat(item.cd_percent) || 0;
     const gstP = parseFloat(item.gst_percent) || 0;
 
-    const rateTax = rate + (rate * (gstP / 100));
+    let rateTax = parseFloat(item.rate_tax) || 0;
+    if (item._lastEditedField === 'rate_tax' && rateTax > 0) {
+        rate = rateTax / (1 + (gstP / 100));
+    } else {
+        rateTax = rate + (rate * (gstP / 100));
+    }
 
     const amount = qty * rate;
     const disAmt = amount * (disP / 100);
@@ -46,6 +68,7 @@ const calcItem = (item) => {
 
     return {
         ...item,
+        purchase_rate: parseFloat(rate.toFixed(2)),
         rate_tax: parseFloat(rateTax.toFixed(2)),
         amount: parseFloat(amount.toFixed(2)),
         discount_amount: parseFloat(disAmt.toFixed(2)),
@@ -158,22 +181,44 @@ export default function PurchaseEntryForm() {
 
                 let combinedSuppliers = [];
                 if (supData.success && Array.isArray(supData.data)) {
-                    combinedSuppliers = [...supData.data.filter(s => s.is_active !== false)];
+                    combinedSuppliers = supData.data.filter(s => s.is_active !== false).map(s => {
+                        const addrParts = [s.address, s.address_line_1, s.address_line_2, s.address_line_3, s.address_line_4, s.address_line_5, s.billing_address].filter(Boolean);
+                        return {
+                            _id: s._id,
+                            name: s.name,
+                            contact_person: s.contact_person || s.name,
+                            contact_number: s.contact_number || s.phone || s.mobile2 || '',
+                            gst_number: s.gst_number || s.gstin || s.gstin_no || '',
+                            address: addrParts.join(', ') || '',
+                            address_line_1: s.address_line_1 || s.address || '',
+                            opening_balance: s.opening_balance !== undefined && s.opening_balance !== null ? s.opening_balance : 0,
+                            balance_type: s.balance_type || 'CR',
+                            registration_type: s.registration_type || 'Regular',
+                            state: s.state || '',
+                            due_days: s.due_days || 0
+                        };
+                    });
                 }
                 if (ledgData.success && Array.isArray(ledgData.data)) {
                     const ledgerSuppliers = ledgData.data
                         .filter(l => l.is_active !== false)
-                        .map(l => ({
-                            _id: l._id,
-                            name: l.name,
-                            contact_person: l.contact_person || l.name,
-                            contact_number: l.contact_number || l.mobile_no_1 || '',
-                            gst_number: l.gst_number || l.gstin_no || '',
-                            address: l.address || l.address_line_1 || '',
-                            opening_balance: l.opening_balance || 0,
-                            registration_type: l.registration_type || 'Regular',
-                            state: l.state || ''
-                        }));
+                        .map(l => {
+                            const addrParts = [l.billing_address, l.address_line_1, l.address_line_2, l.address_line_3, l.address_line_4, l.address_line_5, l.address].filter(Boolean);
+                            return {
+                                _id: l._id,
+                                name: l.name,
+                                contact_person: l.contact_person || l.name,
+                                contact_number: l.phone || l.mobile2 || l.contact_number || '',
+                                gst_number: l.gstin || l.gst_number || l.gstin_no || '',
+                                address: addrParts.join(', ') || '',
+                                address_line_1: l.address_line_1 || l.address || '',
+                                opening_balance: l.opening_balance !== undefined && l.opening_balance !== null ? l.opening_balance : 0,
+                                balance_type: l.balance_type || 'CR',
+                                registration_type: l.registration_type || 'Regular',
+                                state: l.state || '',
+                                due_days: l.due_days || 0
+                            };
+                        });
 
                     ledgerSuppliers.forEach(ls => {
                         if (!combinedSuppliers.some(s => s._id === ls._id || s.name.toLowerCase() === ls.name.toLowerCase())) {
@@ -247,9 +292,19 @@ export default function PurchaseEntryForm() {
         }
     };
 
+    const getFocusableFields = useCallback(() => {
+        const fieldList = [];
+        Object.keys(colConfig).forEach(key => {
+            if (colConfig[key] && COL_TO_FIELD[key] && !fieldList.includes(COL_TO_FIELD[key])) {
+                fieldList.push(COL_TO_FIELD[key]);
+            }
+        });
+        return fieldList;
+    }, [colConfig]);
+
     const handleItemChange = (idx, field, value) => {
         const newItems = [...items];
-        let item = { ...newItems[idx], [field]: value };
+        let item = { ...newItems[idx], [field]: value, _lastEditedField: field };
 
         // If product selected, populate fields
         if (field === 'product_id') {
@@ -260,8 +315,8 @@ export default function PurchaseEntryForm() {
                 item.code = prod.code || '';
                 item.barcode = prod.barcode || '';
                 item.unit = prod.unit || '';
-                item.purchase_rate = prod.purchase_price || 0;
-                item.cost_rate = prod.cost_price || 0;
+                item.purchase_rate = prod.purchase_price || prod.cost_price || 0;
+                item.cost_rate = prod.cost_price || prod.purchase_price || 0;
                 item.sales_rate = prod.selling_price || 0;
                 item.mrp = prod.mrp || 0;
                 item.gst_percent = prod.gst_purchase || 0;
@@ -271,14 +326,31 @@ export default function PurchaseEntryForm() {
 
         // If barcode changed, try to find product
         if (field === 'barcode' && value) {
-            const prod = products.find(p => p.barcode === value);
+            const prod = products.find(p => p.barcode === value || (p.code && p.code === value));
             if (prod) {
                 item.product_id = prod._id;
                 item.item_name = prod.name;
                 item.code = prod.code || '';
                 item.unit = prod.unit || '';
-                item.purchase_rate = prod.purchase_price || 0;
-                item.cost_rate = prod.cost_price || 0;
+                item.purchase_rate = prod.purchase_price || prod.cost_price || 0;
+                item.cost_rate = prod.cost_price || prod.purchase_price || 0;
+                item.sales_rate = prod.selling_price || 0;
+                item.mrp = prod.mrp || 0;
+                item.gst_percent = prod.gst_purchase || 0;
+                item.hsn_code = prod.hsn_code || '';
+            }
+        }
+
+        // If code changed, try to find product
+        if (field === 'code' && value) {
+            const prod = products.find(p => (p.code && p.code.toLowerCase() === value.toLowerCase()) || (p.barcode && p.barcode === value));
+            if (prod) {
+                item.product_id = prod._id;
+                item.item_name = prod.name;
+                item.barcode = prod.barcode || '';
+                item.unit = prod.unit || '';
+                item.purchase_rate = prod.purchase_price || prod.cost_price || 0;
+                item.cost_rate = prod.cost_price || prod.purchase_price || 0;
                 item.sales_rate = prod.selling_price || 0;
                 item.mrp = prod.mrp || 0;
                 item.gst_percent = prod.gst_purchase || 0;
@@ -346,7 +418,7 @@ export default function PurchaseEntryForm() {
         if (e.key === 'Enter') {
             e.preventDefault();
             if (nextId === 'FIRST_ITEM') {
-                const fields = Object.keys(colConfig).filter(k => colConfig[k]);
+                const fields = getFocusableFields();
                 const nextEl = document.querySelector(`[data-idx="0"][data-field="${fields[0]}"]`);
                 if (nextEl) nextEl.focus();
             } else {
@@ -363,7 +435,7 @@ export default function PurchaseEntryForm() {
     };
 
     const handleItemKeyDown = (e, idx, field) => {
-        const fields = Object.keys(colConfig).filter(k => colConfig[k]);
+        const fields = getFocusableFields();
         const currentIdx = fields.indexOf(field);
 
         if (field === 'item_name' && showItemDropdown && activeItemRow === idx) {
@@ -375,28 +447,33 @@ export default function PurchaseEntryForm() {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setItemCursor(prev => (prev < filtered.length - 1 ? prev + 1 : prev));
+                return;
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 setItemCursor(prev => (prev > 0 ? prev - 1 : 0));
-            } else if (e.key === 'Enter' && itemCursor >= 0) {
+                return;
+            } else if (e.key === 'Enter' && itemCursor >= 0 && filtered[itemCursor]) {
                 e.preventDefault();
                 handleItemChange(idx, 'product_id', filtered[itemCursor]._id);
                 setShowItemDropdown(false);
                 setItemCursor(-1);
                 // Focus next field
                 const nextField = fields[currentIdx + 1];
-                const nextEl = document.querySelector(`[data-idx="${idx}"][data-field="${nextField}"]`);
-                if (nextEl) nextEl.focus();
+                if (nextField) {
+                    const nextEl = document.querySelector(`[data-idx="${idx}"][data-field="${nextField}"]`);
+                    if (nextEl) nextEl.focus();
+                }
                 return;
             } else if (e.key === 'Escape') {
                 setShowItemDropdown(false);
                 setItemCursor(-1);
+                return;
             }
         }
 
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (currentIdx < fields.length - 1) {
+            if (currentIdx > -1 && currentIdx < fields.length - 1) {
                 const nextField = fields[currentIdx + 1];
                 const nextEl = document.querySelector(`[data-idx="${idx}"][data-field="${nextField}"]`);
                 if (nextEl) nextEl.focus();
@@ -431,7 +508,7 @@ export default function PurchaseEntryForm() {
                     if (prevEl) prevEl.focus();
                 } else {
                     // Back to header
-                    const headerEl = document.getElementById('supplier-search-field');
+                    const headerEl = document.getElementById('due-date-field') || document.getElementById('supplier-search-field');
                     if (headerEl) headerEl.focus();
                 }
             }
@@ -482,26 +559,6 @@ export default function PurchaseEntryForm() {
                                 }}
                             >
                                 <Settings size={15} /> <span>COLUMN SETTINGS</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => navigate('/dashboard/self-service/home')}
-                                style={{
-                                    background: '#FFFFFF',
-                                    color: '#D32F2F',
-                                    border: '1.5px solid #FF8A80',
-                                    borderRadius: '6px',
-                                    padding: '6px 14px',
-                                    fontSize: '12px',
-                                    fontWeight: 800,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <XCircle size={15} /> <span>CLOSE</span>
                             </button>
 
                             {/* Column Settings Slide-Over Drawer Panel */}
@@ -578,12 +635,13 @@ export default function PurchaseEntryForm() {
                                 <div className="pef-f-group-horizontal">
                                     <span className="pef-f-label-left">Date</span>
                                     <input id="invoice-date-field" type="date" className="pef-f-input" value={invoiceDate}
-                                        onKeyDown={e => handleHeaderKeyDown(e, 'payment-type-field')}
+                                        onKeyDown={e => handleHeaderKeyDown(e, 'invoice-date-field-2', 'invoice-no-field')}
                                         onChange={e => handleInvoiceDateChange(e.target.value)} />
                                 </div>
                                 <div className="pef-f-group-horizontal">
                                     <span className="pef-f-label-left">Invoice Date</span>
-                                    <input type="date" className="pef-f-input" value={invoiceDate}
+                                    <input id="invoice-date-field-2" type="date" className="pef-f-input" value={invoiceDate}
+                                        onKeyDown={e => handleHeaderKeyDown(e, 'payment-type-field', 'invoice-date-field')}
                                         onChange={e => handleInvoiceDateChange(e.target.value)} />
                                 </div>
                                 <div className="pef-f-group-horizontal">
@@ -591,6 +649,7 @@ export default function PurchaseEntryForm() {
                                     <div className="pef-f-select-wrap">
                                         <ChevronDown size={14} className="pef-f-chevron" style={{ color: '#FF5722' }} />
                                         <select id="payment-type-field" className="pef-f-select" value={paymentType}
+                                            onKeyDown={e => handleHeaderKeyDown(e, 'supplier-search-field', 'invoice-date-field-2')}
                                             onChange={e => setPaymentType(e.target.value)}>
                                             <option value="CREDIT">CREDIT</option>
                                             <option value="CASH">CASH</option>
@@ -603,79 +662,131 @@ export default function PurchaseEntryForm() {
                             <div className="pef-form-col">
                                 <div className="pef-f-group-horizontal" ref={supplierRef}>
                                     <span className="pef-f-label-left">Supplier</span>
-                                    <div style={{ display: 'flex', width: '100%', gap: '6px', position: 'relative' }}>
-                                        <input 
-                                            id="supplier-search-field"
-                                            className="pef-f-input" 
-                                            style={{ flex: 1, fontWeight: 700 }}
-                                            value={supplierSearch}
-                                            autoComplete="off"
-                                            onFocus={() => setShowSupplierDropdown(true)}
-                                            onChange={(e) => {
-                                                setSupplierSearch(e.target.value);
-                                                setShowSupplierDropdown(true);
-                                                setSupplierCursor(-1);
-                                                if (!e.target.value) {
-                                                    setSupplierId('');
-                                                    setSelectedSupplier(null);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                const filtered = suppliers.filter(s => 
-                                                    s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-                                                    (s.gst_number && s.gst_number.toLowerCase().includes(supplierSearch.toLowerCase()))
-                                                );
-                                                if (e.key === 'ArrowDown') {
-                                                    e.preventDefault();
-                                                    setSupplierCursor(prev => (prev < filtered.length - 1 ? prev + 1 : prev));
-                                                } else if (e.key === 'ArrowUp') {
-                                                    e.preventDefault();
-                                                    setSupplierCursor(prev => (prev > 0 ? prev - 1 : 0));
-                                                } else if (e.key === 'Enter') {
-                                                    if (supplierCursor >= 0 && showSupplierDropdown) {
-                                                        e.preventDefault();
-                                                        handleSupplierChange(filtered[supplierCursor]._id);
-                                                        setShowSupplierDropdown(false);
-                                                        setSupplierCursor(-1);
-                                                    } else {
-                                                        handleHeaderKeyDown(e, 'FIRST_ITEM');
+                                    <div style={{ display: 'flex', width: '100%', gap: '6px', alignItems: 'center' }}>
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <input 
+                                                id="supplier-search-field"
+                                                type="text"
+                                                className="pef-f-input" 
+                                                style={{ fontWeight: 800, paddingRight: '28px' }}
+                                                value={supplierSearch}
+                                                autoComplete="off"
+                                                placeholder="Search or select supplier..."
+                                                onFocus={() => setShowSupplierDropdown(true)}
+                                                onChange={(e) => {
+                                                    setSupplierSearch(e.target.value);
+                                                    setShowSupplierDropdown(true);
+                                                    setSupplierCursor(-1);
+                                                    if (!e.target.value) {
+                                                        setSupplierId('');
+                                                        setSelectedSupplier(null);
                                                     }
-                                                } else if (e.key === 'Escape') {
-                                                    setShowSupplierDropdown(false);
-                                                }
-                                            }}
-                                            placeholder="Rajesh Traders"
-                                        />
-                                        {showSupplierDropdown && (
-                                            <div className="pef-dropdown-container">
-                                                {suppliers.filter(s => 
-                                                    s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-                                                    (s.gst_number && s.gst_number.toLowerCase().includes(supplierSearch.toLowerCase()))
-                                                ).map((s, idx) => (
-                                                    <div 
-                                                        key={s._id} 
-                                                        className={`pef-dropdown-item ${supplierCursor === idx ? 'active' : ''}`}
-                                                        onClick={() => {
-                                                            handleSupplierChange(s._id);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    const filtered = suppliers.filter(s => 
+                                                        s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+                                                        (s.gst_number && s.gst_number.toLowerCase().includes(supplierSearch.toLowerCase()))
+                                                    );
+                                                    if (e.key === 'ArrowDown') {
+                                                        e.preventDefault();
+                                                        setShowSupplierDropdown(true);
+                                                        setSupplierCursor(prev => (prev < filtered.length - 1 ? prev + 1 : prev));
+                                                    } else if (e.key === 'ArrowUp') {
+                                                        e.preventDefault();
+                                                        setSupplierCursor(prev => (prev > 0 ? prev - 1 : 0));
+                                                    } else if (e.key === 'Enter') {
+                                                        if (supplierCursor >= 0 && showSupplierDropdown && filtered[supplierCursor]) {
+                                                            e.preventDefault();
+                                                            handleSupplierChange(filtered[supplierCursor]._id);
                                                             setShowSupplierDropdown(false);
-                                                        }}
-                                                        onMouseEnter={() => setSupplierCursor(idx)}
-                                                    >
-                                                        <div className="flex justify-between items-center w-full">
-                                                            <span className="font-bold text-xs">{s.name}</span>
-                                                            <span className="text-[9px] text-slate-400 font-mono tracking-tighter">{s.gst_number || 'NO GSTIN'}</span>
+                                                            setSupplierCursor(-1);
+                                                            const dueDaysEl = document.getElementById('due-days-field');
+                                                            if (dueDaysEl) dueDaysEl.focus();
+                                                        } else if (filtered.length > 0 && showSupplierDropdown) {
+                                                            e.preventDefault();
+                                                            handleSupplierChange(filtered[0]._id);
+                                                            setShowSupplierDropdown(false);
+                                                            setSupplierCursor(-1);
+                                                            const dueDaysEl = document.getElementById('due-days-field');
+                                                            if (dueDaysEl) dueDaysEl.focus();
+                                                        } else {
+                                                            handleHeaderKeyDown(e, 'due-days-field', 'payment-type-field');
+                                                        }
+                                                    } else if (e.key === 'Escape') {
+                                                        setShowSupplierDropdown(false);
+                                                    }
+                                                }}
+                                            />
+                                            <ChevronDown 
+                                                size={14} 
+                                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#FF5722', pointerEvents: 'none' }} 
+                                            />
+
+                                            {showSupplierDropdown && (
+                                                <div 
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        left: 0,
+                                                        right: 0,
+                                                        marginTop: '4px',
+                                                        background: '#ffffff',
+                                                        border: '1.5px solid #FFAB91',
+                                                        borderRadius: '8px',
+                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                                                        zIndex: 9999,
+                                                        maxHeight: '220px',
+                                                        overflowY: 'auto'
+                                                    }}
+                                                >
+                                                    {suppliers.filter(s => 
+                                                        s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+                                                        (s.gst_number && s.gst_number.toLowerCase().includes(supplierSearch.toLowerCase()))
+                                                    ).map((s, idx) => (
+                                                        <div 
+                                                            key={s._id} 
+                                                            style={{
+                                                                padding: '8px 12px',
+                                                                fontSize: '12px',
+                                                                fontWeight: 700,
+                                                                cursor: 'pointer',
+                                                                borderBottom: '1px solid #f1f5f9',
+                                                                background: supplierCursor === idx ? '#FFF3E0' : (supplierId === s._id ? '#FFF8F6' : '#ffffff'),
+                                                                color: supplierCursor === idx ? '#E65100' : '#1e293b',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center'
+                                                            }}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleSupplierChange(s._id);
+                                                                setShowSupplierDropdown(false);
+                                                                const dueDaysEl = document.getElementById('due-days-field');
+                                                                if (dueDaysEl) dueDaysEl.focus();
+                                                            }}
+                                                            onMouseEnter={() => setSupplierCursor(idx)}
+                                                        >
+                                                            <span>{s.name}</span>
+                                                            <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                                                {s.gst_number ? `GST: ${s.gst_number}` : ''}
+                                                            </span>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                                <div className="pef-dropdown-footer">
-                                                    {suppliers.length === 0 ? 'No suppliers registered. Click + to add.' : 'List End'}
+                                                    ))}
+                                                    {suppliers.filter(s => 
+                                                        s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+                                                        (s.gst_number && s.gst_number.toLowerCase().includes(supplierSearch.toLowerCase()))
+                                                    ).length === 0 && (
+                                                        <div style={{ padding: '12px', fontSize: '12px', color: '#94a3b8', textAlign: 'center', fontWeight: 600 }}>
+                                                            No suppliers found
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                         <button 
                                             type="button"
-                                            style={{ width: '32px', height: '32px', border: '1.5px solid #FFAB91', borderRadius: '6px', color: '#FF5722', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                            title="Add Supplier" 
+                                            style={{ width: '32px', height: '32px', border: '1.5px solid #FFAB91', borderRadius: '6px', color: '#FF5722', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                                            title="Add New Supplier" 
                                             onClick={() => navigate('/dashboard/self-service/ledgers/create')}
                                         >
                                             <Plus size={16} />
@@ -688,7 +799,7 @@ export default function PurchaseEntryForm() {
                                     <textarea 
                                         className="pef-address-box" 
                                         readOnly 
-                                        value={selectedSupplier?.address || ''} 
+                                        value={selectedSupplier ? (selectedSupplier.address || 'No address provided') : ''} 
                                         placeholder="Supplier address details..." 
                                     />
                                 </div>
@@ -698,7 +809,7 @@ export default function PurchaseEntryForm() {
                             <div className="pef-form-col">
                                 <div className="pef-f-group-horizontal">
                                     <span className="pef-f-label-left">GSTIN</span>
-                                    <input className="pef-f-input" readOnly value={selectedSupplier?.gst_number || '33, AXBPV, 5028, C1ZL'} />
+                                    <input className="pef-f-input" readOnly value={selectedSupplier ? (selectedSupplier.gst_number || 'NO GSTIN') : ''} placeholder="GSTIN No" />
                                 </div>
 
                                 <div className="pef-f-group-horizontal">
@@ -708,9 +819,12 @@ export default function PurchaseEntryForm() {
                                             className="pef-f-input" 
                                             style={{ paddingRight: '45px', fontWeight: 800 }} 
                                             readOnly 
-                                            value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : '₹12,500.00'} 
+                                            value={selectedSupplier ? `₹${parseFloat(selectedSupplier.opening_balance || 0).toFixed(2)}` : ''} 
+                                            placeholder="₹0.00"
                                         />
-                                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: '#FFF3E0', color: '#E65100', border: '1px solid #FFE0B2', fontWeight: 800, fontSize: '10px', padding: '1px 5px', borderRadius: '4px' }}>CR</span>
+                                        <span style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: '#FFF3E0', color: '#E65100', border: '1px solid #FFE0B2', fontWeight: 800, fontSize: '10px', padding: '1px 5px', borderRadius: '4px' }}>
+                                            {selectedSupplier?.balance_type || 'CR'}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -725,6 +839,7 @@ export default function PurchaseEntryForm() {
                                             min="0"
                                             value={dueDays} 
                                             onChange={e => handleDueDaysChange(e.target.value)} 
+                                            onKeyDown={e => handleHeaderKeyDown(e, 'due-date-field', 'supplier-search-field')}
                                         />
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
@@ -736,6 +851,7 @@ export default function PurchaseEntryForm() {
                                             style={{ flex: 1, fontWeight: 700 }}
                                             value={dueDate} 
                                             onChange={e => setDueDate(e.target.value)} 
+                                            onKeyDown={e => handleHeaderKeyDown(e, 'FIRST_ITEM', 'due-days-field')}
                                         />
                                     </div>
                                 </div>
@@ -797,9 +913,10 @@ export default function PurchaseEntryForm() {
                                             )}
                                             {colConfig['ITEM_NAME'] && (
                                                 <td className="pef-td-name pef-item-name-cell">
-                                                    <div className="relative">
+                                                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
                                                         <input
                                                             className="pef-cell-input pef-w-name"
+                                                            style={{ paddingRight: '22px', fontWeight: 700 }}
                                                             data-idx={idx} data-field="item_name"
                                                             value={item.item_name}
                                                             autoComplete="off"
@@ -813,34 +930,78 @@ export default function PurchaseEntryForm() {
                                                                 setItemCursor(-1);
                                                             }}
                                                             onKeyDown={e => handleItemKeyDown(e, idx, 'item_name')}
-                                                            placeholder="Type Item Name..."
+                                                            placeholder="Search or select item..."
                                                         />
+                                                        <ChevronDown 
+                                                            size={12} 
+                                                            style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', color: '#FF5722', pointerEvents: 'none' }} 
+                                                        />
+
                                                         {showItemDropdown && activeItemRow === idx && (
-                                                            <div className="pef-dropdown-container !w-[300px]">
+                                                            <div 
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '100%',
+                                                                    left: 0,
+                                                                    width: '280px',
+                                                                    marginTop: '2px',
+                                                                    background: '#ffffff',
+                                                                    border: '1.5px solid #FFAB91',
+                                                                    borderRadius: '8px',
+                                                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                                                                    zIndex: 9999,
+                                                                    maxHeight: '220px',
+                                                                    overflowY: 'auto'
+                                                                }}
+                                                            >
                                                                 {products.filter(p => 
                                                                     p.name.toLowerCase().includes((item.item_name || '').toLowerCase()) ||
                                                                     (p.code && p.code.toLowerCase().includes((item.item_name || '').toLowerCase()))
                                                                 ).slice(0, 50).map((p, pIdx) => (
                                                                     <div 
                                                                         key={p._id} 
-                                                                        className={`pef-dropdown-item ${itemCursor === pIdx ? 'active' : ''}`}
-                                                                        onClick={() => {
+                                                                        style={{
+                                                                            padding: '6px 10px',
+                                                                            fontSize: '11px',
+                                                                            fontWeight: 700,
+                                                                            cursor: 'pointer',
+                                                                            borderBottom: '1px solid #f1f5f9',
+                                                                            background: itemCursor === pIdx ? '#FFF3E0' : (item.product_id === p._id ? '#FFF8F6' : '#ffffff'),
+                                                                            color: itemCursor === pIdx ? '#E65100' : '#1e293b',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center'
+                                                                        }}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
                                                                             handleItemChange(idx, 'product_id', p._id);
                                                                             setShowItemDropdown(false);
+                                                                            setItemCursor(-1);
+                                                                            const fields = getFocusableFields();
+                                                                            const currentIdx = fields.indexOf('item_name');
+                                                                            const nextField = fields[currentIdx + 1];
+                                                                            if (nextField) {
+                                                                                const nextEl = document.querySelector(`[data-idx="${idx}"][data-field="${nextField}"]`);
+                                                                                if (nextEl) nextEl.focus();
+                                                                            }
                                                                         }}
                                                                         onMouseEnter={() => setItemCursor(pIdx)}
                                                                     >
-                                                                        <div className="flex justify-between items-center w-full">
-                                                                            <span className="font-bold">{p.name}</span>
-                                                                            <span className="text-[10px] text-slate-400">{p.code || ''}</span>
+                                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                            <span style={{ fontWeight: 800 }}>{p.name}</span>
+                                                                            <span style={{ fontSize: '9px', color: '#64748b' }}>Rate: ₹{p.purchase_price || p.cost_price || 0} | Stock: {p.current_stock || 0}</span>
                                                                         </div>
-                                                                        <div className="flex justify-between text-[9px] text-slate-500 mt-0.5">
-                                                                            <span>Rate: ₹{p.purchase_price}</span>
-                                                                            <span>Stock: {p.current_stock || 0}</span>
-                                                                        </div>
+                                                                        <span style={{ fontSize: '9px', color: '#94a3b8', fontFamily: 'monospace' }}>{p.code || ''}</span>
                                                                     </div>
                                                                 ))}
-                                                                <div className="pef-dropdown-footer">Showing top 50 items</div>
+                                                                {products.filter(p => 
+                                                                    p.name.toLowerCase().includes((item.item_name || '').toLowerCase()) ||
+                                                                    (p.code && p.code.toLowerCase().includes((item.item_name || '').toLowerCase()))
+                                                                ).length === 0 && (
+                                                                    <div style={{ padding: '10px', fontSize: '11px', color: '#94a3b8', textAlign: 'center', fontWeight: 600 }}>
+                                                                        No items found
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

@@ -38,7 +38,8 @@ const supplierSchema = new mongoose.Schema({
     },
     opening_balance: {
         type: Number,
-        default: 0
+        default: 0,
+        set: v => (v === null || v === undefined || isNaN(v) ? 0 : Number(v))
     },
     is_active: {
         type: Boolean,

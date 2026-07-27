@@ -3,6 +3,7 @@ const Ledger = require('../models/Ledger');
 const AccountTransaction = require('../models/AccountTransaction');
 const VoucherSeries = require('../models/VoucherSeries');
 const mongoose = require('mongoose');
+const { safeIncBalance } = require('../utils/balanceUtils');
 
 // @desc    Get all vouchers (excluding deleted)
 exports.getVouchers = async (req, res) => {
@@ -83,10 +84,8 @@ exports.createVoucher = async (req, res) => {
         });
 
         // 3. Update Ledger Balances (Opening balance is treated as net balance here)
-        // Note: In a full ERP, we'd have a separate field for current_balance, 
-        // but we'll use opening_balance as the real-time balance for this implementation.
-        await Ledger.findByIdAndUpdate(debit_ledger, { $inc: { opening_balance: amount } });
-        await Ledger.findByIdAndUpdate(credit_ledger, { $inc: { opening_balance: -amount } });
+        await safeIncBalance(Ledger, debit_ledger, amount);
+        await safeIncBalance(Ledger, credit_ledger, -amount);
 
         res.status(201).json({ success: true, data: voucher });
     } catch (error) {
@@ -115,8 +114,8 @@ exports.deleteVoucher = async (req, res) => {
         );
 
         // 3. Revert Ledger Balances
-        await Ledger.findByIdAndUpdate(voucher.debit_ledger, { $inc: { opening_balance: -voucher.amount } });
-        await Ledger.findByIdAndUpdate(voucher.credit_ledger, { $inc: { opening_balance: voucher.amount } });
+        await safeIncBalance(Ledger, voucher.debit_ledger, -voucher.amount);
+        await safeIncBalance(Ledger, voucher.credit_ledger, voucher.amount);
 
         res.status(200).json({ success: true, message: 'Voucher deleted and balances reverted' });
     } catch (error) {

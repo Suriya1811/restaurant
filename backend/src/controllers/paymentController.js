@@ -4,6 +4,7 @@ const Ledger = require('../models/Ledger');
 const Supplier = require('../models/Supplier');
 const AccountTransaction = require('../models/AccountTransaction');
 const mongoose = require('mongoose');
+const { safeIncBalance } = require('../utils/balanceUtils');
 
 // @desc    Get all Payment Vouchers
 exports.getPayments = async (req, res) => {
@@ -222,7 +223,7 @@ exports.createPayment = async (req, res) => {
         }
 
         // 5. Update party ledger balance
-        await Ledger.findByIdAndUpdate(party_ledger_id, { $inc: { opening_balance: -totalAmt } }, { session });
+        await safeIncBalance(Ledger, party_ledger_id, -totalAmt, session);
 
         // 6. Deduct from paymode ledgers (cash/bank goes out)
         // Handled in loops below
@@ -269,7 +270,7 @@ exports.createPayment = async (req, res) => {
                     amount: pmAmt, voucher_type: 'PAYMENT', voucher_number: vno,
                     reference_id: voucher._id, narration: `${vnarration} (${pm.mode})`, date: vdate
                 }], { session });
-                await Ledger.findByIdAndUpdate(pm.ledger_id, { $inc: { opening_balance: -pmAmt } }, { session });
+                await safeIncBalance(Ledger, pm.ledger_id, -pmAmt, session);
             }
         } else {
             await AccountTransaction.create([{
@@ -277,7 +278,7 @@ exports.createPayment = async (req, res) => {
                 amount: totalAmt, voucher_type: 'PAYMENT', voucher_number: vno,
                 reference_id: voucher._id, narration: vnarration, date: vdate
             }], { session });
-            await Ledger.findByIdAndUpdate(paymode_ledger_id, { $inc: { opening_balance: -totalAmt } }, { session });
+            await safeIncBalance(Ledger, paymode_ledger_id, -totalAmt, session);
         }
 
         await session.commitTransaction();
@@ -307,22 +308,22 @@ exports.deletePayment = async (req, res) => {
         await voucher.save({ session });
 
         // Revert party ledger (liability increase)
-        if (voucher.debit_ledger) await Ledger.findByIdAndUpdate(voucher.debit_ledger, { $inc: { opening_balance: voucher.amount } }, { session });
+        if (voucher.debit_ledger) await safeIncBalance(Ledger, voucher.debit_ledger, voucher.amount, session);
 
         // Revert paymode ledgers (asset increase)
         if (voucher.payment_modes && voucher.payment_modes.length > 0) {
             for (const pm of voucher.payment_modes) {
                 if (pm.ledger_id && pm.amount) {
-                    await Ledger.findByIdAndUpdate(pm.ledger_id, { $inc: { opening_balance: pm.amount } }, { session });
+                    await safeIncBalance(Ledger, pm.ledger_id, pm.amount, session);
                 }
             }
         } else if (voucher.credit_ledger) {
-            await Ledger.findByIdAndUpdate(voucher.credit_ledger, { $inc: { opening_balance: voucher.amount } }, { session });
+            await safeIncBalance(Ledger, voucher.credit_ledger, voucher.amount, session);
         }
 
         // Revert supplier balance
         if (voucher.party_id) {
-            await Supplier.findByIdAndUpdate(voucher.party_id, { $inc: { opening_balance: voucher.amount } }, { session });
+            await safeIncBalance(Supplier, voucher.party_id, voucher.amount, session);
         }
 
         // Soft-delete account transactions

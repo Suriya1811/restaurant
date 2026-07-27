@@ -4,6 +4,7 @@ const Ledger = require('../models/Ledger');
 const Customer = require('../models/Customer');
 const AccountTransaction = require('../models/AccountTransaction');
 const mongoose = require('mongoose');
+const { safeIncBalance } = require('../utils/balanceUtils');
 
 // @desc    Get all Receipt Vouchers (specifically mapped to customers/bills)
 exports.getReceipts = async (req, res) => {
@@ -235,7 +236,7 @@ exports.createReceipt = async (req, res) => {
                     amount: pmAmt, voucher_type: 'RECEIPT', voucher_number: vno,
                     reference_id: vid, narration: `${vnarration} (${pm.mode})`, date: vdate
                 }], { session });
-                await Ledger.findByIdAndUpdate(pm.ledger_id, { $inc: { opening_balance: pmAmt } }, { session });
+                await safeIncBalance(Ledger, pm.ledger_id, pmAmt, session);
             }
         } else {
             // Legacy/Single mode fallback
@@ -244,7 +245,7 @@ exports.createReceipt = async (req, res) => {
                 amount: totalAmt, voucher_type: 'RECEIPT', voucher_number: vno,
                 reference_id: vid, narration: vnarration, date: vdate
             }], { session });
-            await Ledger.findByIdAndUpdate(paymode_ledger_id, { $inc: { opening_balance: totalAmt } }, { session });
+            await safeIncBalance(Ledger, paymode_ledger_id, totalAmt, session);
         }
 
         // CREDIT entry (Customer Debt decrease) - One total entry
@@ -253,7 +254,7 @@ exports.createReceipt = async (req, res) => {
             amount: totalAmt, voucher_type: 'RECEIPT', voucher_number: vno,
             reference_id: vid, narration: vnarration, date: vdate
         }], { session });
-        await Ledger.findByIdAndUpdate(customerLedger._id, { $inc: { opening_balance: -totalAmt } }, { session });
+        await safeIncBalance(Ledger, customerLedger._id, -totalAmt, session);
 
         await session.commitTransaction();
         res.status(201).json({ success: true, data: voucher });
@@ -284,21 +285,21 @@ exports.deleteReceipt = async (req, res) => {
 
         // 2. Revert Customer Balance
         if (voucher.party_id) {
-            await Customer.findByIdAndUpdate(voucher.party_id, { $inc: { opening_balance: voucher.amount } }, { session });
+            await safeIncBalance(Customer, voucher.party_id, voucher.amount, session);
         }
 
         // 3. Revert Ledger Balances
         if (voucher.payment_modes && voucher.payment_modes.length > 0) {
             for (const pm of voucher.payment_modes) {
                 if (pm.ledger_id && pm.amount) {
-                    await Ledger.findByIdAndUpdate(pm.ledger_id, { $inc: { opening_balance: -pm.amount } }, { session });
+                    await safeIncBalance(Ledger, pm.ledger_id, -pm.amount, session);
                 }
             }
         } else if (voucher.debit_ledger) {
-            await Ledger.findByIdAndUpdate(voucher.debit_ledger, { $inc: { opening_balance: -voucher.amount } }, { session });
+            await safeIncBalance(Ledger, voucher.debit_ledger, -voucher.amount, session);
         }
 
-        if (voucher.credit_ledger) await Ledger.findByIdAndUpdate(voucher.credit_ledger, { $inc: { opening_balance: voucher.amount } }, { session });
+        if (voucher.credit_ledger) await safeIncBalance(Ledger, voucher.credit_ledger, voucher.amount, session);
 
         // 4. Soft delete Account Transactions
         await AccountTransaction.updateMany({ reference_id: voucher._id, company_id }, { is_deleted: true }, { session });

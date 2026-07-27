@@ -72,7 +72,8 @@ const ledgerSchema = new mongoose.Schema({
     // 4. Accounts Details
     opening_balance: {
         type: Number,
-        default: 0
+        default: 0,
+        set: v => (v === null || v === undefined || isNaN(v) ? 0 : Number(v))
     },
     balance_type: {
         type: String,

@@ -194,6 +194,31 @@
     outline: none;
 }
 
+.pef-f-select-wrap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.pef-f-chevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.pef-f-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 28px;
+    padding-left: 0.65rem;
+    cursor: pointer;
+}
+
 .pef-f-input:focus, .pef-f-select:focus {
     border-color: #FF5722;
     background: #ffffff;

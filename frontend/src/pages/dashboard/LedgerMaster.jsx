@@ -13,6 +13,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { STANDARD_GROUPS, getNatureForGroup } from '../../utils/standardGroups';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
+import { useFormNavigation } from '../../hooks/useFormNavigation';
 
 const API = import.meta.env.VITE_API_URL;
 const getToken = () => JSON.parse(localStorage.getItem('user'))?.token;
@@ -91,7 +92,17 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
     // Form/Drawer states
     const [showDrawer, setShowDrawer] = useState(false);
+    const [showOtherModal, setShowOtherModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+
+    const handleFormSubmitRequest = () => {
+        const formEl = document.getElementById('ledger-form');
+        if (formEl) {
+            formEl.requestSubmit();
+        }
+    };
+
+    const { formRef, handleKeyDown } = useFormNavigation([showDrawer], handleFormSubmitRequest);
     const [formData, setFormData] = useState({
         name: '',
         print_name: '',
@@ -188,9 +199,13 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
             if (data.success) {
                 resetForm();
                 fetchLedgers();
-                setTimeout(() => {
-                    if (nameInputRef.current) nameInputRef.current.focus();
-                }, 100);
+                if (isEditing) {
+                    setShowDrawer(false);
+                } else {
+                    setTimeout(() => {
+                        if (nameInputRef.current) nameInputRef.current.focus();
+                    }, 100);
+                }
             } else {
                 setError(data.error || 'Failed to save ledger');
             }
@@ -203,9 +218,19 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
 
     const handleEdit = (ledger) => {
         setFormData({
-            ...ledger,
-            print_name: ledger.print_name || ledger.name,
+            _id: ledger._id || ledger.id,
+            name: ledger.name || '',
+            print_name: ledger.print_name || ledger.name || '',
+            group: ledger.group || 'Sundry Debtors',
+            opening_balance: ledger.opening_balance !== undefined && ledger.opening_balance !== null ? ledger.opening_balance : 0,
+            balance_type: ledger.balance_type || 'DR',
+            phone: ledger.phone || '',
             mobile2: ledger.mobile2 || '',
+            email: ledger.email || '',
+            gstin: ledger.gstin || '',
+            pan_number: ledger.pan_number || '',
+            registration_type: (ledger.registration_type === 'Registered' || ledger.registration_type === 'Regular') ? 'Regular' : (ledger.registration_type || 'Regular'),
+            state: ledger.state || '',
             address_line_1: ledger.address_line_1 || '',
             address_line_2: ledger.address_line_2 || '',
             address_line_3: ledger.address_line_3 || '',
@@ -214,7 +239,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
             bank_name: ledger.bank_name || '',
             bank_account_number: ledger.bank_account_number || '',
             ifsc_code: ledger.ifsc_code || '',
-            branch: ledger.branch || ''
+            branch: ledger.branch || '',
+            account_holder_name: ledger.account_holder_name || '',
+            billing_address: ledger.billing_address || '',
+            shipping_address: ledger.shipping_address || '',
+            party_category: ledger.party_category || ''
         });
         setIsEditing(true);
         setShowDrawer(true);
@@ -813,18 +842,18 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
+                        <div className="p-4 flex flex-col flex-1 overflow-hidden relative bg-white">
                             {error && (
-                                <div className="bg-rose-50 border border-rose-100 p-3 mb-4 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
+                                <div className="bg-rose-50 border border-rose-100 p-3 mb-3 rounded flex items-center gap-3 text-rose-600 font-bold text-sm shrink-0">
                                     <AlertCircle size={18} /> {error}
                                 </div>
                             )}
 
-                            <form id="ledger-form" onSubmit={handleSave} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
-                                <div className="flex-1 overflow-y-auto pr-2 space-y-5">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
+                            <form id="ledger-form" ref={formRef} onKeyDown={handleKeyDown} onSubmit={handleSave} className="flex-1 flex flex-col justify-between overflow-hidden gap-3">
+                                <div className="flex-1 overflow-y-auto pr-2">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-3">
                                     {/* LEFT COLUMN */}
-                                    <div className="flex flex-col gap-5">
+                                    <div className="flex flex-col gap-2.5">
                                         <div className="flex items-center">
                                             <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
                                                 <span>NAME <span className="text-red-500">*</span></span>
@@ -920,8 +949,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 <input
                                                     type="number"
                                                     placeholder="0.00"
-                                                    value={formData.opening_balance || ''}
-                                                    onChange={e => setFormData({ ...formData, opening_balance: parseFloat(e.target.value) || 0 })}
+                                                    value={formData.opening_balance !== undefined && formData.opening_balance !== null ? formData.opening_balance : ''}
+                                                    onChange={e => setFormData({ ...formData, opening_balance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                                                     className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
                                                     style={{ border: '1px solid #FF7A50' }}
                                                 />
@@ -938,50 +967,52 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col gap-2 mt-2">
+                                        <div className="flex flex-col gap-1.5 mt-1">
                                             <label className="text-xs font-bold text-black uppercase">
                                                 ADDRESS (MAX 5 LINES)
                                             </label>
-                                            <input
-                                                type="text"
-                                                value={formData.address_line_1 || ''}
-                                                onChange={e => setFormData({ ...formData, address_line_1: e.target.value })}
-                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            />
-                                            <input
-                                                type="text"
-                                                value={formData.address_line_2 || ''}
-                                                onChange={e => setFormData({ ...formData, address_line_2: e.target.value })}
-                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            />
-                                            <input
-                                                type="text"
-                                                value={formData.address_line_3 || ''}
-                                                onChange={e => setFormData({ ...formData, address_line_3: e.target.value })}
-                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            />
-                                            <input
-                                                type="text"
-                                                value={formData.address_line_4 || ''}
-                                                onChange={e => setFormData({ ...formData, address_line_4: e.target.value })}
-                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            />
-                                            <input
-                                                type="text"
-                                                value={formData.address_line_5 || ''}
-                                                onChange={e => setFormData({ ...formData, address_line_5: e.target.value })}
-                                                className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            />
+                                            <div className="flex flex-col gap-1.5">
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_line_1 || ''}
+                                                    onChange={e => setFormData({ ...formData, address_line_1: e.target.value })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_line_2 || ''}
+                                                    onChange={e => setFormData({ ...formData, address_line_2: e.target.value })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_line_3 || ''}
+                                                    onChange={e => setFormData({ ...formData, address_line_3: e.target.value })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_line_4 || ''}
+                                                    onChange={e => setFormData({ ...formData, address_line_4: e.target.value })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_line_5 || ''}
+                                                    onChange={e => setFormData({ ...formData, address_line_5: e.target.value })}
+                                                    className="w-full rounded-md px-3 py-1.5 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#FF5722]"
+                                                    style={{ border: '1px solid #FF7A50' }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
                                     {/* RIGHT COLUMN */}
-                                    <div className="flex flex-col gap-5">
+                                    <div className="flex flex-col gap-2.5">
                                         <div className="flex items-center">
                                             <label className="w-40 shrink-0 text-xs font-bold text-black uppercase flex justify-between pr-4">
                                                 <span>CELL NO</span>
@@ -1051,7 +1082,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                         </div>
 
                                         {/* Bank Details Fieldset */}
-                                        <fieldset className="rounded-md p-4 pt-3 mt-2 flex flex-col gap-5" style={{ border: '1px solid #FF7A50' }}>
+                                        <fieldset className="rounded-md p-3.5 pt-2.5 mt-1 flex flex-col gap-2.5" style={{ border: '1px solid #FF7A50' }}>
                                             <legend className="px-2 text-xs font-bold uppercase" style={{ color: '#FF5722' }}>
                                                 BANK DETAILS
                                             </legend>

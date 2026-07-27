@@ -16,6 +16,11 @@ const connectDB = async () => {
 
         console.log(`MongoDB Connected: ${conn.connection.host}`);
         retryCount = 0; // reset on success
+        
+        // Auto-sanitize any null opening_balances in DB
+        const { sanitizeAllBalances } = require('../utils/balanceUtils');
+        sanitizeAllBalances().catch(err => console.error('Sanitization failed:', err.message));
+
         return conn;
 
     } catch (error) {

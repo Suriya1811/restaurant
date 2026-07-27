@@ -2,6 +2,7 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const mongoose = require('mongoose');
+const { safeIncBalance } = require('../utils/balanceUtils');
 
 // GET /api/purchases — list with optional date/search filters
 exports.getPurchases = async (req, res) => {
@@ -206,10 +207,7 @@ exports.createPurchase = async (req, res) => {
 
         // Update supplier balance
         if (dueAmt > 0) {
-            await Supplier.findOneAndUpdate(
-                { _id: supplierDoc._id, company_id },
-                { $inc: { opening_balance: dueAmt } }
-            );
+            await safeIncBalance(Supplier, supplierDoc._id, dueAmt);
         }
 
         // Accounting Integration
@@ -226,14 +224,14 @@ exports.createPurchase = async (req, res) => {
                     voucher_type: 'PURCHASE', voucher_number: invoice_number, reference_id: purchase._id,
                     narration: `Purchase - Inv ${invoice_number}`, date: invoice_date || new Date()
                 });
-                await Ledger.findByIdAndUpdate(purchaseLedger._id, { $inc: { opening_balance: grandTotal } });
+                await safeIncBalance(Ledger, purchaseLedger._id, grandTotal);
 
                 await AccountTransaction.create({
                     company_id, ledger_id: supplierLedger._id, type: 'CREDIT', amount: grandTotal,
                     voucher_type: 'PURCHASE', voucher_number: invoice_number, reference_id: purchase._id,
                     narration: `Purchase - Inv ${invoice_number}`, date: invoice_date || new Date()
                 });
-                await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: -grandTotal } });
+                await safeIncBalance(Ledger, supplierLedger._id, -grandTotal);
 
                 if (paidAmt > 0) {
                     const cashLedger = await Ledger.findOne({ company_id, name: 'Cash in Hand' });
@@ -243,14 +241,14 @@ exports.createPurchase = async (req, res) => {
                             voucher_type: 'PAYMENT', voucher_number: `PAY-${invoice_number}`, reference_id: purchase._id,
                             narration: `Payment for Inv ${invoice_number}`, date: invoice_date || new Date()
                         });
-                        await Ledger.findByIdAndUpdate(supplierLedger._id, { $inc: { opening_balance: paidAmt } });
+                        await safeIncBalance(Ledger, supplierLedger._id, paidAmt);
 
                         await AccountTransaction.create({
                             company_id, ledger_id: cashLedger._id, type: 'CREDIT', amount: paidAmt,
                             voucher_type: 'PAYMENT', voucher_number: `PAY-${invoice_number}`, reference_id: purchase._id,
                             narration: `Payment for Inv ${invoice_number}`, date: invoice_date || new Date()
                         });
-                        await Ledger.findByIdAndUpdate(cashLedger._id, { $inc: { opening_balance: -paidAmt } });
+                        await safeIncBalance(Ledger, cashLedger._id, -paidAmt);
                     }
                 }
             }
@@ -333,10 +331,7 @@ exports.deletePurchase = async (req, res) => {
         // Reverse supplier balance
         const balanceToSubtract = purchase.due_amount || 0;
         if (balanceToSubtract > 0) {
-            await Supplier.findOneAndUpdate(
-                { _id: purchase.supplier_id, company_id },
-                { $inc: { opening_balance: -balanceToSubtract } }
-            );
+            await safeIncBalance(Supplier, purchase.supplier_id, -balanceToSubtract);
         }
 
         await Purchase.findByIdAndDelete(req.params.id);

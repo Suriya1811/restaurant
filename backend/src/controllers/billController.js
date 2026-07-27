@@ -3,6 +3,7 @@ const Counter = require('../models/Counter');
 const Product = require('../models/Product');
 const Restaurant = require('../models/Restaurant');
 const Customer = require('../models/Customer');
+const { safeIncBalance } = require('../utils/balanceUtils');
 
 // Helper to generate next Bill Number
 const generateBillNumber = async (companyId, type = 'SELF_SERVICE', manualBillNumber = null) => {
@@ -379,7 +380,7 @@ exports.processPayment = async (req, res) => {
                     voucher_type: 'SALES', voucher_number: bill.bill_number, reference_id: bill._id,
                     narration: `Sale - Bill ${bill.bill_number}`, date: new Date()
                 });
-                await Ledger.findByIdAndUpdate(salesL._id, { $inc: { opening_balance: -bill.grand_total } });
+                await safeIncBalance(Ledger, salesL._id, -bill.grand_total);
 
                 let counterData = null;
                 if (bill.counter_id) {
@@ -433,7 +434,7 @@ exports.processPayment = async (req, res) => {
                             voucher_type: 'SALES', voucher_number: bill.bill_number, reference_id: bill._id,
                             narration: `Receipt - Bill ${bill.bill_number} (${pm.type})`, date: new Date()
                         });
-                        await Ledger.findByIdAndUpdate(payL._id, { $inc: { opening_balance: pm.amount } });
+                        await safeIncBalance(Ledger, payL._id, pm.amount);
                     }
                 }
 
@@ -481,7 +482,7 @@ exports.processPayment = async (req, res) => {
                             voucher_type: 'SALES', voucher_number: bill.bill_number, reference_id: bill._id,
                             narration: `Credit Sale / Outstanding - Bill ${bill.bill_number}`, date: new Date()
                         });
-                        await Ledger.findByIdAndUpdate(custL._id, { $inc: { opening_balance: balance } });
+                        await safeIncBalance(Ledger, custL._id, balance);
                     }
                 }
             }
