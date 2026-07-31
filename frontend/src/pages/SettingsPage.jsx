@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../components/dashboard/DashboardPageShell';
 import './SettingsPage.css';
 import './ProfilePage.css';
 import VoucherSeriesSettings from '@/components/settings/VoucherSeriesSettings';
@@ -493,33 +494,25 @@ const SettingsPage = () => {
     );
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={toggleSidebar} title="Settings" isMaster={true} />
+                <Header 
+                    toggleSidebar={toggleSidebar} 
+                    title="Settings" 
+                    isMaster={true}
+                    tabs={TABS.map(tab => ({
+                        id: tab.id,
+                        label: tab.label,
+                        active: activeTab === tab.id,
+                        onClick: () => { setActiveTab(tab.id); navigate(`/dashboard/self-service/settings?tab=${tab.id}`, { replace: true }); }
+                    }))}
+                />
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">
-                        
-                        {/* Top Navigation Tabs */}
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            {TABS.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-md font-bold text-sm transition-all shadow-sm
-                                        ${activeTab === tab.id 
-                                            ? 'bg-orange-600 text-white shadow-orange-200' 
-                                            : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-                                        }`}
-                                >
-                                    {tab.icon}
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
 
                         <div>
                             
@@ -1455,7 +1448,7 @@ const SettingsPage = () => {
                 </div>
 
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

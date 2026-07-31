@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import {
     Plus, Search, Trash2, Save, Calendar, Loader2,
@@ -117,7 +118,7 @@ const PurchaseEntry = () => {
     );
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -297,7 +298,7 @@ const PurchaseEntry = () => {
                     </form>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

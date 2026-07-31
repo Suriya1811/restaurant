@@ -2,6 +2,7 @@
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Ticket, Plus, Trash2, Edit, Save, Loader2, AlertCircle, CheckCircle, Search, CalendarDays , Download, Printer} from 'lucide-react';
 import '../../pages/SettingsPage.css';
 
@@ -83,7 +84,7 @@ const MaintainCoupon = () => {
     const handlePrint       = () => printTable('Coupon Master', `Total: ${filteredCoupons.length}`, exportCols, getExportRows());
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -283,7 +284,7 @@ const MaintainCoupon = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

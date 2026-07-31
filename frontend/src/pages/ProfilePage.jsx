@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../components/dashboard/DashboardPageShell';
 import './SettingsPage.css';
 import {
     User, Key, Save, CheckCircle, AlertCircle, Loader2,
@@ -367,7 +368,7 @@ const ProfilePage = () => {
     );
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -817,7 +818,7 @@ const ProfilePage = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

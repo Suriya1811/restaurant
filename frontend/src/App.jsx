@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Provider } from 'react-redux';
 import { store } from './redux/store';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useGlobalPageBehaviors } from './hooks/useGlobalPageBehaviors';
 
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
 const RegisterRestaurant = lazy(() => import('./pages/RegisterRestaurant.jsx'));
@@ -103,6 +104,7 @@ const PermissionRoute = ({ children, pageKey, module }) => {
 
 function AppRoutes() {
     const { user, getLandingPage } = useAuth();
+    useGlobalPageBehaviors();
 
     return (
         <Routes>

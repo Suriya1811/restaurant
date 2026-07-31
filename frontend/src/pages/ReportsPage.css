@@ -11,12 +11,12 @@
 }
 
 .scrollbar-premium::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
+    background: #1e3a8a;
     border-radius: 10px;
 }
 
 .scrollbar-premium::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
+    background: #0f172a;
 }
 
 /* Ensure no double scrolling when embedded */

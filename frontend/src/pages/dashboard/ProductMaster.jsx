@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -127,12 +128,12 @@ const ProductMaster = () => {
     // Navigation Sequence
     const NAVIGATION_SEQUENCE = [
         'barcode',
-        'code',
         'name',
-        'print_name',
         'category',
-        'brand',
         'hsn_code',
+        'code',
+        'print_name',
+        'brand',
         'unit',
         'purchase_price',
         'cost_price',
@@ -143,10 +144,10 @@ const ProductMaster = () => {
         'gst_purchase',
         'igst_purchase',
         'opening_stock',
-        'max_stock',
-        'reorder_level',
         'stock_value',
+        'max_stock',
         'min_stock',
+        'reorder_level',
         'urgent_order_level'
     ];
 
@@ -217,6 +218,86 @@ const ProductMaster = () => {
             throw new Error('Session expired. Please log in again.');
         }
         return res;
+    };
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = filteredProducts.map(p => p._id || p.id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected item(s)?`)) return;
+            let blockedMessages = [];
+            for (const id of selectedIds) {
+                try {
+                    const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        if (data.message || data.error) blockedMessages.push(data.message || data.error);
+                    }
+                } catch (err) { }
+            }
+            if (blockedMessages.length > 0) {
+                alert(blockedMessages[0]);
+            }
+            fetchData();
+        } else if (actionType === 'ACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_active: true })
+                    });
+                } catch (err) { }
+            }
+            setProducts(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_active: true } : x));
+        } else if (actionType === 'DEACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_active: false })
+                    });
+                } catch (err) { }
+            }
+            setProducts(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_active: false } : x));
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected item(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_cancelled: true, is_active: false })
+                    });
+                } catch (err) { }
+            }
+            setProducts(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_cancelled: true, is_active: false } : x));
+        }
+
+        setSelectedIds([]);
+        setShowBulkMenu(false);
     };
 
     const fetchData = async () => {
@@ -567,9 +648,13 @@ const ProductMaster = () => {
         const id = product._id || product.id;
         if (!window.confirm("Delete this master item?")) return;
         try {
-            await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
+            const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/products/${id}`, {
                 method: 'DELETE'
             });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                alert(data.message || data.error || "Cannot delete record because it is used in transaction history.");
+            }
             fetchData();
         } catch (err) {
             console.error(err);
@@ -853,7 +938,7 @@ const ProductMaster = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             {/* Inline stylesheet to force spreadsheet layout with custom grid lines */}
             <style>{`
                 .item-table-grid {
@@ -931,7 +1016,7 @@ const ProductMaster = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md"
+                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md whitespace-nowrap flex-shrink-0"
                                     onClick={() => { resetForm(); setSearchTerm(''); setShowDrawer(true); }}
                                 >
                                     <PlusCircle size={14} />
@@ -939,19 +1024,17 @@ const ProductMaster = () => {
                                 </button>
                             </>
                         ) : (
-                            <div className="flex items-center gap-4 ml-auto">
-                                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                                    <span className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Type</span>
-                                    <select
-                                        name="product_type"
-                                        value={formData.product_type || 'GOODS'}
-                                        onChange={handleInputChange}
-                                        className="px-3 py-1.5 bg-white text-black border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 font-bold shadow-sm cursor-pointer"
-                                    >
-                                        <option value="GOODS" className="text-black bg-white">Goods</option>
-                                        <option value="SERVICE" className="text-black bg-white">Service</option>
-                                    </select>
-                                </div>
+                            <div className="flex items-center gap-2.5 ml-auto">
+                                <span className="text-xs font-medium text-slate-700">Type</span>
+                                <select
+                                    name="product_type"
+                                    value={formData.product_type || 'GOODS'}
+                                    onChange={handleInputChange}
+                                    className="w-48 px-3 py-1.5 bg-white text-slate-800 border border-orange-300 rounded text-xs outline-none focus:border-orange-500 font-medium cursor-pointer shadow-sm"
+                                >
+                                    <option value="GOODS">Goods</option>
+                                    <option value="SERVICE">Service</option>
+                                </select>
                             </div>
                         )
                     }
@@ -1007,12 +1090,27 @@ const ProductMaster = () => {
                                         <option value="ALL">ALL</option>
                                     </select>
                                 </div>
+
+                                {/* Action Dropdown Button - right aligned, white/orange */}
+                                <div className="relative ml-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                        className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                        Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                        <ChevronDown size={14} />
+                                    </button>
+                                    {showBulkMenu && (
+                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                            <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                            <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                            <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="flex flex-col items-end flex-shrink-0">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Registry</span>
-                                <span className="text-lg font-black text-slate-800">{filteredProducts.length} <span className="text-xs text-slate-300">Units</span></span>
-                            </div>
                         </div>
 
                         {/* Responsive Scrollable Container */}
@@ -1021,7 +1119,7 @@ const ProductMaster = () => {
                             style={{
                                 overflowX: 'auto',
                                 overflowY: 'auto',
-                                maxHeight: 'calc(100vh - 230px)',
+                                maxHeight: 'calc(100vh - 275px)',
                                 maxWidth: '100%',
                                 borderRadius: '1rem',
                                 background: 'white',
@@ -1032,6 +1130,14 @@ const ProductMaster = () => {
                             <table className="item-table-grid">
                                 <thead>
                                     <tr>
+                                        <th style={{ textAlign: 'center', width: '40px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.includes(p._id || p.id))}
+                                                onChange={toggleSelectAll}
+                                                className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                            />
+                                        </th>
                                         {visibleColumns.action && <th style={{ textAlign: 'center', width: '60px' }}>Action</th>}
                                         {visibleColumns.code && <th>Code</th>}
                                         {visibleColumns.barcode && <th>Barcode</th>}
@@ -1070,6 +1176,14 @@ const ProductMaster = () => {
                                         </tr>
                                     ) : filteredProducts.map(p => (
                                         <tr key={p._id} className={`group hover:bg-slate-50 transition-all ${!p.is_active ? 'opacity-60 grayscale-[0.8] bg-slate-50/50' : ''}`}>
+                                            <td style={{ textAlign: 'center', width: '40px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(p._id || p.id)}
+                                                    onChange={() => toggleSelectOne(p._id || p.id)}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </td>
                                             {visibleColumns.action && (
                                                 <td style={{ textAlign: 'center', width: '40px' }} className="no-print">
                                                     <ActionDropdown item={p} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
@@ -1098,10 +1212,22 @@ const ProductMaster = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Bottom Total Buttons */}
+                        <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm">{filteredProducts.length}</span>
+                            </div>
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                                <span>TOTAL STOCK VALUE:</span>
+                                <span className="font-bold text-sm">₹{filteredProducts.reduce((sum, p) => sum + parseFloat(p.stock_value || 0), 0).toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
-                        <div className="p-6 flex flex-col flex-1 overflow-hidden relative bg-white">
+                        <div className="p-6 flex flex-col flex-1 relative bg-white">
                             {error && (
                                 <div className="bg-rose-50 border border-rose-200 p-2.5 rounded flex items-center gap-2 text-rose-700 font-medium text-xs mb-3 flex-shrink-0 animate-in fade-in duration-200">
                                     <AlertCircle size={16} />
@@ -1109,315 +1235,432 @@ const ProductMaster = () => {
                                 </div>
                             )}
 
-                        <form onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
-                            <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                            <form onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }} className="flex-1 flex flex-col justify-between overflow-hidden gap-4">
+                                <div className="flex-1 overflow-hidden pr-2 space-y-5">
 
-                                {/* ITEM DETAILS */}
-                                <div>
-                                    <div className="w-full mb-1">
-                                        <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider">Item Details</h3>
+                                    {/* ITEM DETAILS */}
+                                    <div>
+                                        <div className="w-full mb-1">
+                                            <h3 className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">Item Details</h3>
+                                        </div>
+                                        <hr className="border-t border-orange-400 mt-1 mb-4" />
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 relative">
+                                            {/* Left Column */}
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Barcode</label>
+                                                    <div className="col-span-9">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['barcode'] = el; }}
+                                                            type="text"
+                                                            name="barcode"
+                                                            value={formData.barcode}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'barcode')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Item Name *</label>
+                                                    <div className="col-span-9">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['name'] = el; }}
+                                                            type="text"
+                                                            name="name"
+                                                            required
+                                                            value={formData.name}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'name')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Group</label>
+                                                    <div className="col-span-9 flex gap-1.5 items-center">
+                                                        <select
+                                                            ref={el => { if (el) inputRefs.current['category'] = el; }}
+                                                            name="category"
+                                                            required
+                                                            value={formData.category}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'category')}
+                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        >
+                                                            <option value="">Choose Class</option>
+                                                            {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+                                                        </select>
+                                                        <button type="button" onClick={() => setShowGroupModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">HSN Code</label>
+                                                    <div className="col-span-9">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['hsn_code'] = el; }}
+                                                            type="text"
+                                                            name="hsn_code"
+                                                            value={formData.hsn_code}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'hsn_code')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Middle vertical line between left & right column under item details */}
+                                            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2" />
+
+                                            {/* Right Column */}
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Code</label>
+                                                    <div className="col-span-9">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['code'] = el; }}
+                                                            type="text"
+                                                            name="code"
+                                                            placeholder="Auto"
+                                                            value={formData.code}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'code')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Print Name</label>
+                                                    <div className="col-span-9">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['print_name'] = el; }}
+                                                            type="text"
+                                                            name="print_name"
+                                                            value={formData.print_name}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'print_name')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Brand</label>
+                                                    <div className="col-span-9 flex gap-1.5 items-center">
+                                                        <select
+                                                            ref={el => { if (el) inputRefs.current['brand'] = el; }}
+                                                            name="brand"
+                                                            required
+                                                            value={formData.brand}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'brand')}
+                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        >
+                                                            <option value="">Select Brand</option>
+                                                            {brands.map(b => <option key={b._id} value={b.name}>{b.name}</option>)}
+                                                        </select>
+                                                        <button type="button" onClick={() => setShowBrandModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-3 text-[12px] font-bold text-slate-700">Unit</label>
+                                                    <div className="col-span-9 flex gap-1.5 items-center">
+                                                        <select
+                                                            ref={el => { if (el) inputRefs.current['unit'] = el; }}
+                                                            name="unit"
+                                                            required
+                                                            value={formData.unit}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'unit')}
+                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 uppercase transition-all font-semibold"
+                                                        >
+                                                            <option value="">SELECT UNIT</option>
+                                                            {units.map(u => <option key={u._id} value={u.name}>{u.name}</option>)}
+                                                        </select>
+                                                        <button type="button" onClick={() => setShowUnitModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <hr className="border-t border-orange-500 mt-1 mb-4" />
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 relative">
-                                        {/* Left Column */}
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Barcode</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['barcode'] = el; }}
-                                                        type="text"
-                                                        name="barcode"
-                                                        value={formData.barcode}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'barcode')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 relative">
+                                        {/* RATE DETAILS */}
+                                        <div>
+                                            <div className="w-full mb-1">
+                                                <h3 className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">Rate Details</h3>
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Code</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['code'] = el; }}
-                                                        type="text"
-                                                        name="code"
-                                                        placeholder="Auto"
-                                                        value={formData.code}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'code')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
+                                            <hr className="border-t border-orange-400 mt-1 mb-4" />
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">Pur Rate</label>
+                                                        <div className="col-span-7">
+                                                            <input
+                                                                ref={el => { if (el) inputRefs.current['purchase_price'] = el; }}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                name="purchase_price"
+                                                                value={formData.purchase_price}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'purchase_price')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">Cost Rate</label>
+                                                        <div className="col-span-7">
+                                                            <input
+                                                                ref={el => { if (el) inputRefs.current['cost_price'] = el; }}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                name="cost_price"
+                                                                value={formData.cost_price}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'cost_price')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Group</label>
-                                                <div className="col-span-9 flex gap-1 items-center">
-                                                    <select
-                                                        ref={el => { if (el) inputRefs.current['category'] = el; }}
-                                                        name="category"
-                                                        required
-                                                        value={formData.category}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'category')}
-                                                        className="flex-1 px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    >
-                                                        <option value="">Choose Class</option>
-                                                        {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
-                                                    </select>
-                                                    <button type="button" onClick={() => setShowGroupModal(true)} className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm">+</button>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">HSN Code</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['hsn_code'] = el; }}
-                                                        type="text"
-                                                        name="hsn_code"
-                                                        value={formData.hsn_code}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'hsn_code')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">Sale Rate *</label>
+                                                        <div className="col-span-7">
+                                                            <input
+                                                                ref={el => { if (el) inputRefs.current['selling_price'] = el; }}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                name="selling_price"
+                                                                required
+                                                                value={formData.selling_price}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'selling_price')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">MRP Rate</label>
+                                                        <div className="col-span-7">
+                                                            <input
+                                                                ref={el => { if (el) inputRefs.current['mrp'] = el; }}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                name="mrp"
+                                                                value={formData.mrp}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'mrp')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Middle vertical line between left & right column under item details */}
+                                        {/* Middle vertical line between Rates & Taxes */}
                                         <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2" />
 
-                                        {/* Right Column */}
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Item Name *</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['name'] = el; }}
-                                                        type="text"
-                                                        name="name"
-                                                        required
-                                                        value={formData.name}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'name')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
+                                        {/* TAX DETAILS */}
+                                        <div>
+                                            <div className="w-full mb-1">
+                                                <h3 className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">Tax Details</h3>
                                             </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Print Name</label>
-                                                <div className="col-span-9">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['print_name'] = el; }}
-                                                        type="text"
-                                                        name="print_name"
-                                                        value={formData.print_name}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'print_name')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
+                                            <hr className="border-t border-orange-400 mt-1 mb-4" />
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">GST Sale (%)</label>
+                                                        <div className="col-span-7">
+                                                            <select
+                                                                ref={el => { if (el) inputRefs.current['gst_sales'] = el; }}
+                                                                name="gst_sales"
+                                                                value={formData.gst_sales}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'gst_sales')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            >
+                                                                <option value="">Select Tax</option>
+                                                                {taxes.map(t => (
+                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">IGST Sale (%)</label>
+                                                        <div className="col-span-7">
+                                                            <select
+                                                                ref={el => { if (el) inputRefs.current['igst_sales'] = el; }}
+                                                                name="igst_sales"
+                                                                value={formData.igst_sales}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'igst_sales')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            >
+                                                                <option value="">Select Tax</option>
+                                                                {taxes.map(t => (
+                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Brand *</label>
-                                                <div className="col-span-9 flex gap-1 items-center">
-                                                    <select
-                                                        ref={el => { if (el) inputRefs.current['brand'] = el; }}
-                                                        name="brand"
-                                                        required
-                                                        value={formData.brand}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'brand')}
-                                                        className="flex-1 px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    >
-                                                        <option value="">Select Brand</option>
-                                                        {brands.map(b => <option key={b._id} value={b.name}>{b.name}</option>)}
-                                                    </select>
-                                                    <button type="button" onClick={() => setShowBrandModal(true)} className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm">+</button>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-3 text-[13px] font-bold text-slate-800">Unit *</label>
-                                                <div className="col-span-9 flex gap-1 items-center">
-                                                    <select
-                                                        ref={el => { if (el) inputRefs.current['unit'] = el; }}
-                                                        name="unit"
-                                                        required
-                                                        value={formData.unit}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'unit')}
-                                                        className="flex-1 px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 uppercase transition-all font-semibold"
-                                                    >
-                                                        <option value="">Select Unit</option>
-                                                        {units.map(u => <option key={u._id} value={u.name}>{u.name}</option>)}
-                                                    </select>
-                                                    <button type="button" onClick={() => setShowUnitModal(true)} className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm">+</button>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">GST Purchase (%)</label>
+                                                        <div className="col-span-7">
+                                                            <select
+                                                                ref={el => { if (el) inputRefs.current['gst_purchase'] = el; }}
+                                                                name="gst_purchase"
+                                                                value={formData.gst_purchase}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'gst_purchase')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            >
+                                                                <option value="">Select Tax</option>
+                                                                {taxes.map(t => (
+                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-12 items-center gap-2">
+                                                        <label className="col-span-5 text-[12px] font-bold text-slate-700">IGST Purchase (%)</label>
+                                                        <div className="col-span-7">
+                                                            <select
+                                                                ref={el => { if (el) inputRefs.current['igst_purchase'] = el; }}
+                                                                name="igst_purchase"
+                                                                value={formData.igst_purchase}
+                                                                onChange={handleInputChange}
+                                                                onKeyDown={(e) => handleFormKeyDown(e, 'igst_purchase')}
+                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                            >
+                                                                <option value="">Select Tax</option>
+                                                                {taxes.map(t => (
+                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 relative">
-                                    {/* RATE DETAILS */}
+                                    {/* STOCK DETAILS */}
                                     <div>
                                         <div className="w-full mb-1">
-                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider">Rate Details</h3>
+                                            <h3 className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">Stock Details</h3>
                                         </div>
-                                        <hr className="border-t border-orange-500 mt-1 mb-4" />
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">Pur Rate</label>
-                                                    <div className="col-span-8">
-                                                        <input
-                                                            ref={el => { if (el) inputRefs.current['purchase_price'] = el; }}
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            name="purchase_price"
-                                                            value={formData.purchase_price}
-                                                            onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'purchase_price')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">Cost Rate</label>
-                                                    <div className="col-span-8">
-                                                        <input
-                                                            ref={el => { if (el) inputRefs.current['cost_price'] = el; }}
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            name="cost_price"
-                                                            value={formData.cost_price}
-                                                            onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'cost_price')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">Sale Rate *</label>
-                                                    <div className="col-span-8">
-                                                        <input
-                                                            ref={el => { if (el) inputRefs.current['selling_price'] = el; }}
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            name="selling_price"
-                                                            required
-                                                            value={formData.selling_price}
-                                                            onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'selling_price')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">MRP Rate</label>
-                                                    <div className="col-span-8">
-                                                        <input
-                                                            ref={el => { if (el) inputRefs.current['mrp'] = el; }}
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            name="mrp"
-                                                            value={formData.mrp}
-                                                            onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'mrp')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        <hr className="border-t border-orange-400 mt-1 mb-4" />
 
-                                    {/* Middle vertical line between Rates & Taxes */}
-                                    <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2" />
-
-                                    {/* TAX DETAILS */}
-                                    <div>
-                                        <div className="w-full mb-1">
-                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider">Tax Details</h3>
-                                        </div>
-                                        <hr className="border-t border-orange-500 mt-1 mb-4" />
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3 relative">
+                                            {/* Column 1 */}
+                                            <div className="space-y-3">
                                                 <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">GST Sale (%) *</label>
-                                                    <div className="col-span-8">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['gst_sales'] = el; }}
-                                                            name="gst_sales"
-                                                            value={formData.gst_sales}
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Opening Stk</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['opening_stock'] = el; }}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            name="opening_stock"
+                                                            value={formData.opening_stock}
                                                             onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'gst_sales')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Select Tax</option>
-                                                            {taxes.map(t => (
-                                                                <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                            ))}
-                                                        </select>
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'opening_stock')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">IGST Sale (%) *</label>
-                                                    <div className="col-span-8">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['igst_sales'] = el; }}
-                                                            name="igst_sales"
-                                                            value={formData.igst_sales}
-                                                            onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'igst_sales')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Select Tax</option>
-                                                            {taxes.map(t => (
-                                                                <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                            ))}
-                                                        </select>
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Stock Value</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['stock_value'] = el; }}
+                                                            type="text"
+                                                            readOnly
+                                                            name="stock_value"
+                                                            value={formData.stock_value || ((parseFloat(formData.purchase_price) || 0) * (parseFloat(formData.opening_stock) || 0)).toFixed(2)}
+                                                            className="w-full px-3 py-2 bg-slate-50 border border-orange-200 rounded text-sm outline-none cursor-not-allowed text-slate-500 font-semibold"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
+
+                                            {/* Column divider 1 */}
+                                            <div className="hidden md:block absolute left-[33.33%] top-0 bottom-0 w-px bg-slate-200" />
+
+                                            {/* Column 2 */}
+                                            <div className="space-y-3">
                                                 <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">GST Purchase (%) *</label>
-                                                    <div className="col-span-8">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['gst_purchase'] = el; }}
-                                                            name="gst_purchase"
-                                                            value={formData.gst_purchase}
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Maximum Stk</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['max_stock'] = el; }}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            name="max_stock"
+                                                            value={formData.max_stock}
                                                             onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'gst_purchase')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Select Tax</option>
-                                                            {taxes.map(t => (
-                                                                <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                            ))}
-                                                        </select>
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'max_stock')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-12 items-center gap-2">
-                                                    <label className="col-span-4 text-[13px] font-bold text-slate-800">IGST Purchase (%) *</label>
-                                                    <div className="col-span-8">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['igst_purchase'] = el; }}
-                                                            name="igst_purchase"
-                                                            value={formData.igst_purchase}
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Minimum Stock</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['min_stock'] = el; }}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            name="min_stock"
+                                                            value={formData.min_stock}
                                                             onChange={handleInputChange}
-                                                            onKeyDown={(e) => handleFormKeyDown(e, 'igst_purchase')}
-                                                            className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Select Tax</option>
-                                                            {taxes.map(t => (
-                                                                <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                            ))}
-                                                        </select>
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'min_stock')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Column divider 2 */}
+                                            <div className="hidden md:block absolute left-[66.66%] top-0 bottom-0 w-px bg-slate-200" />
+
+                                            {/* Column 3 */}
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Re-order Level</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['reorder_level'] = el; }}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            name="reorder_level"
+                                                            value={formData.reorder_level}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'reorder_level')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-12 items-center gap-2">
+                                                    <label className="col-span-5 text-[12px] font-bold text-slate-700">Urgent Order Stk</label>
+                                                    <div className="col-span-7">
+                                                        <input
+                                                            ref={el => { if (el) inputRefs.current['urgent_order_level'] = el; }}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            name="urgent_order_level"
+                                                            value={formData.urgent_order_level}
+                                                            onChange={handleInputChange}
+                                                            onKeyDown={(e) => handleFormKeyDown(e, 'urgent_order_level')}
+                                                            className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1425,433 +1668,312 @@ const ProductMaster = () => {
                                     </div>
                                 </div>
 
-                                {/* STOCK DETAILS */}
-                                <div>
-                                    <div className="w-full mb-1">
-                                        <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider">Stock Details</h3>
-                                    </div>
-                                    <hr className="border-t border-orange-500 mt-1 mb-4" />
+                                {/* bottom actions bar & popups */}
+                                <div className="pt-3 border-t border-slate-100 flex flex-row justify-between items-center bg-white flex-shrink-0 relative">
+                                    {/* Modal popup implementations - centered on screen */}
+                                    {activePopover && (
+                                        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setActivePopover(null)}>
+                                            <div className="absolute inset-0 bg-black/30" />
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3 relative">
-                                        {/* Column 1 */}
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Opening Stk</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['opening_stock'] = el; }}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        name="opening_stock"
-                                                        value={formData.opening_stock}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'opening_stock')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Stock Value</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['stock_value'] = el; }}
-                                                        type="text"
-                                                        readOnly
-                                                        name="stock_value"
-                                                        value={formData.stock_value || ((parseFloat(formData.purchase_price) || 0) * (parseFloat(formData.opening_stock) || 0)).toFixed(2)}
-                                                        className="w-full px-3 py-2 bg-slate-50 border border-orange-300 rounded text-sm outline-none cursor-not-allowed text-slate-500 font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Column divider 1 */}
-                                        <div className="hidden md:block absolute left-[33.33%] top-0 bottom-0 w-px bg-slate-200" />
-
-                                        {/* Column 2 */}
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Maximum Stk</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['max_stock'] = el; }}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        name="max_stock"
-                                                        value={formData.max_stock}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'max_stock')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Minimum Stock</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['min_stock'] = el; }}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        name="min_stock"
-                                                        value={formData.min_stock}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'min_stock')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Column divider 2 */}
-                                        <div className="hidden md:block absolute left-[66.66%] top-0 bottom-0 w-px bg-slate-200" />
-
-                                        {/* Column 3 */}
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Re-order Level</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['reorder_level'] = el; }}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        name="reorder_level"
-                                                        value={formData.reorder_level}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'reorder_level')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-12 items-center gap-2">
-                                                <label className="col-span-4 text-[13px] font-bold text-slate-800">Urgent Order Stk</label>
-                                                <div className="col-span-8">
-                                                    <input
-                                                        ref={el => { if (el) inputRefs.current['urgent_order_level'] = el; }}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        name="urgent_order_level"
-                                                        value={formData.urgent_order_level}
-                                                        onChange={handleInputChange}
-                                                        onKeyDown={(e) => handleFormKeyDown(e, 'urgent_order_level')}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* bottom actions bar & popups */}
-                            <div className="pt-3 border-t border-slate-100 flex flex-row justify-between items-center bg-white flex-shrink-0 relative">
-                                {/* Modal popup implementations - centered on screen */}
-                                {activePopover && (
-                                    <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setActivePopover(null)}>
-                                        <div className="absolute inset-0 bg-black/30" />
-
-                                        {/* VARIATIONS POPUP */}
-                                        {activePopover === 'variations' && (
-                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
-                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Variations</span>
-                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
-                                                </div>
-                                                <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
-                                                    {formData.variations?.map((v, idx) => (
-                                                        <div key={idx} className="flex gap-2 items-center">
-                                                            <input
-                                                                type="text"
-                                                                value={v.name}
-                                                                placeholder="e.g. Small"
-                                                                onChange={(e) => handleVariationChange(idx, 'name', e.target.value)}
-                                                                className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={v.amount}
-                                                                placeholder="Rate"
-                                                                onChange={(e) => handleVariationChange(idx, 'amount', e.target.value.replace(/[^0-9.]/g, ''))}
-                                                                className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                                            />
-                                                            <button type="button" onClick={() => handleRemoveVariation(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
-                                                        </div>
-                                                    ))}
-                                                    {(!formData.variations || formData.variations.length === 0) && (
-                                                        <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No variations added.</p>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                                                    <button type="button" onClick={handleAddVariation} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setFormData(prev => ({ ...prev, variations: [] })); setActivePopover(null); }}
-                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                            style={{ backgroundColor: '#ef4444' }}
-                                                        >
-                                                            DELETE
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setActivePopover(null)}
-                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                            style={{ backgroundColor: '#f97316' }}
-                                                        >
-                                                            SAVE
-                                                        </button>
+                                            {/* VARIATIONS POPUP */}
+                                            {activePopover === 'variations' && (
+                                                <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Variations</span>
+                                                        <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* ADDONS POPUP */}
-                                        {activePopover === 'addons' && (
-                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
-                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Add Ons</span>
-                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
-                                                </div>
-                                                <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
-                                                    {formData.addons?.map((addon, idx) => (
-                                                        <div key={idx} className="flex gap-2 items-center">
-                                                            <input
-                                                                type="text"
-                                                                value={addon.name}
-                                                                placeholder="e.g. Cheese"
-                                                                onChange={(e) => handleAddonChange(idx, 'name', e.target.value)}
-                                                                className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={addon.rate}
-                                                                placeholder="Rate"
-                                                                onChange={(e) => handleAddonChange(idx, 'rate', e.target.value.replace(/[^0-9.]/g, ''))}
-                                                                className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                                            />
-                                                            <button type="button" onClick={() => handleRemoveAddon(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
-                                                        </div>
-                                                    ))}
-                                                    {(!formData.addons || formData.addons.length === 0) && (
-                                                        <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No addons added.</p>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                                                    <button type="button" onClick={handleAddAddon} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setFormData(prev => ({ ...prev, addons: [] })); setActivePopover(null); }}
-                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                            style={{ backgroundColor: '#ef4444' }}
-                                                        >
-                                                            DELETE
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setActivePopover(null)}
-                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                            style={{ backgroundColor: '#f97316' }}
-                                                        >
-                                                            SAVE
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* OTHER INFO POPUP */}
-                                        {activePopover === 'otherInfo' && (
-                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
-                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Other Info</span>
-                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
-                                                </div>
-                                                <div className="px-5 py-4 space-y-4 max-h-[50vh] overflow-y-auto">
-                                                    <div className="space-y-1.5">
-                                                        <label className="block text-xs font-bold text-slate-700 uppercase">Food Type</label>
-                                                        <select
-                                                            name="food_type"
-                                                            value={formData.food_type}
-                                                            onChange={handleInputChange}
-                                                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold"
-                                                        >
-                                                            <option value="NONE">None</option>
-                                                            <option value="VEG">Veg</option>
-                                                            <option value="NON_VEG">Non-Veg</option>
-                                                        </select>
-                                                    </div>
-                                                    <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-                                                        <span className="text-xs font-bold text-slate-700 uppercase">Online Order Available</span>
-                                                        <input
-                                                            type="checkbox"
-                                                            name="online_order"
-                                                            checked={formData.online_order}
-                                                            onChange={(e) => setFormData(p => ({ ...p, online_order: e.target.checked }))}
-                                                            className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 cursor-pointer accent-orange-500"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 border-t border-slate-100 pt-3">
-                                                        <span className="block text-xs font-bold text-slate-700 uppercase">Serve Types</span>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {Object.entries({
-                                                                dine_in: 'Dine In',
-                                                                delivery: 'Delivery',
-                                                                pickup: 'Pickup',
-                                                                party_order: 'Party Order'
-                                                            }).map(([key, label]) => (
-                                                                <label key={key} className="flex items-center gap-2 cursor-pointer">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={!!formData.serve_types[key]}
-                                                                        onChange={() => handleServeTypeChange(key)}
-                                                                        className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 accent-orange-500"
-                                                                    />
-                                                                    <span className="text-xs font-bold text-slate-700 uppercase">{label}</span>
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                food_type: 'NONE',
-                                                                online_order: false,
-                                                                serve_types: { dine_in: true, delivery: true, pickup: true, party_order: true }
-                                                            }));
-                                                            setActivePopover(null);
-                                                        }}
-                                                        className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                        style={{ backgroundColor: '#ef4444' }}
-                                                    >
-                                                        DELETE
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActivePopover(null)}
-                                                        className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                        style={{ backgroundColor: '#f97316' }}
-                                                    >
-                                                        SAVE
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* IMAGE POPUP */}
-                                        {activePopover === 'image' && (
-                                            <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
-                                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Item Image</span>
-                                                    <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
-                                                </div>
-                                                <div className="px-5 py-5 flex flex-col items-center gap-4">
-                                                    {formData.image ? (
-                                                        <div className="flex flex-col items-center gap-2">
-                                                            <div className="w-28 h-28 rounded border border-orange-300 overflow-hidden shadow-inner bg-slate-50">
-                                                                <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                                    <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
+                                                        {formData.variations?.map((v, idx) => (
+                                                            <div key={idx} className="flex gap-2 items-center">
+                                                                <input
+                                                                    type="text"
+                                                                    value={v.name}
+                                                                    placeholder="e.g. Small"
+                                                                    onChange={(e) => handleVariationChange(idx, 'name', e.target.value)}
+                                                                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    value={v.amount}
+                                                                    placeholder="Rate"
+                                                                    onChange={(e) => handleVariationChange(idx, 'amount', e.target.value.replace(/[^0-9.]/g, ''))}
+                                                                    className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                                />
+                                                                <button type="button" onClick={() => handleRemoveVariation(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
                                                             </div>
-                                                            <span className="text-xs text-slate-500 font-medium">Image uploaded</span>
+                                                        ))}
+                                                        {(!formData.variations || formData.variations.length === 0) && (
+                                                            <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No variations added.</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                        <button type="button" onClick={handleAddVariation} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setFormData(prev => ({ ...prev, variations: [] })); setActivePopover(null); }}
+                                                                className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                                style={{ backgroundColor: '#ef4444' }}
+                                                            >
+                                                                DELETE
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setActivePopover(null)}
+                                                                className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                                style={{ backgroundColor: '#f97316' }}
+                                                            >
+                                                                SAVE
+                                                            </button>
                                                         </div>
-                                                    ) : (
-                                                        <div className="w-28 h-28 rounded border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
-                                                            <ImageIcon size={32} className="stroke-[1.5]" />
-                                                            <span className="text-[10px] font-bold mt-1.5 uppercase">No Image</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* ADDONS POPUP */}
+                                            {activePopover === 'addons' && (
+                                                <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Add Ons</span>
+                                                        <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                    </div>
+                                                    <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
+                                                        {formData.addons?.map((addon, idx) => (
+                                                            <div key={idx} className="flex gap-2 items-center">
+                                                                <input
+                                                                    type="text"
+                                                                    value={addon.name}
+                                                                    placeholder="e.g. Cheese"
+                                                                    onChange={(e) => handleAddonChange(idx, 'name', e.target.value)}
+                                                                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    value={addon.rate}
+                                                                    placeholder="Rate"
+                                                                    onChange={(e) => handleAddonChange(idx, 'rate', e.target.value.replace(/[^0-9.]/g, ''))}
+                                                                    className="w-24 px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                                />
+                                                                <button type="button" onClick={() => handleRemoveAddon(idx)} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 size={16} /></button>
+                                                            </div>
+                                                        ))}
+                                                        {(!formData.addons || formData.addons.length === 0) && (
+                                                            <p className="text-sm text-slate-400 font-medium italic py-4 text-center">No addons added.</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                        <button type="button" onClick={handleAddAddon} className="px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors uppercase">+ Add</button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setFormData(prev => ({ ...prev, addons: [] })); setActivePopover(null); }}
+                                                                className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                                style={{ backgroundColor: '#ef4444' }}
+                                                            >
+                                                                DELETE
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setActivePopover(null)}
+                                                                className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                                style={{ backgroundColor: '#f97316' }}
+                                                            >
+                                                                SAVE
+                                                            </button>
                                                         </div>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => imageUploadInputRef.current?.click()}
-                                                        className="w-full px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 rounded text-sm font-bold uppercase transition-colors text-center"
-                                                    >
-                                                        {formData.image ? 'CHANGE FILE' : 'UPLOAD FILE'}
-                                                    </button>
-                                                    {formData.image && (
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* OTHER INFO POPUP */}
+                                            {activePopover === 'otherInfo' && (
+                                                <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Other Info</span>
+                                                        <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                    </div>
+                                                    <div className="px-5 py-4 space-y-4 max-h-[50vh] overflow-y-auto">
+                                                        <div className="space-y-1.5">
+                                                            <label className="block text-xs font-bold text-slate-700 uppercase">Food Type</label>
+                                                            <select
+                                                                name="food_type"
+                                                                value={formData.food_type}
+                                                                onChange={handleInputChange}
+                                                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold"
+                                                            >
+                                                                <option value="NONE">None</option>
+                                                                <option value="VEG">Veg</option>
+                                                                <option value="NON_VEG">Non-Veg</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                                                            <span className="text-xs font-bold text-slate-700 uppercase">Online Order Available</span>
+                                                            <input
+                                                                type="checkbox"
+                                                                name="online_order"
+                                                                checked={formData.online_order}
+                                                                onChange={(e) => setFormData(p => ({ ...p, online_order: e.target.checked }))}
+                                                                className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 cursor-pointer accent-orange-500"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2 border-t border-slate-100 pt-3">
+                                                            <span className="block text-xs font-bold text-slate-700 uppercase">Serve Types</span>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {Object.entries({
+                                                                    dine_in: 'Dine In',
+                                                                    delivery: 'Delivery',
+                                                                    pickup: 'Pickup',
+                                                                    party_order: 'Party Order'
+                                                                }).map(([key, label]) => (
+                                                                    <label key={key} className="flex items-center gap-2 cursor-pointer">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={!!formData.serve_types[key]}
+                                                                            onChange={() => handleServeTypeChange(key)}
+                                                                            className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 accent-orange-500"
+                                                                        />
+                                                                        <span className="text-xs font-bold text-slate-700 uppercase">{label}</span>
+                                                                    </label>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50/50">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setFormData(p => ({ ...p, image: '' }))}
-                                                            className="w-full px-4 py-2 bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 rounded text-sm font-bold uppercase transition-colors text-center"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    food_type: 'NONE',
+                                                                    online_order: false,
+                                                                    serve_types: { dine_in: true, delivery: true, pickup: true, party_order: true }
+                                                                }));
+                                                                setActivePopover(null);
+                                                            }}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#ef4444' }}
                                                         >
-                                                            DELETE IMAGE
+                                                            DELETE
                                                         </button>
-                                                    )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActivePopover(null)}
+                                                            className="px-4 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#f97316' }}
+                                                        >
+                                                            SAVE
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex justify-end px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActivePopover(null)}
-                                                        className="px-5 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
-                                                        style={{ backgroundColor: '#f97316' }}
-                                                    >
-                                                        SAVE
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                            )}
 
-                                {/* bottom button triggers - orange styling */}
-                                <div className="flex gap-2.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setActivePopover(activePopover === 'variations' ? null : 'variations')}
-                                        className="px-4 py-2 border border-orange-500 bg-white text-orange-500 hover:bg-orange-50 rounded text-sm font-bold uppercase flex items-center gap-2 transition-all shadow-sm"
-                                        style={{ borderColor: '#f97316', color: '#f97316' }}
-                                    >
-                                        <Package size={16} /> VARIATIONS
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActivePopover(activePopover === 'otherInfo' ? null : 'otherInfo')}
-                                        className="px-4 py-2 border border-orange-500 bg-white text-orange-500 hover:bg-orange-50 rounded text-sm font-bold uppercase flex items-center gap-2 transition-all shadow-sm"
-                                        style={{ borderColor: '#f97316', color: '#f97316' }}
-                                    >
-                                        <FileText size={16} /> OTHER INFO
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActivePopover(activePopover === 'addons' ? null : 'addons')}
-                                        className="px-4 py-2 border border-orange-500 bg-white text-orange-500 hover:bg-orange-50 rounded text-sm font-bold uppercase flex items-center gap-2 transition-all shadow-sm"
-                                        style={{ borderColor: '#f97316', color: '#f97316' }}
-                                    >
-                                        <Puzzle size={16} /> ADD ONS
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setActivePopover(activePopover === 'image' ? null : 'image')}
-                                        className="px-4 py-2 border border-orange-500 bg-white text-orange-500 hover:bg-orange-50 rounded text-sm font-bold uppercase flex items-center gap-2 transition-all shadow-sm"
-                                        style={{ borderColor: '#f97316', color: '#f97316' }}
-                                    >
-                                        <ImageIcon size={16} /> IMAGE
-                                    </button>
-                                    <input
-                                        ref={imageUploadInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                    />
-                                    {uploading && <span className="text-[10px] text-orange-500 font-bold self-center animate-pulse">Uploading...</span>}
-                                    {formData.image && !uploading && (
-                                        <div className="w-8 h-8 rounded border border-orange-500 overflow-hidden flex-shrink-0 self-center">
-                                            <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                            {/* IMAGE POPUP */}
+                                            {activePopover === 'image' && (
+                                                <div className="relative bg-white rounded-lg shadow-2xl border border-orange-200 w-[380px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100">
+                                                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Item Image</span>
+                                                        <button type="button" onClick={() => setActivePopover(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                                                    </div>
+                                                    <div className="px-5 py-5 flex flex-col items-center gap-4">
+                                                        {formData.image ? (
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <div className="w-28 h-28 rounded border border-orange-300 overflow-hidden shadow-inner bg-slate-50">
+                                                                    <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                                                </div>
+                                                                <span className="text-xs text-slate-500 font-medium">Image uploaded</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-28 h-28 rounded border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
+                                                                <ImageIcon size={32} className="stroke-[1.5]" />
+                                                                <span className="text-[10px] font-bold mt-1.5 uppercase">No Image</span>
+                                                            </div>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => imageUploadInputRef.current?.click()}
+                                                            className="w-full px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 rounded text-sm font-bold uppercase transition-colors text-center"
+                                                        >
+                                                            {formData.image ? 'CHANGE FILE' : 'UPLOAD FILE'}
+                                                        </button>
+                                                        {formData.image && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setFormData(p => ({ ...p, image: '' }))}
+                                                                className="w-full px-4 py-2 bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 rounded text-sm font-bold uppercase transition-colors text-center"
+                                                            >
+                                                                DELETE IMAGE
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-end px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActivePopover(null)}
+                                                            className="px-5 py-1.5 text-xs font-bold text-white rounded hover:opacity-90 transition-colors uppercase"
+                                                            style={{ backgroundColor: '#f97316' }}
+                                                        >
+                                                            SAVE
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
-                                </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={submitting || uploading}
-                                    className="px-8 py-2.5 bg-[#ff5722] hover:bg-[#e64a19] text-white rounded text-sm font-black uppercase flex items-center gap-2 transition-all shadow-md ml-auto hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    <Save size={16} /> Save
-                                </button>
-                            </div>
-                        </form>
+                                    {/* bottom button triggers - 5-column full-width grid */}
+                                    <div className="grid grid-cols-5 gap-3 w-full items-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePopover(activePopover === 'variations' ? null : 'variations')}
+                                            className="w-full h-[40px] px-3 border border-orange-300 bg-white text-[#ea580c] hover:bg-orange-50 rounded text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                                        >
+                                            <Package size={16} className="text-[#ea580c]" /> VARIATIONS
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePopover(activePopover === 'otherInfo' ? null : 'otherInfo')}
+                                            className="w-full h-[40px] px-3 border border-orange-300 bg-white text-[#ea580c] hover:bg-orange-50 rounded text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                                        >
+                                            <FileText size={16} className="text-[#ea580c]" /> OTHER INFO
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePopover(activePopover === 'addons' ? null : 'addons')}
+                                            className="w-full h-[40px] px-3 border border-orange-300 bg-white text-[#ea580c] hover:bg-orange-50 rounded text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                                        >
+                                            <Puzzle size={16} className="text-[#ea580c]" /> ADD ONS
+                                        </button>
+                                        <div className="relative w-full">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActivePopover(activePopover === 'image' ? null : 'image')}
+                                                className="w-full h-[40px] px-3 border border-orange-300 bg-white text-[#ea580c] hover:bg-orange-50 rounded text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                                            >
+                                                <ImageIcon size={16} className="text-[#ea580c]" /> IMAGE
+                                                {formData.image && !uploading && (
+                                                    <div className="w-5 h-5 rounded border border-orange-400 overflow-hidden ml-1 flex-shrink-0">
+                                                        <img src={`${getBaseUrl()}${formData.image}`} alt="Uploaded" className="w-full h-full object-cover" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                            <input
+                                                ref={imageUploadInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleFileChange}
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={submitting || uploading}
+                                            className="w-full h-[40px] px-3 bg-[#ea580c] hover:bg-orange-700 text-white rounded text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+                                        >
+                                            <Save size={16} /> SAVE
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}
@@ -2033,7 +2155,7 @@ const ProductMaster = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 

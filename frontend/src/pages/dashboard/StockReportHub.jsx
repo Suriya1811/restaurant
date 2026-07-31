@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import {
     Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, Search, CheckSquare, Square
 } from 'lucide-react';
@@ -360,7 +361,7 @@ const StockReportHub = () => {
     );
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -441,63 +442,53 @@ const StockReportHub = () => {
                         </>
                     )}
 
-                    {/* Filter Controls Row 1: Search & Dates */}
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex-1 min-w-[240px] max-w-md relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    {/* Single Row Filters: Search, Dates, Stock Type, View Type, Group, Brand, Refresh */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Search Bar */}
+                        <div className="w-[160px] shrink-0 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                             <input
                                 type="text"
-                                placeholder="Search SKU, Barcode, Name"
+                                placeholder="Search SKU..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-medium py-2 pl-9 pr-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00]"
+                                className="w-full bg-white border border-slate-300 text-slate-700 text-[12px] font-medium py-1.5 pl-8 pr-2 rounded-[4px] focus:outline-none focus:border-[#ff6b00]"
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <div className="flex flex-col gap-1 min-w-[140px]">
-                                <label className="text-[11px] font-bold text-slate-800">From Date</label>
-                                <input
-                                    type="date"
-                                    value={fromDate}
-                                    onChange={(e) => setFromDate(e.target.value)}
-                                    className="bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-1.5 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-1 min-w-[140px]">
-                                <label className="text-[11px] font-bold text-slate-800">To Date</label>
-                                <input
-                                    type="date"
-                                    value={toDate}
-                                    onChange={(e) => setToDate(e.target.value)}
-                                    className="bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-1.5 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="flex flex-col justify-end">
-                                <button
-                                    onClick={fetchStockData}
-                                    disabled={loading}
-                                    className="flex items-center justify-center gap-2 px-5 py-2 bg-[#ff6b00] hover:bg-[#e66000] text-white text-[13px] font-bold rounded-[4px] shadow-sm transition-colors cursor-pointer mt-5"
-                                >
-                                    <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
-                                </button>
-                            </div>
+                        {/* From Date */}
+                        <div className="w-[135px] shrink-0">
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                placeholder="From Date"
+                                title="From Date"
+                                className="w-full bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                            />
                         </div>
-                    </div>
 
-                    {/* Filter Controls Row 2: Stock Type, View Type, Group, Brand */}
-                    <div className="flex flex-wrap items-center gap-6">
+                        {/* To Date */}
+                        <div className="w-[135px] shrink-0">
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                placeholder="To Date"
+                                title="To Date"
+                                className="w-full bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                            />
+                        </div>
+
                         {/* Stock Type */}
-                        <div className="flex flex-col gap-1.5 min-w-[160px]">
-                            <label className="text-[12px] font-bold text-[#ff6b00]">Stock Type</label>
+                        <div className="w-[140px] shrink-0">
                             <div className="relative">
                                 <select
                                     value={stockType}
                                     onChange={(e) => setStockType(e.target.value)}
-                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 pr-6 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 >
+                                    <option value="All Stock">Stock Type</option>
                                     <option value="All Stock">All Stock</option>
                                     <option value="Negative Stock">Negative Stock</option>
                                     <option value="Moving Stock">Moving Stock</option>
@@ -505,58 +496,67 @@ const StockReportHub = () => {
                                     <option value="Below Minimum Stock">Below Minimum Stock</option>
                                     <option value="Nil Stock">Nil Stock</option>
                                 </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                             </div>
                         </div>
 
                         {/* View Type */}
-                        <div className="flex flex-col gap-1.5 min-w-[160px]">
-                            <label className="text-[12px] font-bold text-[#ff6b00]">View Type</label>
+                        <div className="w-[130px] shrink-0">
                             <div className="relative">
                                 <select
                                     value={viewType}
                                     onChange={(e) => setViewType(e.target.value)}
-                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 pr-6 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 >
+                                    <option value="Standard View">View Type</option>
                                     <option value="Standard View">Standard View</option>
                                     <option value="Detail View">Detail View</option>
                                 </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                             </div>
                         </div>
 
                         {/* Group */}
-                        <div className="flex flex-col gap-1.5 min-w-[160px]">
-                            <label className="text-[12px] font-bold text-[#ff6b00]">Group</label>
+                        <div className="w-[130px] shrink-0">
                             <div className="relative">
                                 <select
                                     value={selectedGroup}
                                     onChange={(e) => setSelectedGroup(e.target.value)}
-                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 pr-6 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 >
                                     {groupOptions.map((g, i) => (
                                         <option key={i} value={g}>{g}</option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                             </div>
                         </div>
 
                         {/* Brand */}
-                        <div className="flex flex-col gap-1.5 min-w-[160px]">
-                            <label className="text-[12px] font-bold text-[#ff6b00]">Brand</label>
+                        <div className="w-[130px] shrink-0">
                             <div className="relative">
                                 <select
                                     value={selectedBrand}
                                     onChange={(e) => setSelectedBrand(e.target.value)}
-                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold py-1.5 px-2 pr-6 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 >
                                     {brandOptions.map((b, i) => (
                                         <option key={i} value={b}>{b}</option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                             </div>
+                        </div>
+
+                        {/* Refresh Button */}
+                        <div className="shrink-0 ml-auto">
+                            <button
+                                onClick={fetchStockData}
+                                disabled={loading}
+                                className="flex items-center justify-center gap-1.5 px-4 py-1.5 bg-[#ff6b00] hover:bg-[#e66000] text-white text-[12px] font-bold rounded-[4px] shadow-sm transition-colors cursor-pointer"
+                            >
+                                <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+                            </button>
                         </div>
                     </div>
 
@@ -638,7 +638,7 @@ const StockReportHub = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

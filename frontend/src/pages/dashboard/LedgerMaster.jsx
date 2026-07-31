@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import Sidebar from '../../components/dashboard/Sidebar';
 import {
     Save, X, Calendar, User, Phone, Mail, Hash, CreditCard,
@@ -13,6 +14,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { STANDARD_GROUPS, getNatureForGroup } from '../../utils/standardGroups';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
+import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 
 const API = import.meta.env.VITE_API_URL;
@@ -75,6 +77,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
@@ -85,7 +88,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
     // Column selection states
     const [visibleColumns, setVisibleColumns] = useState(DEFAULT_COLUMNS);
     const [tempVisibleColumns, setTempVisibleColumns] = useState(DEFAULT_COLUMNS);
-    const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+    const [showColumnModal, setShowColumnModal] = useState(false);
 
     // Context menu states
     const [activeActionMenuId, setActiveActionMenuId] = useState(null);
@@ -95,12 +98,15 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
     const [showOtherModal, setShowOtherModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
 
-    const handleFormSubmitRequest = () => {
+    const handleFormSubmitRequest = () => setShowSaveConfirm(true);
+    const confirmSave = () => {
+        setShowSaveConfirm(false);
         const formEl = document.getElementById('ledger-form');
-        if (formEl) {
-            formEl.requestSubmit();
+        if (formEl && typeof formEl.requestSubmit === 'function') {
+            try { formEl.requestSubmit(); } catch (_) {}
         }
     };
+    const cancelSave = () => setShowSaveConfirm(false);
 
     const { formRef, handleKeyDown } = useFormNavigation([showDrawer], handleFormSubmitRequest);
     const [formData, setFormData] = useState({
@@ -132,9 +138,70 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         party_category: ''
     });
 
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = paginatedLedgers.map(l => l._id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+        const token = getToken();
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledgers/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            fetchLedgers();
+        } else if (actionType === 'ACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledgers/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: true }) });
+                } catch (err) { }
+            }
+            fetchLedgers();
+        } else if (actionType === 'DEACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledgers/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: false }) });
+                } catch (err) { }
+            }
+            fetchLedgers();
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledgers/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_cancelled: true, is_active: false }) });
+                } catch (err) { }
+            }
+            fetchLedgers();
+        }
+        setSelectedIds([]);
+        setShowBulkMenu(false);
+    };
+
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(9);
 
     const fetchLedgers = async () => {
         setLoading(true);
@@ -199,13 +266,9 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
             if (data.success) {
                 resetForm();
                 fetchLedgers();
-                if (isEditing) {
-                    setShowDrawer(false);
-                } else {
-                    setTimeout(() => {
-                        if (nameInputRef.current) nameInputRef.current.focus();
-                    }, 100);
-                }
+                setTimeout(() => {
+                    if (nameInputRef.current) nameInputRef.current.focus();
+                }, 100);
             } else {
                 setError(data.error || 'Failed to save ledger');
             }
@@ -468,13 +531,13 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
-            <main className="dashboard-main bg-slate-50/50">
+            <main className="dashboard-main flex flex-col h-screen overflow-hidden relative bg-slate-50/50">
                 <style>{`
                     .filter-label {
                         font-size: 10px;
@@ -588,13 +651,13 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <button
                                     onClick={() => {
                                         setTempVisibleColumns(visibleColumns);
-                                        setShowColumnDropdown(true);
+                                        setShowColumnModal(true);
                                     }}
-                                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer"
+                                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer whitespace-nowrap flex-shrink-0"
                                 >
                                     <Settings size={14} /> COLUMN SETTINGS
                                 </button>
-                                <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add">
+                                <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add whitespace-nowrap flex-shrink-0">
                                     <PlusCircle size={16} /> Create Ledger
                                 </button>
                             </>
@@ -603,7 +666,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                 />
 
                 {!showDrawer ? (
-                <div className="dashboard-content print-section">
+                <div className="print-section flex-1 flex flex-col" style={{ overflow: 'hidden', minHeight: 0, padding: '1.5rem' }}>
                     {/* Print Only Header */}
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-bold text-black mb-2">Ledger Master Report</h2>
@@ -615,7 +678,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     </div>
 
                     {/* Filters Toolbar */}
-                    <div className="toolbar-premium mb-4">
+                    <div className="toolbar-premium mb-4 flex-shrink-0">
                         <div className="search-premium">
                             <Search size={20} />
                             <input
@@ -647,41 +710,62 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <option value="Active">Active</option>
                                 <option value="Deactive">Deactive</option>
                             </select>
-                            
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                TOTAL : {filteredLedgers.length}
-                            </span>
                         </div>
 
-                        {/* Columns Selection Dropdown */}
-                        <div>
+                        <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                    className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                </button>
+                                {showBulkMenu && (
+                                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                        <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                        <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                        <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                    </div>
+                                )}
+                            </div>
 
-                            {showColumnDropdown && (
+                            {/* Column Settings Drawer Panel */}
+                            {showColumnModal && (
                                 <>
-                                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColumnDropdown(false)} />
+                                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColumnModal(false)} />
                                     <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl border-l border-slate-200 z-[10000] flex flex-col animate-in slide-in-from-right duration-300">
                                         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                             <div>
                                                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Column Settings</h3>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Select columns to display</p>
                                             </div>
-                                            <button onClick={() => setShowColumnDropdown(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800">
+                                            <button onClick={() => setShowColumnModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800">
                                                 <X size={18} />
                                             </button>
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                            {ALL_COLUMNS.map(col => (
-                                                <label key={col.key} className="flex items-center gap-3 cursor-pointer group py-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={tempVisibleColumns.includes(col.key)}
-                                                        onChange={() => toggleTempColumn(col.key)}
-                                                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
-                                                        style={{ accentColor: '#f97316' }}
-                                                    />
-                                                    <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">{col.label}</span>
-                                                </label>
-                                            ))}
+                                            {ALL_COLUMNS.map((col) => {
+                                                const isChecked = tempVisibleColumns.includes(col.key);
+                                                return (
+                                                    <label key={col.key} className="flex items-center gap-3 cursor-pointer group py-1">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setTempVisibleColumns([...tempVisibleColumns, col.key]);
+                                                                } else {
+                                                                    if (tempVisibleColumns.length <= 1) return;
+                                                                    setTempVisibleColumns(tempVisibleColumns.filter(k => k !== col.key));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                                                            style={{ accentColor: '#ff6b00' }}
+                                                        />
+                                                        <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">{col.label}</span>
+                                                    </label>
+                                                );
+                                            })}
                                         </div>
                                         <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
                                             <button
@@ -695,7 +779,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 type="button"
                                                 onClick={() => {
                                                     setVisibleColumns(tempVisibleColumns);
-                                                    setShowColumnDropdown(false);
+                                                    localStorage.setItem('ledgerPageColumns', JSON.stringify(tempVisibleColumns));
+                                                    setShowColumnModal(false);
                                                 }}
                                                 className="flex-1 py-2 text-xs font-bold text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors"
                                             >
@@ -705,15 +790,22 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     </div>
                                 </>
                             )}
-                        </div>
                     </div>
 
                     {/* Table View */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-                        <div className="overflow-x-auto">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
+                        <div className="overflow-x-auto overflow-y-auto flex-1">
                             <table className="table-premium">
                                 <thead>
                                     <tr className="bg-[#0b1727] border-b border-slate-200 text-[10px] font-black text-[#f97316] uppercase tracking-widest">
+                                        <th style={{ width: '40px', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={paginatedLedgers.length > 0 && paginatedLedgers.every(l => selectedIds.includes(l._id))}
+                                                onChange={toggleSelectAll}
+                                                className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                            />
+                                        </th>
                                         {columnVisible('action') && <th style={{ width: '60px', textAlign: 'center' }}>Action</th>}
                                         {columnVisible('name') && <th>Name</th>}
                                         {columnVisible('print_name') && <th>Print Name</th>}
@@ -746,6 +838,14 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     ) : (
                                         paginatedLedgers.map((ledger) => (
                                             <tr key={ledger._id}>
+                                                <td className="w-10 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(ledger._id)}
+                                                        onChange={() => toggleSelectOne(ledger._id)}
+                                                        className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                    />
+                                                </td>
                                                 {columnVisible('action') && (
                                                     <td className="w-10 text-center">
                                                         <ActionDropdown item={ledger} onEdit={handleEdit} onStatusChange={handleToggleStatus} onDelete={handleDelete} />
@@ -784,61 +884,68 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Bottom Total Bar + Pagination */}
+                        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 flex-shrink-0">
+                            <span className="text-[13px] font-bold text-[#ff6b00] uppercase tracking-wide">
+                                TOTAL RECORDS : {filteredLedgers.length}
+                            </span>
+                            {!loading && filteredLedgers.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                                        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLedgers.length)} of {filteredLedgers.length}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            disabled={currentPage === 1}
+                                            onClick={() => setCurrentPage(currentPage - 1)}
+                                            className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                        {Array.from({ length: totalPages }).map((_, idx) => {
+                                            const p = idx + 1;
+                                            if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+                                                return (
+                                                    <button
+                                                        key={p}
+                                                        onClick={() => setCurrentPage(p)}
+                                                        className={`w-8 h-8 rounded border text-xs font-bold ${currentPage === p
+                                                            ? 'bg-[#f97316] border-[#f97316] text-white shadow'
+                                                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        {p}
+                                                    </button>
+                                                );
+                                            } else if (p === currentPage - 2 || p === currentPage + 2) {
+                                                return <span key={p} className="text-slate-400 px-1 text-sm font-bold">...</span>;
+                                            }
+                                            return null;
+                                        })}
+                                        <button
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => setCurrentPage(currentPage + 1)}
+                                            className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                    <select
+                                        value={pageSize}
+                                        onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
+                                        className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-600 bg-white outline-none"
+                                    >
+                                        <option value={9}>9 / page</option>
+                                        <option value={25}>25 / page</option>
+                                        <option value={50}>50 / page</option>
+                                        <option value={100}>100 / page</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Pagination Controls */}
-                    {!loading && filteredLedgers.length > 0 && (
-                        <div className="flex justify-between items-center mt-4 no-print">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLedgers.length)} of {filteredLedgers.length} entries
-                            </span>
-                            <div className="flex items-center gap-4 ml-auto">
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage(currentPage - 1)}
-                                        className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-
-                                    {Array.from({ length: totalPages }).map((_, idx) => {
-                                        const p = idx + 1;
-                                        return (
-                                            <button
-                                                key={p}
-                                                onClick={() => setCurrentPage(p)}
-                                                className={`w-8 h-8 rounded border text-xs font-bold uppercase ${currentPage === p
-                                                    ? 'bg-[#f97316] border-[#f97316] text-white shadow'
-                                                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                    }`}
-                                            >
-                                                {p}
-                                            </button>
-                                        );
-                                    })}
-
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(currentPage + 1)}
-                                        className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
-                                <select
-                                    value={pageSize}
-                                    onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-                                    className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-600 bg-white outline-none"
-                                >
-                                    <option value={10}>10 / page</option>
-                                    <option value={25}>25 / page</option>
-                                    <option value={50}>50 / page</option>
-                                    <option value={100}>100 / page</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
                 </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
@@ -1173,6 +1280,11 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     </div>
                 )}
             </main>
-        </div>
+            <SaveConfirmationModal
+                isOpen={showSaveConfirm}
+                onConfirm={confirmSave}
+                onCancel={cancelSave}
+            />
+        </DashboardPageShell>
     );
 }

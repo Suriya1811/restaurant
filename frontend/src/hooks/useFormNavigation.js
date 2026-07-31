@@ -3,14 +3,20 @@ import { useEffect, useRef, useCallback } from 'react';
 export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
     const formRef = useRef(null);
 
+    // Mark the form with a data attribute so global navigation handler skips it
+    useEffect(() => {
+        if (formRef.current && formRef.current instanceof HTMLElement) {
+            formRef.current.setAttribute('data-form-nav-enabled', 'true');
+            formRef.current.dataset.formNavEnabled = 'true';
+        }
+    }, []);
+
     const getFocusableElements = useCallback(() => {
         if (!formRef.current) return [];
-        // Get all inputs, selects, textareas, and submit buttons that are not disabled or hidden
         return Array.from(formRef.current.querySelectorAll('input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[type="submit"]:not([disabled])'));
     }, []);
 
     useEffect(() => {
-        // Focus the first element when dependencies change (e.g. form modal opens)
         const timer = setTimeout(() => {
             if (!formRef.current) return;
             const elements = getFocusableElements();
@@ -34,12 +40,10 @@ export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
             const index = elements.indexOf(e.target);
 
             if (index > -1) {
-                // Do not prevent default if it's a textarea or button submit
                 if (e.target.tagName === 'TEXTAREA') return;
 
                 e.preventDefault();
 
-                // If not the last element and not a button, move to next
                 if (index < elements.length - 1 && e.target.tagName !== 'BUTTON') {
                     const nextEl = elements[index + 1];
                     if (nextEl && typeof nextEl.focus === 'function') {
@@ -49,15 +53,12 @@ export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
                         }
                     }
                 } else if (onSubmitRequest) {
-                    // Trigger submit confirmation when Enter is pressed on the last field or submit button
                     onSubmitRequest();
                 }
             }
         } else if (e.key === 'Backspace') {
             const target = e.target;
-            // Only navigate back if it is an input/textarea and it's completely empty
             if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-                // Guard against selectionStart DOMException on non-text input types
                 let isCursorAtStart = false;
                 try {
                     if (typeof target.selectionStart === 'number') {
@@ -87,5 +88,13 @@ export const useFormNavigation = (dependencies = [], onSubmitRequest) => {
         }
     }, [getFocusableElements, onSubmitRequest]);
 
-    return { formRef, handleKeyDown };
+    const formNavProps = {
+        ref: formRef,
+        onKeyDown: handleKeyDown,
+        'data-form-nav-enabled': 'true',
+    };
+
+    return { formRef, handleKeyDown, formNavProps };
 };
+
+export default useFormNavigation;

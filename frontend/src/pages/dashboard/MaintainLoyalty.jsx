@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Gift, Save, Loader2, AlertCircle, CheckCircle, Search, CalendarDays } from 'lucide-react';
 import '../../pages/SettingsPage.css';
 
@@ -64,7 +65,7 @@ const MaintainLoyalty = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -157,7 +158,7 @@ const MaintainLoyalty = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

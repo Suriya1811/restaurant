@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import {
     ArrowLeft,
     Search,
@@ -56,6 +57,7 @@ const HoldBillsPage = () => {
     });
 
     return (
+        <DashboardPageShell>
         <div style={{
             minHeight: '100vh',
             background: '#f1f5f9',
@@ -185,6 +187,7 @@ const HoldBillsPage = () => {
                 )}
             </div>
         </div>
+        </DashboardPageShell>
     );
 };
 

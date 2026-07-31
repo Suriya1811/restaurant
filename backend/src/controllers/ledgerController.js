@@ -99,8 +99,28 @@ exports.toggleLedgerStatus = async (req, res) => {
 // ─── DELETE ledger ───────────────────────────────────────────────────────────
 exports.deleteLedger = async (req, res) => {
     try {
-        const ledger = await Ledger.findOneAndDelete({ _id: req.params.id, company_id: req.user.restaurant_id });
+        const ledger = await Ledger.findOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         if (!ledger) return res.status(404).json({ success: false, error: 'Ledger not found' });
+
+        const Bill = require('../models/Bill');
+        const Purchase = require('../models/Purchase');
+        const Voucher = require('../models/Voucher');
+        const AccountTransaction = require('../models/AccountTransaction');
+
+        const billExists = await Bill.findOne({ customer_id: ledger._id });
+        const purchaseExists = await Purchase.findOne({ supplier_id: ledger._id });
+        const voucherExists = await Voucher.findOne({ "entries.ledger_id": ledger._id });
+        const txnExists = await AccountTransaction.findOne({ ledger_id: ledger._id });
+
+        if (billExists || purchaseExists || voucherExists || txnExists) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${ledger.name}' because it has transaction history. You can deactivate it instead.`
+            });
+        }
+
+        await Ledger.deleteOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         res.status(200).json({ success: true, message: 'Ledger deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

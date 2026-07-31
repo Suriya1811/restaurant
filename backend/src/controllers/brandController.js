@@ -108,11 +108,10 @@ exports.deleteBrand = async (req, res) => {
         });
 
         if (productsCount > 0) {
-            brand.is_active = false;
-            await brand.save();
-            return res.status(200).json({
-                success: true,
-                message: 'Brand preserved but deactivated because products are associated with it'
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${brand.name}' because it is used in products. You can deactivate it instead.`
             });
         }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import { PlusCircle, Search, Edit, Trash2, Loader2, AlertCircle, XCircle, CheckCircle2, Layers, ChevronDown, ChevronRight, Info, TrendingUp, TrendingDown, Package, Wallet, Triangle, X, Download, Printer, ChevronLeft, ArrowLeft, Save } from 'lucide-react';
 import { STANDARD_GROUPS, getNatureForGroup, ACCOUNT_NATURES } from '../../utils/standardGroups';
@@ -39,6 +40,66 @@ const GroupMaster = () => {
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState({});
     const toggleExpand = (name) => setExpandedGroups(p => ({...p, [name]: !p[name]}));
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = groups.map(g => g._id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledger-groups/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            fetchGroups();
+        } else if (actionType === 'ACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledger-groups/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: true }) });
+                } catch (err) { }
+            }
+            fetchGroups();
+        } else if (actionType === 'DEACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledger-groups/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: false }) });
+                } catch (err) { }
+            }
+            fetchGroups();
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${API}/ledger-groups/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_cancelled: true, is_active: false }) });
+                } catch (err) { }
+            }
+            fetchGroups();
+        }
+        setSelectedIds([]);
+        setShowBulkMenu(false);
+    };
 
     const handleFormSubmitRequest = () => {
         setShowSaveConfirm(true);
@@ -90,8 +151,12 @@ const GroupMaster = () => {
             const result = await res.json();
             if (!result.success) throw new Error(result.error || result.message);
             fetchGroups();
-            setShowDrawer(false);
             resetForm();
+            setTimeout(() => {
+                if (nameInputRef.current && typeof nameInputRef.current.focus === 'function') {
+                    try { nameInputRef.current.focus(); } catch (_) {}
+                }
+            }, 100);
         } catch (err) { setError(err.message); }
         finally { setSubmitting(false); }
     };
@@ -190,6 +255,14 @@ const GroupMaster = () => {
             <React.Fragment key={node._id}>
                 <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors group/row">
                     <td className="w-10 text-center py-3 px-2">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.includes(node._id)}
+                            onChange={() => toggleSelectOne(node._id)}
+                            className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                        />
+                    </td>
+                    <td className="w-10 text-center py-3 px-2">
                         <ActionDropdown item={node} onEdit={handleEdit} onStatusChange={handleStatusChange} onDelete={handleDelete} />
                     </td>
                     <td className="py-3 px-4" style={{ paddingLeft: `${depth * 30 + 16}px` }}>
@@ -220,7 +293,7 @@ const GroupMaster = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -290,9 +363,24 @@ const GroupMaster = () => {
                                     <option value="ACTIVE">Active</option>
                                     <option value="DEACTIVE">Deactive</option>
                                 </select>
-                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                    TOTAL : {treeData.length}
-                                </span>
+                                <div className="relative ml-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                        className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                        Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                        <ChevronDown size={14} />
+                                    </button>
+                                    {showBulkMenu && (
+                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                            <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                            <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                            <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                        </div>
+                                    )}
+                                </div>
+
                             </div>
                         </div>
 
@@ -301,6 +389,14 @@ const GroupMaster = () => {
                                 <table className="table-premium">
                                     <thead>
                                         <tr>
+                                            <th style={{ width: '40px', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={groups.length > 0 && groups.every(g => selectedIds.includes(g._id))}
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </th>
                                             <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                             <th>GROUP NAME</th>
                                             <th>NATURE</th>
@@ -309,14 +405,14 @@ const GroupMaster = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="3" className="text-center py-12">
+                                                <td colSpan="4" className="text-center py-12">
                                                     <Loader2 className="animate-spin text-[#f97316] mb-3 mx-auto" size={32} />
                                                     <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Loading Hierarchy...</p>
                                                 </td>
                                             </tr>
                                         ) : treeData.length === 0 ? (
                                             <tr>
-                                                <td colSpan="3" className="text-center py-12">
+                                                <td colSpan="4" className="text-center py-12">
                                                     <Layers size={40} className="mx-auto mb-3 text-slate-200" />
                                                     <p className="font-black text-slate-400 uppercase tracking-widest text-[12px]">No Groups Found</p>
                                                 </td>
@@ -326,6 +422,14 @@ const GroupMaster = () => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        {/* Bottom Total Buttons */}
+                        <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm">{treeData.length}</span>
                             </div>
                         </div>
                     </div>
@@ -406,7 +510,7 @@ const GroupMaster = () => {
                 )}
             </main>
             <SaveConfirmationModal isOpen={showSaveConfirm} onConfirm={confirmSave} onCancel={cancelSave} />
-        </div>
+        </DashboardPageShell>
     );
 };
 

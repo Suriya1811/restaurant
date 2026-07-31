@@ -105,19 +105,19 @@ exports.deleteCategory = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Category not found' });
         }
 
-        // Check if any products are associated with this category
-        const Product = require('../models/Product'); // Import here to avoid circular dependency
+        const Product = require('../models/Product');
+        const Bill = require('../models/Bill');
         const productsCount = await Product.countDocuments({
             category: category.name,
             company_id: req.user.restaurant_id
         });
+        const billExists = await Bill.findOne({ "items.category": category.name });
 
-        if (productsCount > 0) {
-            category.is_active = false;
-            await category.save();
-            return res.status(200).json({
-                success: true,
-                message: 'Category preserved but deactivated because products are associated with it'
+        if (productsCount > 0 || billExists) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${category.name}' because it is used in products or transactions. You can deactivate it instead.`
             });
         }
 

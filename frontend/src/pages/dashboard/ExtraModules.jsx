@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { 
     Ticket, Gift, Save, Loader2, AlertCircle, CheckCircle, 
     Plus, Trash2, Edit, CalendarDays, Sliders, ChevronRight,
@@ -48,9 +49,11 @@ const ExtraModules = () => {
     // --- System Modules State ---
     const [moduleStates, setModuleStates] = useState({
         kitchen: true, printer: true, counter: true, dashboard: true, 
-        reports: true, staff: true, table: true, management: true
+        reports: true, staff: true, table: true, management: true,
+        coupon: false, loyalty: false, kot: true, party_order: true
     });
     const [moduleSuccess, setModuleSuccess] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const toggleSidebar = () => {
         if (window.innerWidth <= 768) { setIsMobileSidebarOpen(!isMobileSidebarOpen); }
@@ -92,7 +95,11 @@ const ExtraModules = () => {
                         reports: settingsData.data.modules.reports_enabled,
                         staff: settingsData.data.modules.staff_enabled,
                         table: settingsData.data.modules.table_enabled,
-                        management: settingsData.data.modules.management_enabled
+                        management: settingsData.data.modules.management_enabled,
+                        coupon: settingsData.data.modules.coupon_enabled,
+                        loyalty: settingsData.data.modules.loyalty_enabled,
+                        kot: settingsData.data.modules.kot_enabled,
+                        party_order: settingsData.data.modules.party_order_enabled
                     });
                 }
             }
@@ -203,18 +210,29 @@ const ExtraModules = () => {
 
     const handleToggleModule = async (moduleKey, enabled) => {
         setModuleStates(prev => ({ ...prev, [moduleKey]: enabled }));
+    };
+
+    const handleSaveExtraModules = async () => {
+        setSaving(true);
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-            const payload = { [`${moduleKey}_enabled`]: enabled };
+            const payload = {
+                coupon_enabled: moduleStates.coupon,
+                printer_enabled: moduleStates.printer,
+                loyalty_enabled: moduleStates.loyalty,
+                kot_enabled: moduleStates.kot,
+                reports_enabled: moduleStates.reports,
+                party_order_enabled: moduleStates.party_order
+            };
             await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
             setModuleSuccess(true);
             setTimeout(() => setModuleSuccess(false), 3000);
 
-            // Sync AuthContext
             const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -223,7 +241,8 @@ const ExtraModules = () => {
                 setModuleSettings(sData.data.modules);
                 localStorage.setItem('moduleSettings', JSON.stringify(sData.data.modules));
             }
-        } catch (err) { console.error(`Failed to toggle ${moduleKey} module`, err); }
+        } catch (err) { console.error("Failed to save extra modules", err); }
+        finally { setSaving(false); }
     };
 
     const TABS = [
@@ -242,309 +261,75 @@ const ExtraModules = () => {
     );
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
                 <Header toggleSidebar={toggleSidebar} />
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">
                         <div>
-                            
-                            {activeTab === 'coupon' && (
-                                <div className="fade-in">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Coupons</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Promo ranges</p>
-                                        </div>
-                                    </div>
+                            <h2 className="text-2xl font-black uppercase tracking-wider mb-6" style={{ color: '#ea580c' }}>
+                                EXTRA MODULES
+                            </h2>
 
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        <div className="flex flex-col md:flex-row items-center justify-between bg-indigo-50/40 p-4 rounded border border-indigo-100 mb-8 gap-4 shadow-sm">
-                                            <div className="flex gap-4 items-center">
-                                                <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-indigo-600 shadow-sm">
-                                                    <Ticket size={24} />
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-indigo-900 uppercase tracking-tight text-sm">Coupon Checklist</p>
-                                                    <p className="text-[10px] font-bold text-indigo-700/60 mt-1 uppercase tracking-wider">Tick to unlock in Billing Settings</p>
-                                                </div>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" checked={couponEnabled} onChange={(e) => handleToggleCoupon(e.target.checked)} className="hidden peer" />
-                                                <div className="w-16 h-8 bg-slate-200 rounded-full peer peer-checked:after:translate-x-8 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
-                                            </label>
-                                        </div>
-
-                                        {couponSuccess && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Coupon module status updated!</div>}
-
-                                        <div className={`grid grid-cols-1 xl:grid-cols-2 gap-12 transition-opacity ${!couponEnabled ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
-                                            {/* Form */}
-                                            <div className="space-y-6">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded">
-                                                        <Plus size={20} />
-                                                    </div>
-                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                                                        {editingCouponId ? 'Update Coupon' : 'Create New Coupon'}
-                                                    </h3>
-                                                </div>
-
-                                                <div className="space-y-5">
-                                                    <div className="form-group-premium">
-                                                        <label>Coupon Name *</label>
-                                                        <input type="text" className="input-premium !rounded" value={couponForm.coupon_name} onChange={(e) => setCouponForm({ ...couponForm, coupon_name: e.target.value })} placeholder="e.g. Summer Festival" />
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="form-group-premium">
-                                                            <label>Number From *</label>
-                                                            <input type="number" className="input-premium !rounded" value={couponForm.num_from} onChange={(e) => setCouponForm({ ...couponForm, num_from: e.target.value })} />
-                                                        </div>
-                                                        <div className="form-group-premium">
-                                                            <label>Number To *</label>
-                                                            <input type="number" className="input-premium !rounded" value={couponForm.num_to} onChange={(e) => setCouponForm({ ...couponForm, num_to: e.target.value })} />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="form-group-premium">
-                                                            <label>Start Date *</label>
-                                                            <input type="date" className="input-premium !rounded" value={couponForm.start_date ? couponForm.start_date.split('T')[0] : ''} onChange={(e) => setCouponForm({ ...couponForm, start_date: e.target.value })} />
-                                                        </div>
-                                                        <div className="form-group-premium">
-                                                            <label>End Date *</label>
-                                                            <input type="date" className="input-premium !rounded" value={couponForm.end_date ? couponForm.end_date.split('T')[0] : ''} onChange={(e) => setCouponForm({ ...couponForm, end_date: e.target.value })} />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="form-group-premium">
-                                                        <label>Coupon Mode</label>
-                                                        <select className="input-premium !rounded" value={couponForm.type} onChange={(e) => setCouponForm({ ...couponForm, type: e.target.value })}>
-                                                            <option value="DISCOUNT">Fixed / Percentage Discount</option>
-                                                            <option value="BOGO">Buy 1 Get 1 Free (BOGO)</option>
-                                                        </select>
-                                                    </div>
-
-                                                    {couponForm.type === 'DISCOUNT' && (
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="form-group-premium">
-                                                                <label>Disc. Mode</label>
-                                                                <select className="input-premium !rounded" value={couponForm.discount_type} onChange={(e) => setCouponForm({ ...couponForm, discount_type: e.target.value })}>
-                                                                    <option value="PERCENT">Percentage (%)</option>
-                                                                    <option value="FIXED">Fixed Amount (₹)</option>
-                                                                </select>
-                                                            </div>
-                                                            <div className="form-group-premium">
-                                                                <label>Amount / %</label>
-                                                                <input type="number" className="input-premium !rounded" value={couponForm.discount_value} onChange={(e) => setCouponForm({ ...couponForm, discount_value: e.target.value })} />
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex gap-3 pt-6">
-                                                        {editingCouponId && (
-                                                            <button onClick={() => { setEditingCouponId(null); setCouponForm({ coupon_name: '', num_from: '', num_to: '', start_date: '', end_date: '', type: 'DISCOUNT', discount_type: 'PERCENT', discount_value: 0 }); }} 
-                                                                className="btn-premium-outline flex-1">CANCEL</button>
-                                                        )}
-                                                        
-                            
-                            
-                            
-
-                            
-                            
-                            
-
-                            
-                            
-                            
-
-                            <button
-                                type="button"
-                                className="btn-export excel"
-                                onClick={() => {}}
-                                title="Export to Excel"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export pdf"
-                                onClick={() => {}}
-                                title="Export to PDF"
-                            >
-                                <Download size={14} />
-                                <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-export print"
-                                onClick={() => window.print()}
-                                title="Print"
-                            >
-                                <Printer size={14} />
-                                <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
-                            </button>
-<button onClick={handleSaveCoupon} disabled={savingCoupon} className="btn-action-add">
-                                                            {savingCoupon ? <><Loader2 className="animate-spin" /> ...</> : <><Save size={18} /> {editingCouponId ? 'Update' : 'Create'}</>}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* List */}
-                                            <div className="bg-slate-50/50 rounded p-4 border border-slate-100 flex flex-col min-h-[500px]">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Active Coupon List</p>
-                                                <div className="space-y-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-                                                    {coupons.map(c => (
-                                                        <div key={c._id} className="bg-white p-5 rounded border border-slate-100 shadow-sm group hover:border-indigo-200 transition-all">
-                                                            <div className="flex justify-between items-start mb-3">
-                                                                <div>
-                                                                    <h4 className="font-black text-slate-800 tracking-tight text-sm mb-1">{c.coupon_name}</h4>
-                                                                    <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">{c.type}</span>
-                                                                </div>
-                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                                    <button onClick={() => { setEditingCouponId(c._id); setCouponForm(c); }} className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-colors"><Edit size={14} /></button>
-                                                                    <button onClick={() => handleDeleteCoupon(c._id)} className="p-2 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={14} /></button>
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-4 text-[11px] text-slate-600">
-                                                                <div>Range: {c.num_from} - {c.num_to}</div>
-                                                                <div className="text-right">Value: {c.type === 'DISCOUNT' ? (c.discount_type === 'PERCENT' ? `${c.discount_value}%` : `₹${c.discount_value}`) : 'BOGO'}</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {coupons.length === 0 && (
-                                                        <div className="text-center py-20 text-slate-300">No coupons found.</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                            {moduleSuccess && (
+                                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6">
+                                    <CheckCircle size={18} /> Extra modules settings saved successfully!
                                 </div>
                             )}
 
-                            {activeTab === 'loyalty' && (
-                                <div className="fade-in">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Loyalty</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Points setup</p>
-                                        </div>
-                                    </div>
+                            <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                {[
+                                    { key: 'coupon', label: 'Coupon Module' },
+                                    { key: 'printer', label: 'Printer Settings' },
+                                    { key: 'loyalty', label: 'Loyalty Module' },
+                                    { key: 'kot', label: 'KOT Module' },
+                                    { key: 'reports', label: 'Advanced Reports' },
+                                    { key: 'party_order', label: 'Party Order Module' }
+                                ].map((mod, index) => (
+                                    <label
+                                        key={mod.key}
+                                        className={`flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-slate-50 transition-colors ${index !== 5 ? 'border-b border-slate-200' : ''}`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={moduleStates[mod.key] || false}
+                                            onChange={(e) => handleToggleModule(mod.key, e.target.checked)}
+                                            className="w-5 h-5 rounded border-2 border-slate-400 text-orange-500 focus:ring-orange-500 focus:ring-2 cursor-pointer"
+                                            style={{ accentColor: '#ea580c' }}
+                                        />
+                                        <span className="text-lg font-bold text-slate-800">
+                                            {mod.label}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
 
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        {loyaltySuccess && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Loyalty settings saved!</div>}
-
-                                        <div className="max-w-2xl space-y-8">
-                                            <div className="flex flex-col md:flex-row items-center justify-between bg-indigo-50/40 p-4 rounded border border-indigo-100 gap-4 shadow-sm">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-indigo-600 shadow-sm">
-                                                        <Gift size={24} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-indigo-900 uppercase tracking-tight text-sm">Loyalty Checklist</p>
-                                                        <p className="text-[10px] font-bold text-indigo-700/60 mt-1 uppercase tracking-wider">Tick to unlock in Billing Settings</p>
-                                                    </div>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" className="hidden peer" checked={loyaltyForm.enabled} 
-                                                        onChange={e => handleToggleLoyalty(e.target.checked)} />
-                                                    <div className="w-16 h-8 bg-slate-200 rounded-full peer peer-checked:after:translate-x-8 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
-                                                </label>
-                                            </div>
-
-                                            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity ${!loyaltyForm.enabled ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
-                                                <div className="form-group-premium">
-                                                    <label>Points Per ₹100 Spent</label>
-                                                    <input type="number" className="input-premium !rounded" value={loyaltyForm.points_per_100} 
-                                                        onChange={e => setLoyaltyForm({ ...loyaltyForm, points_per_100: e.target.value })} />
-                                                </div>
-                                                <div className="form-group-premium">
-                                                    <label>Min Points to Redeem</label>
-                                                    <input type="number" className="input-premium !rounded" value={loyaltyForm.target_points} 
-                                                        onChange={e => setLoyaltyForm({ ...loyaltyForm, target_points: e.target.value })} />
-                                                </div>
-                                                <div className="form-group-premium">
-                                                    <label>Rupee Value per Point (₹)</label>
-                                                    <input type="number" className="input-premium !rounded" value={loyaltyForm.point_value} 
-                                                        onChange={e => setLoyaltyForm({ ...loyaltyForm, point_value: e.target.value })} />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-end pt-4">
-                                                <button onClick={handleSaveLoyalty} disabled={savingLoyalty} className="btn-action-save">
-                                                    {savingLoyalty ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Save Loyalty Config</>}
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-indigo-50/50 rounded p-4 border border-indigo-50 flex gap-4">
-                                                <AlertCircle className="text-indigo-600 shrink-0" size={20} />
-                                                <p className="text-[11px] font-bold text-indigo-700/70">
-                                                    Note: Point value adjustments will affect all existing points. Minimum redemption limit applies at checkout.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'system' && (
-                                <div className="fade-in">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">System</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Core modules</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        {moduleSuccess && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Module settings synchronized!</div>}
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {[
-                                                { key: 'reports', label: 'Reports Hub', icon: <BarChart3 size={20} />, sub: 'Advanced sales & stock analysis' },
-                                                { key: 'kitchen', label: 'Kitchen Display', icon: <Monitor size={20} />, sub: 'Order tracking for chefs' },
-                                                { key: 'printer', label: 'Printer Engine', icon: <Printer size={20} />, sub: 'Receipt & KOT printing gateways' },
-                                                { key: 'counter', label: 'Counter System', icon: <Clock size={20} />, sub: 'Shift control & multi-counter' },
-                                                { key: 'staff', label: 'Waiter & Captain', icon: <Users size={20} />, sub: 'Staff assignments & tracking' },
-                                                { key: 'table', label: 'Table Management', icon: <Table size={18} />, sub: 'Floor plan & availability' },
-                                                { key: 'management', label: 'Management Suite', icon: <Settings size={18} />, sub: 'Admin controls & configurations' }
-                                            ].map(mod => (
-                                                <div key={mod.key} className="bg-slate-50/50 p-4 rounded border border-slate-100 flex flex-col justify-between group hover:border-indigo-100 transition-all">
-                                                    <div className="mb-6">
-                                                        <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-indigo-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                                            {mod.icon}
-                                                        </div>
-                                                        <p className="font-black text-slate-800 uppercase tracking-tight text-sm">{mod.label}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{mod.sub}</p>
-                                                    </div>
-                                                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                                        <span className={`text-[9px] font-black uppercase tracking-widest ${moduleStates[mod.key] ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                                            {moduleStates[mod.key] ? 'ENABLED' : 'DISABLED'}
-                                                        </span>
-                                                        <label className="relative inline-flex items-center cursor-pointer">
-                                                            <input type="checkbox" className="hidden peer" checked={moduleStates[mod.key]} 
-                                                                onChange={e => handleToggleModule(mod.key, e.target.checked)} />
-                                                            <div className="w-12 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <div className="flex justify-end mt-10">
+                                <button
+                                    onClick={handleSaveExtraModules}
+                                    disabled={saving}
+                                    className="px-10 py-4 text-white font-black uppercase tracking-widest rounded-md shadow-lg hover:opacity-90 transition-all flex items-center gap-3 disabled:opacity-50"
+                                    style={{ backgroundColor: '#ea580c', minWidth: '180px', justifyContent: 'center' }}
+                                >
+                                    {saving ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Save size={18} />
+                                            SAVE
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

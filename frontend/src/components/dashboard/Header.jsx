@@ -4,9 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import logoSidebar from '../../assets/logo_sidebar.png';
 import FinancialYearModal from '../common/FinancialYearModal';
+import ClosePageConfirmationModal from '../common/ClosePageConfirmationModal';
 import { getActiveFinancialYear, checkFinancialYearActive } from '@/utils/financialYearUtils';
 
-const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, onClose, showClose = true, showProfileControls, isMaster }) => {
+const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, onClose, showClose = true, showProfileControls, isMaster, tabs }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -14,6 +15,9 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [isFYModalOpen, setIsFYModalOpen] = useState(false);
     const [activeFY, setActiveFY] = useState(() => getActiveFinancialYear());
+    const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+    const pendingCloseActionRef = useRef(null);
+    const closeConfirmOpenRef = useRef(false);
     const profileRef = useRef(null);
 
     useEffect(() => {
@@ -45,44 +49,80 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                 return;
             }
 
-            if (!isInput) {
-                if (e.ctrlKey) {
-                    if (e.key === 'F2' || e.code === 'F2') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/display');
-                    } else if (e.key === 'F5' || e.code === 'F5') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/ledgers');
-                    } else if (e.key === 'F6' || e.code === 'F6') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/products');
-                    } else if (e.key === 'F9' || e.code === 'F9') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/vouchers');
-                    } else if (e.key === 'F12' || e.code === 'F12') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/purchase-history');
-                    }
-                } else if (!e.altKey && !e.shiftKey) {
-                    if (e.key === 'F2' || e.code === 'F2') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/billing');
-                    } else if (e.key === 'F3' || e.code === 'F3') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/table-select');
-                    } else if (e.key === 'F5' || e.code === 'F5') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/ledgers/create');
-                    } else if (e.key === 'F6' || e.code === 'F6') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/products');
-                    } else if (e.key === 'F9' || e.code === 'F9') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/vouchers');
-                    } else if (e.key === 'F12' || e.code === 'F12') {
-                        e.preventDefault();
-                        navigate('/dashboard/self-service/purchase');
-                    }
+            // ESC Key -> Show "Close this page?" confirmation from any page
+            if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+                const isMainPage = location.pathname === '/dashboard/self-service/home' ||
+                                   location.pathname === '/dashboard/home' ||
+                                   location.pathname === '/dashboard' ||
+                                   location.pathname === '/dashboard/self-service' ||
+                                   location.pathname === '/dashboard/self-service/';
+                if (!isMainPage && !closeConfirmOpenRef.current && !showCloseConfirm && !isFYModalOpen) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                    pendingCloseActionRef.current = () => {
+                        if (onClose) {
+                            onClose();
+                        } else {
+                            navigate('/dashboard/self-service/home');
+                        }
+                    };
+                    closeConfirmOpenRef.current = true;
+                    setShowCloseConfirm(true);
+                    return;
+                }
+            }
+
+            // Direct Function Key Shortcuts (F2, F5, F6, F9, F12)
+            if (!e.altKey && !e.ctrlKey && !e.shiftKey) {
+                if (e.key === 'F2' || e.code === 'F2' || e.keyCode === 113) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/billing');
+                    return;
+                }
+                if (e.key === 'F3' || e.code === 'F3' || e.keyCode === 114) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/table-select');
+                    return;
+                }
+                if (e.key === 'F5' || e.code === 'F5' || e.keyCode === 116) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/ledgers/create');
+                    return;
+                }
+                if (e.key === 'F6' || e.code === 'F6' || e.keyCode === 117) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/products');
+                    return;
+                }
+                if (e.key === 'F9' || e.code === 'F9' || e.keyCode === 120) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/vouchers');
+                    return;
+                }
+                if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123) {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/purchase');
+                    return;
+                }
+            }
+
+            if (!isInput && e.ctrlKey) {
+                if (e.key === 'F2' || e.code === 'F2') {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/display');
+                } else if (e.key === 'F5' || e.code === 'F5') {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/ledgers');
+                } else if (e.key === 'F6' || e.code === 'F6') {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/products');
+                } else if (e.key === 'F9' || e.code === 'F9') {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/vouchers');
+                } else if (e.key === 'F12' || e.code === 'F12') {
+                    e.preventDefault();
+                    navigate('/dashboard/self-service/purchase-history');
                 }
             }
         };
@@ -101,50 +141,110 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('financial_year_changed', handleFYChange);
         };
-    }, [navigate]);
+    }, [navigate, location.pathname, showCloseConfirm, isFYModalOpen, onClose]);
 
     const storeName = 'YUGAM SOFTWARE';
-    const isMainDashboardRoute = location.pathname === '/dashboard/self-service/home' || 
-                                location.pathname === '/dashboard/home' || 
-                                location.pathname === '/dashboard' || 
+    const isMainDashboardRoute = location.pathname === '/dashboard/self-service/home' ||
+                                location.pathname === '/dashboard/home' ||
+                                location.pathname === '/dashboard' ||
                                 location.pathname === '/dashboard/self-service' ||
                                 location.pathname === '/dashboard/self-service/';
     const isMasterHeader = !isMainDashboardRoute || isMaster === true || showProfileControls === false;
+
+    const requestClosePage = () => {
+        if (isMainDashboardRoute && showClose === false) {
+            return;
+        }
+        pendingCloseActionRef.current = () => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate('/dashboard/self-service/home');
+            }
+        };
+        setShowCloseConfirm(true);
+    };
+
+    const confirmClosePage = () => {
+        setShowCloseConfirm(false);
+        const action = pendingCloseActionRef.current;
+        pendingCloseActionRef.current = null;
+        if (typeof action === 'function') {
+            action();
+        }
+    };
+
+    const cancelClosePage = () => {
+        setShowCloseConfirm(false);
+        pendingCloseActionRef.current = null;
+    };
 
     return (
         <header
             className={`dashboard-header ${isMasterHeader ? 'master-header' : ''}`}
             style={{
-                height: '65px',
+                height: '54px',
                 backgroundColor: isMasterHeader ? '#ffffff' : '#0F172A',
                 color: isMasterHeader ? '#0f172a' : '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-start',
                 padding: '0 1.25rem',
                 borderBottom: isMasterHeader ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
                 zIndex: 100,
-                flexShrink: 0
+                flexShrink: 0,
+                gap: '0',
+                ...(window.electronAPI?.isElectron ? { WebkitAppRegion: 'drag', appRegion: 'drag' } : {})
             }}
         >
-            {/* Left side */}
-            <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Left side (flex 1 to match right and keep center truly centered) */}
+            <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 0%', minWidth: 0, justifyContent: 'flex-start', ...(window.electronAPI?.isElectron ? { WebkitAppRegion: 'no-drag', appRegion: 'no-drag' } : {}) }}>
                 {title && (
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: isMasterHeader ? '#0f172a' : '#ffffff', margin: 0, letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{title}</h2>
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: isMasterHeader ? '#0f172a' : '#ffffff', margin: 0, letterSpacing: '-0.01em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{title}</h2>
+                )}
+                {/* Inline Tab Buttons (for Settings page) */}
+                {tabs && tabs.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '16px' }}>
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={tab.onClick}
+                                style={{
+                                    padding: '6px 16px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: 800,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.03em',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    border: tab.active ? 'none' : '1px solid #e2e8f0',
+                                    backgroundColor: tab.active ? '#ea580c' : '#ffffff',
+                                    color: tab.active ? '#ffffff' : '#475569',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: tab.active ? '0 2px 8px rgba(234, 88, 12, 0.3)' : 'none'
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 )}
             </div>
 
-            {/* Center: Store / Company Name in Bold White (Only on Main Dashboard Header) */}
-            {!isMasterHeader && (
-                <div className="header-center" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            {/* Center: Store / Company Name in Bold White (Only on Main Dashboard Header) — flex 1 for absolute center */}
+            {!isMasterHeader ? (
+                <div className="header-center" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 0%', minWidth: 0, pointerEvents: 'none', position: 'relative' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                         {storeName}
                     </span>
                 </div>
+            ) : (
+                <div style={{ flex: '1 1 0%', minWidth: 0 }} />
             )}
 
-            {/* Right: Actions / Buttons */}
-            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative' }} ref={profileRef}>
+            {/* Right: Actions / Buttons (flex 1 to match left/center for absolute center) */}
+            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative', flex: '1 1 0%', minWidth: 0, justifyContent: 'flex-end', ...(window.electronAPI?.isElectron ? { WebkitAppRegion: 'no-drag', appRegion: 'no-drag' } : {}) }} ref={profileRef}>
                 {(actions || headerActions) && <div className="flex items-center gap-2.5">{actions || headerActions}</div>}
                 
                 {/* Close button for Master Page Headers (matching Ledger Master styling) */}
@@ -152,7 +252,7 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                     <button
                         type="button"
                         onClick={onClose || (() => navigate('/dashboard/self-service/home'))}
-                        className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ml-1"
+                        className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ml-1"
                         title="Close Module"
                     >
                         <X size={14} /> CLOSE
@@ -172,22 +272,22 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '6px',
-                                height: '36px',
-                                padding: '0 14px',
-                                borderRadius: '18px',
+                                gap: '5px',
+                                height: '30px',
+                                padding: '0 12px',
+                                borderRadius: '15px',
                                 border: '1.5px solid rgba(255, 255, 255, 0.3)',
                                 backgroundColor: isHelpOpen ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.08)',
                                 color: '#ffffff',
                                 cursor: 'pointer',
-                                fontSize: '13px',
+                                fontSize: '12px',
                                 fontWeight: 700,
                                 transition: 'all 0.2s',
                                 marginRight: '4px'
                             }}
                             title="Keyboard Shortcuts & Help"
                         >
-                            <HelpCircle size={16} />
+                            <HelpCircle size={15} />
                             <span>Help</span>
                         </button>
 
@@ -197,8 +297,8 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                                 setIsHelpOpen(false);
                             }}
                             style={{
-                                width: '36px',
-                                height: '36px',
+                                width: '30px',
+                                height: '30px',
                                 borderRadius: '50%',
                                 border: '1.5px solid rgba(255, 255, 255, 0.3)',
                                 backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -221,7 +321,11 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginLeft: '4px' }}>
                             <button
                                 type="button"
-                                onClick={() => {}}
+                                onClick={() => {
+                                    if (window.electronAPI?.window?.minimize) {
+                                        window.electronAPI.window.minimize();
+                                    }
+                                }}
                                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
                                 title="Minimize"
                             >
@@ -229,7 +333,11 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                             </button>
                             <button
                                 type="button"
-                                onClick={() => {}}
+                                onClick={() => {
+                                    if (window.electronAPI?.window?.toggleMaximize) {
+                                        window.electronAPI.window.toggleMaximize();
+                                    }
+                                }}
                                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
                                 title="Maximize"
                             >
@@ -237,7 +345,13 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                             </button>
                             <button
                                 type="button"
-                                onClick={onClose || (() => navigate('/dashboard/self-service/home'))}
+                                onClick={() => {
+                                    if (window.electronAPI?.window?.requestClose) {
+                                        window.electronAPI.window.requestClose();
+                                    } else {
+                                        requestClosePage();
+                                    }
+                                }}
                                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}
                                 title="Close"
                             >

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { useNavigate } from 'react-router-dom';
 import { printReport } from '@/components/common/ReportToolbar';
 import { Loader2, Eye, X, FileText, Printer, Wallet, Landmark, Activity, Info, Download, Search } from 'lucide-react';
@@ -205,7 +206,7 @@ const CashAndBank = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50 font-sans min-h-screen">
+        <DashboardPageShell className="bg-slate-50 font-sans min-h-screen">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -483,7 +484,7 @@ const CashAndBank = () => {
                 </div>
             </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

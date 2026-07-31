@@ -120,92 +120,56 @@ const ExtraModulesSettings = () => {
 
     return (
         <div className="fade-in">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Extra Modules</h3>
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Enable or disable additional features</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={saveModules} disabled={saving} className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5">
-                        {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} SAVE MODULES
-                    </button>
-                </div>
+            <h2 className="text-xl font-black uppercase tracking-wider mb-6" style={{ color: '#ea580c' }}>
+                EXTRA MODULES
+            </h2>
+
+            {error && <div className="bg-rose-50 border border-rose-200 p-4 rounded-lg flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {error}</div>}
+            {success && <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> {success}</div>}
+
+            <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                {[
+                    { key: 'coupon_enabled', label: 'Coupon Module' },
+                    { key: 'printer_enabled', label: 'Printer Settings' },
+                    { key: 'loyalty_enabled', label: 'Loyalty Module' },
+                    { key: 'kot_enabled', label: 'KOT Module' },
+                    { key: 'reports_enabled', label: 'Advanced Reports' },
+                    { key: 'party_order_enabled', label: 'Party Order Module' }
+                ].map((mod, index) => (
+                    <label
+                        key={mod.key}
+                        className={`flex items-center gap-5 px-6 py-4 cursor-pointer hover:bg-slate-50 transition-colors ${index !== 5 ? 'border-b border-slate-200' : ''}`}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={modules[mod.key] || false}
+                            onChange={(e) => setModules({...modules, [mod.key]: e.target.checked})}
+                            className="w-5 h-5 rounded border-2 border-slate-400 text-orange-500 focus:ring-orange-500 focus:ring-2 cursor-pointer"
+                            style={{ accentColor: '#ea580c' }}
+                        />
+                        <span className="text-base font-bold text-slate-800">
+                            {mod.label}
+                        </span>
+                    </label>
+                ))}
             </div>
 
-            {error && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {error}</div>}
-            {success && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> {success}</div>}
-
-            <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    
-                    {/* Module Cards */}
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">Coupon Module</h4>
-                            <p className="text-xs text-slate-500 mt-1">Enable discount coupons</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.coupon_enabled} onChange={e => setModules({...modules, coupon_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">Loyalty Module</h4>
-                            <p className="text-xs text-slate-500 mt-1">Enable loyalty points system</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.loyalty_enabled} onChange={e => setModules({...modules, loyalty_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">KOT Module</h4>
-                            <p className="text-xs text-slate-500 mt-1">Kitchen Order Tickets</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.kot_enabled} onChange={e => setModules({...modules, kot_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">Printer Settings</h4>
-                            <p className="text-xs text-slate-500 mt-1">Thermal Printing</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.printer_enabled} onChange={e => setModules({...modules, printer_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">Advanced Reports</h4>
-                            <p className="text-xs text-slate-500 mt-1">Data Export & Analysis</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.reports_enabled} onChange={e => setModules({...modules, reports_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-sm">Party Order Module</h4>
-                            <p className="text-xs text-slate-500 mt-1">Show Party Order in Sales Bill</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={modules.party_order_enabled !== false} onChange={e => setModules({...modules, party_order_enabled: e.target.checked})} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                        </label>
-                    </div>
-
-                </div>
+            <div className="flex justify-end mt-8">
+                <button
+                    onClick={saveModules}
+                    disabled={saving}
+                    className="px-8 py-3 text-white font-black uppercase tracking-widest rounded-md shadow-lg hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 text-sm"
+                    style={{ backgroundColor: '#ea580c', minWidth: '150px', justifyContent: 'center' }}
+                >
+                    {saving ? (
+                        <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                        <>
+                            <Save size={16} />
+                            SAVE
+                        </>
+                    )}
+                </button>
             </div>
         </div>
     );

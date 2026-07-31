@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Loader2, Printer, Save, CheckCircle2 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -83,7 +84,7 @@ const PrinterSettings = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             <main className="dashboard-main">
@@ -163,7 +164,7 @@ const PrinterSettings = () => {
                     )}
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

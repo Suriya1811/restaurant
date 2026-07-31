@@ -151,18 +151,16 @@ exports.deleteProduct = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
 
-        // Soft Delete Logic: If biled, only deactivate.
         const Bill = require('../models/Bill'); 
-        const billExists = await Bill.findOne({
-            "items.product_id": req.params.id
-        });
+        const Purchase = require('../models/Purchase'); 
+        const billExists = await Bill.findOne({ "items.product_id": req.params.id });
+        const purchaseExists = await Purchase.findOne({ "items.product_id": req.params.id });
 
-        if (billExists) {
-            product.is_active = false;
-            await product.save();
-            return res.status(200).json({
-                success: true,
-                message: 'Product preserved but deactivated because it has been used in bills'
+        if (billExists || purchaseExists) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${product.name}' because it is used in transaction history. You can deactivate it instead.`
             });
         }
 

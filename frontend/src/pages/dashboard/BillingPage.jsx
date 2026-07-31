@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarPaymentFlow from './SidebarPaymentFlow';
 import PayModePopup from './PayModePopup';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './BillingPage.css';
 import BillPreviewModal from './BillPreviewModal';
 import { CardSkeleton } from '../../components/Skeleton';
@@ -2129,6 +2130,7 @@ const BillingPage = () => {
     };
 
     return (
+        <DashboardPageShell>
         <div className={`pos-layout ${showSidebar ? 'sidebar-open' : 'sidebar-closed'} layout-${billingLayout.toLowerCase().replace('_', '-')}`}>
             {/* Top Navigation Bar - Pitch Black Header Matching Reference Image */}
             <div className="pos-nav" style={{ background: '#050811', height: '50px', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #ff5200' }}>
@@ -2743,7 +2745,7 @@ const BillingPage = () => {
                             <span>TRANSFER</span>
                         </button>
 
-                        {/* 5. REFUND / RETURN */}
+                        {/* 5. RETURN */}
                         <button
                             type="button"
                             onClick={() => toggleExpandableForm('RETURN')}
@@ -2763,10 +2765,10 @@ const BillingPage = () => {
                                 cursor: 'pointer',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                             }}
-                            title="Refund / Return"
+                            title="Sales Return"
                         >
                             <RotateCcw size={15} color={showReturnForm ? '#ff5200' : '#334155'} />
-                            <span>REFUND</span>
+                            <span>RETURN</span>
                         </button>
                     </div>
 
@@ -4572,6 +4574,7 @@ const BillingPage = () => {
                 </div>
             )}
         </div>
+        </DashboardPageShell>
     );
 };
 

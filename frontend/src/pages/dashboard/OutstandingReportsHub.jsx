@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import {
     Loader2, RefreshCw, Printer, Settings, X, UserCircle, Users,
     TrendingUp, TrendingDown, FileText
@@ -664,7 +665,7 @@ const OutstandingReportsHub = ({ defaultTab, isEmbedded = false }) => {
     }
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             <Sidebar
                 isCollapsed={isCollapsed}
                 isMobileOpen={isMobileSidebarOpen}
@@ -684,7 +685,7 @@ const OutstandingReportsHub = ({ defaultTab, isEmbedded = false }) => {
                 />
                 {mainContent}
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

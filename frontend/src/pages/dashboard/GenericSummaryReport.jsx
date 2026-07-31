@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import ReportNavigationDropdown from '@/components/dashboard/ReportNavigationDropdown';
 import {
     Calendar, RefreshCw, Loader2, Download, Database,
@@ -426,7 +427,7 @@ const GenericSummaryReport = ({ title, subtitle, endpoint, groupBy, isEmbedded =
     if (isEmbedded) return content;
 
     return (
-        <div className="dashboard-layout bg-white">
+        <DashboardPageShell className="bg-white">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)} />
@@ -440,7 +441,7 @@ const GenericSummaryReport = ({ title, subtitle, endpoint, groupBy, isEmbedded =
                     {content}
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

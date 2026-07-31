@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import {
     Printer, Plus, Trash2, Edit2, Save, X, Loader2,
@@ -145,7 +146,7 @@ export default function PrinterManagement() {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -394,6 +395,6 @@ export default function PrinterManagement() {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 }

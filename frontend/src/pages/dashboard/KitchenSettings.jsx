@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Loader2, ChefHat, Save, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -100,7 +101,7 @@ const KitchenSettings = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             <main className="dashboard-main">
@@ -197,7 +198,7 @@ const KitchenSettings = () => {
                     )}
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -173,7 +174,7 @@ const AdvancedReports = () => {
     );
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -748,7 +749,7 @@ const AdvancedReports = () => {
 
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import './PurchaseEntryForm.css';
 import {
@@ -397,11 +398,33 @@ export default function PurchaseEntryForm() {
             const data = await res.json();
             if (data.success) {
                 if (andPrint) {
-                    // Navigate to view with print intent
                     navigate('/dashboard/purchase-invoices', { state: { printId: data.data._id } });
                 } else {
+                    setInvoiceNo('');
+                    setInvoiceDate(new Date().toISOString().split('T')[0]);
+                    setPaymentType('CREDIT');
+                    setSupplierId('');
+                    setSelectedSupplier(null);
+                    setDueDays(0);
+                    setDueDate(getTodayStr());
+                    setRemarks('');
+                    setOtherCharges(0);
+                    setRoundOff(0);
+                    setPaidAmount(0);
+                    setItems([emptyItem()]);
+                    setTotals({ sub_total: 0, discount_amount: 0, tax_amount: 0, cgst_amount: 0, sgst_amount: 0, net_amount: 0, grand_total: 0 });
+                    setSupplierSearch('');
+                    setShowSupplierDropdown(false);
+                    setShowItemDropdown(false);
+                    setActiveItemRow(-1);
+                    setItemCursor(-1);
                     alert('Purchase bill saved successfully!');
-                    navigate('/dashboard/purchase-invoices');
+                    setTimeout(() => {
+                        const firstField = document.getElementById('pef-supplier');
+                        if (firstField && typeof firstField.focus === 'function') {
+                            try { firstField.focus(); } catch (_) {}
+                        }
+                    }, 150);
                 }
             } else {
                 alert('Error: ' + (data.error || 'Save failed'));
@@ -525,7 +548,7 @@ export default function PurchaseEntryForm() {
     );
 
     return (
-        <div className="dashboard-layout bg-slate-50/50">
+        <DashboardPageShell className="bg-slate-50/50">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -1331,6 +1354,6 @@ export default function PurchaseEntryForm() {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 }

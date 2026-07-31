@@ -68,6 +68,21 @@ exports.deleteUnit = async (req, res) => {
         if (!unit) {
             return res.status(404).json({ success: false, error: 'Unit not found' });
         }
+
+        const Product = require('../models/Product');
+        const productsCount = await Product.countDocuments({
+            unit: unit.name,
+            company_id: req.user.restaurant_id
+        });
+
+        if (productsCount > 0) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${unit.name}' because it is used in products. You can deactivate it instead.`
+            });
+        }
+
         await Unit.deleteOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         res.status(200).json({ success: true, message: 'Unit deleted successfully' });
     } catch (error) {

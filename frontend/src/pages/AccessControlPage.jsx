@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../components/dashboard/DashboardPageShell';
 import {
     Shield, Users, Plus, Edit2, Trash2, Save, X, Check,
     ChevronDown, ChevronRight, Eye, EyeOff, UserPlus,
@@ -820,7 +821,7 @@ const AccessControlPage = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar
                 isCollapsed={sidebarCollapsed}
                 isMobileOpen={mobileSidebarOpen}
@@ -1522,7 +1523,7 @@ const AccessControlPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 

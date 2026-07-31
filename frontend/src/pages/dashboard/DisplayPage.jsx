@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import ActionDropdown from '@/components/dashboard/ActionDropdown';
 import {
     CalendarDays, FileText, ClipboardList, DollarSign, Landmark,
@@ -83,6 +84,70 @@ const DisplayPage = () => {
     // Staff lists
     const [captains, setCaptains] = useState([]);
     const [waiters, setWaiters] = useState([]);
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = paginatedRecords.map(r => r._id || r.id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+
+        const savedUser = localStorage.getItem('user');
+        const { token } = JSON.parse(savedUser || '{}');
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/bills/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            setRecords(prev => prev.filter(x => !selectedIds.includes(x._id || x.id)));
+        } else if (actionType === 'ACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/bills/${id}/status`, { method: 'PUT', headers, body: JSON.stringify({ is_active: true }) });
+                } catch (err) { }
+            }
+            setRecords(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_active: true } : x));
+        } else if (actionType === 'DEACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/bills/${id}/status`, { method: 'PUT', headers, body: JSON.stringify({ is_active: false }) });
+                } catch (err) { }
+            }
+            setRecords(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_active: false } : x));
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/bills/${id}/status`, { method: 'PUT', headers, body: JSON.stringify({ is_cancelled: true, is_active: false }) });
+                } catch (err) { }
+            }
+            setRecords(prev => prev.map(x => selectedIds.includes(x._id || x.id) ? { ...x, is_cancelled: true, is_active: false } : x));
+        }
+
+        setSelectedIds([]);
+        setShowBulkMenu(false);
+    };
 
     const toggleSidebar = () => {
         if (window.innerWidth <= 768) {
@@ -486,7 +551,7 @@ const DisplayPage = () => {
     );
 
     return (
-        <div className="dashboard-layout bg-slate-50 print:bg-white print:block">
+        <DashboardPageShell className="bg-slate-50 print:bg-white print:block">
             <div className="print:hidden">
                 <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             </div>
@@ -505,16 +570,15 @@ const DisplayPage = () => {
                     <div className="p-6 space-y-4 flex-1 w-full mx-auto max-w-[1400px] print:p-0 print:max-w-none">
 
                         {/* Filters Row */}
-                        <div className="flex flex-wrap items-end gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100 print:hidden">
+                        <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100 print:hidden">
                             {/* Type Filter */}
-                            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                                <label className="text-[12px] font-bold text-slate-700">Sales Type</label>
+                            <div className="flex-1 min-w-[140px]">
                                 <select
                                     value={salesType}
                                     onChange={(e) => { setSalesType(e.target.value); setCurrentPage(1); }}
                                     className="w-full px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                 >
-                                    <option value="ALL">All</option>
+                                    <option value="ALL">Sales Type</option>
                                     <option value="KOT">KOT</option>
                                     <option value="KOT_BILL">KOT Bill</option>
                                     <option value="SALES_BILL">Sales Bill</option>
@@ -522,8 +586,7 @@ const DisplayPage = () => {
                             </div>
 
                             {/* Filter By */}
-                            <div className="flex flex-col gap-1.5 flex-[1.5] min-w-[240px]">
-                                <label className="text-[12px] font-bold text-slate-700">Filter By</label>
+                            <div className="flex-[1.5] min-w-[240px]">
                                 <div className="flex gap-2">
                                     <select
                                         value={filterBy}
@@ -535,7 +598,7 @@ const DisplayPage = () => {
                                         }}
                                         className="w-[120px] px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors cursor-pointer bg-white"
                                     >
-                                        <option value="ALL">All</option>
+                                        <option value="ALL">Filter By</option>
                                         <option value="CAPTAIN">Captain</option>
                                         <option value="WAITER">Waiter</option>
                                     </select>
@@ -571,29 +634,46 @@ const DisplayPage = () => {
                             </div>
 
                             {/* Date Range */}
-                            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                                <label className="text-[12px] font-bold text-slate-700">From Date</label>
+                            <div className="flex-1 min-w-[140px]">
                                 <input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }}
+                                    placeholder="From Date"
+                                    title="From Date"
                                     className="w-full px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white cursor-pointer"
                                 />
                             </div>
-                            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                                <label className="text-[12px] font-bold text-slate-700">To Date</label>
+                            <div className="flex-1 min-w-[140px]">
                                 <input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
+                                    placeholder="To Date"
+                                    title="To Date"
                                     className="w-full px-3 h-[42px] border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors bg-white cursor-pointer"
                                 />
                             </div>
 
                             {/* Action / Refresh Buttons */}
-                            <div className="flex flex-col gap-1.5 ml-auto">
-                                <label className="text-[12px] font-bold text-transparent select-none pointer-events-none">Actions</label>
+                            <div className="ml-auto">
                                 <div className="flex items-center gap-3 relative">
+                                    {/* Top Action Button */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                            className="flex items-center gap-2 px-5 h-[42px] bg-slate-800 text-white rounded-[4px] text-[13px] font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wide cursor-pointer"
+                                        >
+                                            Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px] ml-1">{selectedIds.length}</span>}
+                                            <ChevronDown size={14} />
+                                        </button>
+                                        {showBulkMenu && (
+                                            <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-[13px]">
+                                                <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
+                                                <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                            </div>
+                                        )}
+                                    </div>
                                     <button onClick={handleReset} className="flex items-center gap-2 px-6 h-[42px] bg-[#ff6b00] text-white rounded-[4px] text-[13px] font-bold hover:bg-[#e66000] transition-colors shadow-sm uppercase tracking-wide">
                                         <RefreshCw size={15} /> Refresh
                                     </button>
@@ -610,6 +690,14 @@ const DisplayPage = () => {
                                     <thead className="sticky top-0 bg-[#0b1727] z-10 shadow-sm print:static">
 
                                         <tr className="border-b border-slate-200">
+                                            <th className="py-4 px-3 text-center border-r border-slate-700/50 w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={paginatedRecords.length > 0 && paginatedRecords.every(r => selectedIds.includes(r._id || r.id))}
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </th>
                                             {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
                                                 <th key={col.id} className="py-4 px-4 text-[12px] font-bold text-[#ff6b00] uppercase tracking-wide text-center border-r border-slate-700/50 last:border-0 whitespace-nowrap">
                                                     {col.label}
@@ -635,64 +723,72 @@ const DisplayPage = () => {
                                         ) : (
                                             paginatedRecords.map((record, index) => (
                                                 <tr key={record.id} className="border-b border-slate-200 bg-white hover:bg-slate-50/80 transition-colors group">
+                                                    <td className="py-3 px-3 text-center border-r border-slate-200 w-10">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedIds.includes(record._id || record.id)}
+                                                            onChange={() => toggleSelectOne(record._id || record.id)}
+                                                            className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                        />
+                                                    </td>
                                                     {visibleColumns.includes('action') && (
                                                         <td className="py-3 px-4 relative text-center border-r border-slate-200 last:border-0 w-10">
                                                             <ActionDropdown
-                                                                 item={record}
-                                                                 onView={(r) => {
-                                                                     const targetBillId = r.raw_bill_id || r._id || r.bill_id;
-                                                                     if (targetBillId) {
-                                                                         navigate('/dashboard/self-service/billing', {
-                                                                             state: {
-                                                                                 fromTable: true,
-                                                                                 billId: targetBillId,
-                                                                                 tableNo: r.table || '',
-                                                                                 tableStatus: 'OCCUPIED'
-                                                                             }
-                                                                         });
-                                                                     }
-                                                                 }}
-                                                                 onAlter={(r) => {
-                                                                     const targetBillId = r.raw_bill_id || r._id || r.bill_id;
-                                                                     if (targetBillId) {
-                                                                         navigate('/dashboard/self-service/billing', {
-                                                                             state: {
-                                                                                 fromTable: true,
-                                                                                 billId: targetBillId,
-                                                                                 tableNo: r.table || '',
-                                                                                 tableStatus: 'OCCUPIED'
-                                                                             }
-                                                                         });
-                                                                     }
-                                                                 }}
-                                                                 onStatusChange={async (r, newStatus) => {
-                                                                     const targetId = r._id || r.id;
-                                                                     try {
-                                                                         const savedUser = localStorage.getItem('user');
-                                                                         const { token } = JSON.parse(savedUser || '{}');
-                                                                         await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}/status`, {
-                                                                             method: 'PUT',
-                                                                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                             body: JSON.stringify({ is_active: newStatus })
-                                                                         });
-                                                                     } catch (err) { }
-                                                                     setRecords(prev => prev.map(x => (x._id || x.id) === targetId ? { ...x, is_active: newStatus } : x));
-                                                                 }}
-                                                                 onDelete={async (r) => {
-                                                                     const targetId = r._id || r.id;
-                                                                     if (window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) {
-                                                                         try {
-                                                                             const savedUser = localStorage.getItem('user');
-                                                                             const { token } = JSON.parse(savedUser || '{}');
-                                                                             await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}`, {
-                                                                                 method: 'DELETE',
-                                                                                 headers: { 'Authorization': `Bearer ${token}` }
-                                                                             });
-                                                                         } catch (err) { }
-                                                                         setRecords(prev => prev.filter(x => (x._id || x.id) !== targetId));
-                                                                     }
-                                                                 }}
-                                                             />
+                                                                item={record}
+                                                                onView={(r) => {
+                                                                    const targetBillId = r.raw_bill_id || r._id || r.bill_id;
+                                                                    if (targetBillId) {
+                                                                        navigate('/dashboard/self-service/billing', {
+                                                                            state: {
+                                                                                fromTable: true,
+                                                                                billId: targetBillId,
+                                                                                tableNo: r.table || '',
+                                                                                tableStatus: 'OCCUPIED'
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                onAlter={(r) => {
+                                                                    const targetBillId = r.raw_bill_id || r._id || r.bill_id;
+                                                                    if (targetBillId) {
+                                                                        navigate('/dashboard/self-service/billing', {
+                                                                            state: {
+                                                                                fromTable: true,
+                                                                                billId: targetBillId,
+                                                                                tableNo: r.table || '',
+                                                                                tableStatus: 'OCCUPIED'
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                onStatusChange={async (r, newStatus) => {
+                                                                    const targetId = r._id || r.id;
+                                                                    try {
+                                                                        const savedUser = localStorage.getItem('user');
+                                                                        const { token } = JSON.parse(savedUser || '{}');
+                                                                        await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}/status`, {
+                                                                            method: 'PUT',
+                                                                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                                            body: JSON.stringify({ is_active: newStatus })
+                                                                        });
+                                                                    } catch (err) { }
+                                                                    setRecords(prev => prev.map(x => (x._id || x.id) === targetId ? { ...x, is_active: newStatus } : x));
+                                                                }}
+                                                                onDelete={async (r) => {
+                                                                    const targetId = r._id || r.id;
+                                                                    if (window.confirm(`Are you sure you want to delete ${formatDisplayNumber(r.type, r.type === 'KOT' ? r.kot_no : r.bill_no)}?`)) {
+                                                                        try {
+                                                                            const savedUser = localStorage.getItem('user');
+                                                                            const { token } = JSON.parse(savedUser || '{}');
+                                                                            await fetch(`${import.meta.env.VITE_API_URL}/bills/${targetId}`, {
+                                                                                method: 'DELETE',
+                                                                                headers: { 'Authorization': `Bearer ${token}` }
+                                                                            });
+                                                                        } catch (err) { }
+                                                                        setRecords(prev => prev.filter(x => (x._id || x.id) !== targetId));
+                                                                    }
+                                                                }}
+                                                            />
                                                         </td>
                                                     )}
                                                     {visibleColumns.includes('sno') && (
@@ -873,7 +969,7 @@ const DisplayPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 

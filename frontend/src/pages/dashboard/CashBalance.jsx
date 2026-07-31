@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Download, Loader2, Wallet } from 'lucide-react';
 import './Dashboard.css';
 
@@ -63,7 +64,7 @@ const CashBalance = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             <main className="dashboard-main">
@@ -137,7 +138,7 @@ const CashBalance = () => {
                     )}
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

@@ -164,6 +164,13 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 768,
     show: false,
+    frame: false,
+    fullscreen: true,
+    autoHideMenuBar: true,
+    menuBarVisible: false,
+    resizable: true,
+    center: true,
+    backgroundColor: '#ffffff',
     title: 'Yugam Software',
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
@@ -174,12 +181,16 @@ function createWindow() {
     },
   });
 
+  // Hide the menu bar completely
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.removeMenu();
+
   // Always load via the Express server (avoids file:// React Router issues)
   mainWindow.loadURL('http://localhost:5055');
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    mainWindow.maximize();
+    mainWindow.focus();
   });
 
   // Open external links in default browser
@@ -189,6 +200,13 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => { mainWindow = null; });
+
+  // Re-enter fullscreen when restored from minimize so taskbar never shows
+  mainWindow.on('restore', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setFullScreen(true);
+    }
+  });
 
   if (isDev) mainWindow.webContents.openDevTools();
 }
@@ -260,4 +278,55 @@ ipcMain.handle('app:selectDirectory', async () => {
     return null;
   }
   return filePaths[0];
+});
+
+// ─── Window Control IPC Handlers ──────────────────────────────────────────────
+ipcMain.handle('window:minimize', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.minimize();
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('window:toggleMaximize', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Always stay in fullscreen — never go to regular maximize
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+    } else {
+      mainWindow.setFullScreen(true);
+    }
+    return mainWindow.isFullScreen();
+  }
+  return false;
+});
+
+ipcMain.handle('window:isMaximized', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow.isFullScreen();
+  }
+  return false;
+});
+
+ipcMain.handle('window:requestClose', async () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      buttons: ['Yes', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Close Software',
+      message: 'Close Software',
+      detail: 'Are you sure you want to close the software?',
+      noLink: true
+    });
+    if (response === 0) {
+      cleanup();
+      app.quit();
+      return true;
+    }
+    return false;
+  }
+  return false;
 });

@@ -366,10 +366,10 @@
 }
 
 .overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #1e3a8a;
     border-radius: 10px;
 }
 
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: #0f172a;
 }

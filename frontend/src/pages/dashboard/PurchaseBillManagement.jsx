@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import {
     Search, Trash2, Loader2, FileText, Calendar,
@@ -22,6 +23,54 @@ const PurchaseBillManagement = () => {
     const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = filteredPurchases.map(p => p._id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+        const savedUser = localStorage.getItem('user');
+        const { token } = JSON.parse(savedUser || '{}');
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected purchase bill(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/purchases/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            fetchPurchases();
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected purchase bill(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/purchases/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_cancelled: true }) });
+                } catch (err) { }
+            }
+            fetchPurchases();
+        }
+        setSelectedIds([]);
+        setShowBulkMenu(false);
+    };
 
     const toggleSidebar = () => {
         if (window.innerWidth <= 768) { setIsMobileSidebarOpen(!isMobileSidebarOpen); }
@@ -73,7 +122,7 @@ const PurchaseBillManagement = () => {
     };
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -108,6 +157,22 @@ const PurchaseBillManagement = () => {
                                 <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border-none text-xs font-bold text-slate-600 focus:ring-0 p-0" />
                             </div>
 
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                    className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer h-full"
+                                >
+                                    Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                </button>
+                                {showBulkMenu && (
+                                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                        <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
+                                        <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                    </div>
+                                )}
+                            </div>
+
                             <button onClick={() => window.location.href = '/dashboard/self-service/purchase'} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 flex items-center gap-2 transition-all">
                                 <PlusCircle size={18} />
                                 Create Purchase Bill
@@ -119,6 +184,14 @@ const PurchaseBillManagement = () => {
                         <table className="table-premium">
                             <thead>
                                 <tr>
+                                    <th style={{ width: '40px', textAlign: 'center' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={filteredPurchases.length > 0 && filteredPurchases.every(p => selectedIds.includes(p._id))}
+                                            onChange={toggleSelectAll}
+                                            className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                        />
+                                    </th>
                                     <th>Invoice Reference</th>
                                     <th>Vendor Partner</th>
                                     <th>GRN Date</th>
@@ -130,12 +203,12 @@ const PurchaseBillManagement = () => {
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '100px 0' }}>
                                         <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
                                         <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Fetching GRN Archive...</p>
                                     </td></tr>
                                 ) : filteredPurchases.length === 0 ? (
-                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '100px 0' }}>
                                         <ClipboardList size={64} className="text-slate-100 mx-auto mb-4" />
                                         <p className="font-bold text-slate-400">No purchase records on file.</p>
                                     </td></tr>
@@ -143,6 +216,14 @@ const PurchaseBillManagement = () => {
                                     const statusCfg = getStatusConfig(p.payment_status);
                                     return (
                                         <tr key={p._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(p._id)}
+                                                    onChange={() => toggleSelectOne(p._id)}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </td>
                                             <td>
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -284,7 +365,7 @@ const PurchaseBillManagement = () => {
                     </>
                 )}
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

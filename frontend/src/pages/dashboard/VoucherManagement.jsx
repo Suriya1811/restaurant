@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
+import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import { useFormNavigation } from '../../hooks/useFormNavigation';
 import {
     Search, Plus, Calendar, FileText, ChevronDown,
     ArrowDownCircle, ArrowUpCircle, X, Download, Save, Loader2, Edit, Trash2, XCircle, FileSpreadsheet, FileIcon, Printer, AlertCircle, Settings, PlusCircle
@@ -9,6 +12,16 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
+
+const EMPTY_FORM_STATE = (defaultType = '') => ({
+    voucher_type: defaultType,
+    voucher_number: '',
+    date: new Date().toISOString().split('T')[0],
+    party_ledger: '',
+    amount: '',
+    payment_ledger: '',
+    narration: ''
+});
 
 const VouchersPage = () => {
     const navigate = useNavigate();
@@ -32,17 +45,23 @@ const VouchersPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+    const voucherTypeSelectRef = useRef(null);
+
+    const handleFormSubmitRequest = () => setShowSaveConfirm(true);
+    const { formRef, handleKeyDown } = useFormNavigation([showModal], handleFormSubmitRequest);
+
     // Form state
-    const [formData, setFormData] = useState({
-        voucher_type: '', // dynamically selected from series
-        voucher_number: '', // dynamically generated preview
-        date: new Date().toISOString().split('T')[0],
-        party_ledger: '', // For PARTY NAME (credit or debit depending on type, but let's map it simply)
-        amount: '',
-        payment_ledger: '', // For TYPE (Cash/Bank)
-        narration: ''
-    });
+    const [formData, setFormData] = useState(EMPTY_FORM_STATE());
+
+    const resetForm = () => {
+        const defaultType = voucherSeries.length > 0 ? voucherSeries[0].series_name : '';
+        setFormData(EMPTY_FORM_STATE(defaultType));
+        setError('');
+    };
+
+    const confirmSave = () => { setShowSaveConfirm(false); handleSubmit(); };
+    const cancelSave = () => { setShowSaveConfirm(false); };
 
     // Mock metrics calculation
     const calculateMetrics = () => {
@@ -113,36 +132,27 @@ const VouchersPage = () => {
 
     const handleCreateClick = () => {
         setError('');
-        // set default type to first available series if any
         const defaultType = voucherSeries.length > 0 ? voucherSeries[0].series_name : '';
-        setFormData({
-            voucher_type: defaultType,
-            voucher_number: '',
-            date: new Date().toISOString().split('T')[0],
-            party_ledger: '',
-            amount: '',
-            payment_ledger: '',
-            narration: ''
-        });
+        setFormData(EMPTY_FORM_STATE(defaultType));
         setShowModal(true);
+        setTimeout(() => {
+            if (voucherTypeSelectRef.current && typeof voucherTypeSelectRef.current.focus === 'function') {
+                try { voucherTypeSelectRef.current.focus(); } catch (_) {}
+            }
+        }, 150);
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         if (!formData.voucher_type || !formData.party_ledger || !formData.amount || !formData.payment_ledger) {
             return setError("Please fill all required fields.");
         }
-        
+
         setSubmitting(true);
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-            
-            // Map the simplified form to the double-entry backend payload.
-            // Simplified logic: 
-            // If Receipt: Debit is Cash/Bank (Payment Ledger), Credit is Party
-            // If Payment: Debit is Party, Credit is Cash/Bank (Payment Ledger)
-            // Realistically we need more robust logic, but keeping it simple for the UI implementation.
+
             let debit_ledger, credit_ledger;
             if (formData.voucher_type.toLowerCase().includes('receipt')) {
                 debit_ledger = formData.payment_ledger;
@@ -166,11 +176,17 @@ const VouchersPage = () => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
-            
+
             const result = await response.json();
             if (result.success) {
                 fetchData();
-                setShowModal(false);
+                resetForm();
+                alert('Voucher saved successfully!');
+                setTimeout(() => {
+                    if (voucherTypeSelectRef.current && typeof voucherTypeSelectRef.current.focus === 'function') {
+                        try { voucherTypeSelectRef.current.focus(); } catch (_) {}
+                    }
+                }, 120);
             } else {
                 setError(result.error || result.message || "Failed to create voucher");
             }
@@ -179,6 +195,54 @@ const VouchersPage = () => {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = filteredVouchers.map(v => v._id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+        const savedUser = localStorage.getItem('user');
+        const { token } = JSON.parse(savedUser || '{}');
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected voucher(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/vouchers/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            fetchData();
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected voucher(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/vouchers/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_deleted: true }) });
+                } catch (err) { }
+            }
+            fetchData();
+        }
+        setSelectedIds([]);
+        setShowBulkMenu(false);
     };
 
     const handleDelete = async (id) => {
@@ -312,7 +376,7 @@ const VouchersPage = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC]">
+        <DashboardPageShell className="bg-[#F8FAFC]">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
@@ -335,6 +399,21 @@ const VouchersPage = () => {
                                     <Printer size={14} />
                                     <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                                 </button>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                        className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                        Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                    </button>
+                                    {showBulkMenu && (
+                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                            <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
+                                            <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                        </div>
+                                    )}
+                                </div>
                                 <button className="btn-column-settings" title="Column Settings">
                                     <Settings size={14} />
                                     <span>Column Settings</span>
@@ -366,15 +445,14 @@ const VouchersPage = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6">
-                                    <div className="flex flex-col">
-                                        <label className="text-[11px] font-black text-slate-700 mb-1">Voucher Type</label>
+                                    <div>
                                         <div className="relative border border-slate-200 rounded-lg bg-white w-40">
                                             <select 
                                                 className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
                                                 value={filterType}
                                                 onChange={e => setFilterType(e.target.value)}
                                             >
-                                                <option value="ALL">All</option>
+                                                <option value="ALL">Voucher Type</option>
                                                 {voucherSeries.map(s => (
                                                     <option key={s._id} value={s.series_name}>{s.series_name}</option>
                                                 ))}
@@ -382,28 +460,25 @@ const VouchersPage = () => {
                                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" size={14} />
                                         </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <label className="text-[11px] font-black text-slate-700 mb-1">Cancel Type</label>
+                                    <div>
                                         <div className="relative border border-slate-200 rounded-lg bg-white w-40">
                                             <select 
                                                 className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
                                                 value={cancelFilter}
                                                 onChange={e => setCancelFilter(e.target.value)}
                                             >
-                                                <option value="ALL">All</option>
+                                                <option value="ALL">Cancel Type</option>
                                                 <option value="ACTIVE">Active</option>
                                                 <option value="CANCELLED">Cancelled</option>
                                             </select>
                                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" size={14} />
                                         </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <label className="text-[11px] font-black text-slate-700 mb-1">From Date</label>
-                                        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                                    <div>
+                                        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} placeholder="From Date" title="From Date" className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
                                     </div>
-                                    <div className="flex flex-col">
-                                        <label className="text-[11px] font-black text-slate-700 mb-1">To Date</label>
-                                        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                                    <div>
+                                        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} placeholder="To Date" title="To Date" className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
                                     </div>
                                 </div>
                             </div>
@@ -524,6 +599,14 @@ const VouchersPage = () => {
                                 <table className="w-full text-center border-collapse min-w-[1000px]">
                                     <thead>
                                         <tr className="bg-[#0f172a] border-b border-slate-700">
+                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filteredVouchers.length > 0 && filteredVouchers.every(v => selectedIds.includes(v._id))}
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </th>
                                             <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Date</th>
                                             <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Number</th>
                                             <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Type</th>
@@ -542,9 +625,9 @@ const VouchersPage = () => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {loading ? (
-                                            <tr><td colSpan="14" className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
+                                            <tr><td colSpan="15" className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
                                         ) : filteredVouchers.length === 0 ? (
-                                            <tr><td colSpan="14" className="py-8 text-center text-slate-400">No vouchers found</td></tr>
+                                            <tr><td colSpan="15" className="py-8 text-center text-slate-400">No vouchers found</td></tr>
                                         ) : (
                                             filteredVouchers.map((v) => {
                                                 const isReceipt = v.voucher_type?.toLowerCase().includes('receipt');
@@ -558,6 +641,14 @@ const VouchersPage = () => {
                                                 const typeStr = 'Cash'; 
                                                 return (
                                                     <tr key={v._id} className="hover:bg-slate-50 transition-colors group">
+                                                        <td className="py-3 px-3 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedIds.includes(v._id)}
+                                                                onChange={() => toggleSelectOne(v._id)}
+                                                                className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                            />
+                                                        </td>
                                                         <td className="py-3 px-3 text-xs font-black text-slate-700 whitespace-nowrap">
                                                             {new Date(v.date).toLocaleDateString('en-GB')}
                                                         </td>
@@ -610,9 +701,9 @@ const VouchersPage = () => {
             {/* Create Voucher Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
                     <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-full slide-up">
-                        
+
                         {/* Modal Header */}
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                             <div className="flex items-center gap-3">
@@ -626,147 +717,159 @@ const VouchersPage = () => {
                             </button>
                         </div>
 
-                        {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto bg-slate-50/30 flex-1">
-                            {error && (
-                                <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-start gap-3">
-                                    <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                                    <div className="text-sm font-medium">{error}</div>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
-                                {/* Voucher Type */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Type <span className="text-rose-500">*</span></label>
-                                    <div className="relative">
-                                        <select 
-                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
-                                            value={formData.voucher_type}
-                                            onChange={e => setFormData({...formData, voucher_type: e.target.value})}
-                                        >
-                                            <option value="">Select Type</option>
-                                            {voucherSeries.map(s => (
-                                                <option key={s._id} value={s.series_name}>{s.series_name}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                        <form
+                            ref={formRef}
+                            onKeyDown={handleKeyDown}
+                            onSubmit={(e) => { e.preventDefault(); handleFormSubmitRequest(); }}
+                            className="flex flex-col flex-1 overflow-hidden"
+                        >
+                            {/* Modal Body */}
+                            <div className="p-6 overflow-y-auto bg-slate-50/30 flex-1">
+                                {error && (
+                                    <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-start gap-3">
+                                        <AlertCircle size={20} className="shrink-0 mt-0.5" />
+                                        <div className="text-sm font-medium">{error}</div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Voucher Number Preview */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Number <span className="text-rose-500">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full bg-slate-50 border border-orange-400 rounded-xl px-4 py-3 text-slate-600 font-semibold shadow-sm"
-                                        value={formData.voucher_number || 'Select type first'}
-                                        readOnly
-                                        disabled
-                                    />
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+                                    {/* Voucher Type */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Type <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <select
+                                                ref={voucherTypeSelectRef}
+                                                className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
+                                                value={formData.voucher_type}
+                                                onChange={e => setFormData({...formData, voucher_type: e.target.value})}
+                                            >
+                                                <option value="">Select Type</option>
+                                                {voucherSeries.map(s => (
+                                                    <option key={s._id} value={s.series_name}>{s.series_name}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                                        </div>
+                                    </div>
 
-                                {/* Date */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Date <span className="text-rose-500">*</span></label>
-                                    <div className="relative">
-                                        <input 
-                                            type="date" 
-                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 pr-10 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
-                                            value={formData.date}
-                                            onChange={e => setFormData({...formData, date: e.target.value})}
+                                    {/* Voucher Number Preview */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Voucher Number <span className="text-rose-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-50 border border-orange-400 rounded-xl px-4 py-3 text-slate-600 font-semibold shadow-sm"
+                                            value={formData.voucher_number || 'Select type first'}
+                                            readOnly
+                                            disabled
                                         />
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
-                                {/* Party Name */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Party Name <span className="text-rose-500">*</span></label>
-                                    <div className="relative">
-                                        <select 
-                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
-                                            value={formData.party_ledger}
-                                            onChange={e => setFormData({...formData, party_ledger: e.target.value})}
-                                        >
-                                            <option value="">Select Party</option>
-                                            {ledgers.map(l => (
-                                                <option key={l._id} value={l._id}>{l.name}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
-                                    </div>
-                                    <div className="mt-2 px-1 text-[11px] font-bold text-blue-600 inline-block">Balance: ₹ 0.00</div>
-                                </div>
-
-                                {/* Amount */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Amount <span className="text-rose-500">*</span></label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">₹</div>
-                                        <input 
-                                            type="number" 
-                                            className="w-full bg-white border border-orange-400 rounded-xl pl-8 pr-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
-                                            value={formData.amount}
-                                            onChange={e => setFormData({...formData, amount: e.target.value})}
-                                            placeholder="0.00"
-                                        />
+                                    {/* Date */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Date <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <input
+                                                type="date"
+                                                className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 pr-10 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
+                                                value={formData.date}
+                                                onChange={e => setFormData({...formData, date: e.target.value})}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Type (Payment Ledger) */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Type <span className="text-rose-500">*</span></label>
-                                    <div className="relative">
-                                        <select 
-                                            className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
-                                            value={formData.payment_ledger}
-                                            onChange={e => setFormData({...formData, payment_ledger: e.target.value})}
-                                        >
-                                            <option value="">Select Cash/Bank</option>
-                                            {ledgers.filter(l => l.group?.name?.toLowerCase().includes('cash') || l.group?.name?.toLowerCase().includes('bank')).map(l => (
-                                                <option key={l._id} value={l._id}>{l.name}</option>
-                                            ))}
-                                            {/* Fallback if no specific groups found */}
-                                            {ledgers.length > 0 && !ledgers.find(l => l.group?.name?.toLowerCase().includes('cash')) && (
-                                                ledgers.slice(0,5).map(l => (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+                                    {/* Party Name */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Party Name <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <select
+                                                className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
+                                                value={formData.party_ledger}
+                                                onChange={e => setFormData({...formData, party_ledger: e.target.value})}
+                                            >
+                                                <option value="">Select Party</option>
+                                                {ledgers.map(l => (
                                                     <option key={l._id} value={l._id}>{l.name}</option>
-                                                ))
-                                            )}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                                        </div>
+                                        <div className="mt-2 px-1 text-[11px] font-bold text-blue-600 inline-block">Balance: ₹ 0.00</div>
                                     </div>
+
+                                    {/* Amount */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Amount <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">₹</div>
+                                            <input
+                                                type="number"
+                                                className="w-full bg-white border border-orange-400 rounded-xl pl-8 pr-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
+                                                value={formData.amount}
+                                                onChange={e => setFormData({...formData, amount: e.target.value})}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Type (Payment Ledger) */}
+                                    <div>
+                                        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Type <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <select
+                                                className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold appearance-none focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm"
+                                                value={formData.payment_ledger}
+                                                onChange={e => setFormData({...formData, payment_ledger: e.target.value})}
+                                            >
+                                                <option value="">Select Cash/Bank</option>
+                                                {ledgers.filter(l => l.group?.name?.toLowerCase().includes('cash') || l.group?.name?.toLowerCase().includes('bank')).map(l => (
+                                                    <option key={l._id} value={l._id}>{l.name}</option>
+                                                ))}
+                                                {ledgers.length > 0 && !ledgers.find(l => l.group?.name?.toLowerCase().includes('cash')) && (
+                                                    ledgers.slice(0,5).map(l => (
+                                                        <option key={l._id} value={l._id}>{l.name}</option>
+                                                    ))
+                                                )}
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Narration */}
+                                <div>
+                                    <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Narration <span className="text-rose-500">*</span></label>
+                                    <textarea
+                                        className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm resize-none h-24"
+                                        value={formData.narration}
+                                        onChange={e => setFormData({...formData, narration: e.target.value})}
+                                        placeholder="Enter narration details..."
+                                    ></textarea>
                                 </div>
                             </div>
 
-                            {/* Narration */}
-                            <div>
-                                <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wide mb-1.5">Narration <span className="text-rose-500">*</span></label>
-                                <textarea 
-                                    className="w-full bg-white border border-orange-400 rounded-xl px-4 py-3 text-slate-700 font-semibold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm resize-none h-24"
-                                    value={formData.narration}
-                                    onChange={e => setFormData({...formData, narration: e.target.value})}
-                                    placeholder="Enter narration details..."
-                                ></textarea>
+                            {/* Modal Footer */}
+                            <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+                                <button
+                                    type="submit"
+                                    disabled={submitting || !formData.voucher_type || !formData.party_ledger || !formData.amount || !formData.payment_ledger}
+                                    className="bg-[#f97316] hover:bg-orange-600 text-white px-8 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                    {submitting ? 'Saving...' : 'Save'}
+                                </button>
                             </div>
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-                            <button 
-                                onClick={handleSubmit}
-                                disabled={submitting || !formData.voucher_type || !formData.party_ledger || !formData.amount || !formData.payment_ledger}
-                                className="bg-[#f97316] hover:bg-orange-600 text-white px-8 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                {submitting ? 'Saving...' : 'Save'}
-                            </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}
-        </div>
+            <SaveConfirmationModal
+                isOpen={showSaveConfirm}
+                onConfirm={confirmSave}
+                onCancel={cancelSave}
+            />
+        </DashboardPageShell>
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Download, Printer, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { printReport } from '@/components/common/ReportToolbar';
@@ -243,7 +244,7 @@ const ProfitLoss = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50 font-sans min-h-screen">
+        <DashboardPageShell className="bg-slate-50 font-sans min-h-screen">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -393,7 +394,7 @@ const ProfitLoss = () => {
                 </div>
             </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

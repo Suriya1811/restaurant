@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import {
     PlusCircle,
@@ -13,6 +14,7 @@ import {
     AlertCircle,
     Activity,
     Layers,
+    ChevronDown,
     X,
     Download,
     Printer,
@@ -43,6 +45,68 @@ const TableTypeMaster = () => {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+
+    // Selection & Bulk Action State
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+    const toggleSelectAll = () => {
+        const currentIds = filteredTableTypes.map(tt => tt._id);
+        const allSelected = currentIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !currentIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...currentIds])));
+        }
+    };
+
+    const toggleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const handleBulkAction = async (actionType) => {
+        if (selectedIds.length === 0) {
+            alert("Please select at least one record.");
+            return;
+        }
+        const savedUser = localStorage.getItem('user');
+        const { token } = JSON.parse(savedUser || '{}');
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        if (actionType === 'DELETE') {
+            if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/table-types/${id}`, { method: 'DELETE', headers });
+                } catch (err) { }
+            }
+            fetchData();
+        } else if (actionType === 'ACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/table-types/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: true }) });
+                } catch (err) { }
+            }
+            fetchData();
+        } else if (actionType === 'DEACTIVATE') {
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/table-types/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_active: false }) });
+                } catch (err) { }
+            }
+            fetchData();
+        } else if (actionType === 'CANCEL') {
+            if (!window.confirm(`Are you sure you want to cancel ${selectedIds.length} selected record(s)?`)) return;
+            for (const id of selectedIds) {
+                try {
+                    await fetch(`${import.meta.env.VITE_API_URL}/table-types/${id}`, { method: 'PUT', headers, body: JSON.stringify({ is_cancelled: true, is_active: false }) });
+                } catch (err) { }
+            }
+            fetchData();
+        }
+        setSelectedIds([]);
+        setShowBulkMenu(false);
+    };
 
     const handleFormSubmitRequest = () => {
         setShowSaveConfirm(true);
@@ -210,7 +274,7 @@ const TableTypeMaster = () => {
     const handlePrint = () => printTable('Table Type Master', `Total: ${filteredTableTypes.length}`, exportCols, getExportRows());
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -269,9 +333,23 @@ const TableTypeMaster = () => {
                                     <option value="ACTIVE">Active</option>
                                     <option value="DEACTIVE">Deactive</option>
                                 </select>
-                                <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                    TOTAL : {filteredTableTypes.length}
-                                </span>
+                                <div className="relative ml-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                        className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                        Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                        <ChevronDown size={14} />
+                                    </button>
+                                    {showBulkMenu && (
+                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                            <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                            <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                            <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -279,6 +357,14 @@ const TableTypeMaster = () => {
                             <table className="table-premium">
                                 <thead>
                                     <tr>
+                                        <th style={{ width: '40px', textAlign: 'center' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={filteredTableTypes.length > 0 && filteredTableTypes.every(tt => selectedIds.includes(tt._id))}
+                                                onChange={toggleSelectAll}
+                                                className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                            />
+                                        </th>
                                         <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                                         <th>Zone Identifier</th>
                                         <th>Status</th>
@@ -287,20 +373,28 @@ const TableTypeMaster = () => {
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
                                                 <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
                                                 <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Accessing Database...</p>
                                             </td>
                                         </tr>
                                     ) : filteredTableTypes.length === 0 ? (
                                         <tr>
-                                            <td colSpan="3" style={{ textAlign: 'center', padding: '100px 0' }}>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '100px 0' }}>
                                                 <Layers size={64} className="text-slate-100 mx-auto mb-4" />
                                                 <p className="font-bold text-slate-400">No spatial zones defined.</p>
                                             </td>
                                         </tr>
                                     ) : filteredTableTypes.map((type) => (
                                         <tr key={type._id} className="group">
+                                            <td className="w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(type._id)}
+                                                    onChange={() => toggleSelectOne(type._id)}
+                                                    className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="w-10 text-center">
                                                 <ActionDropdown item={type} onEdit={handleEdit} onDelete={handleDelete} />
                                             </td>
@@ -321,6 +415,14 @@ const TableTypeMaster = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Bottom Total Buttons */}
+                        <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm">{filteredTableTypes.length}</span>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -415,7 +517,7 @@ const TableTypeMaster = () => {
                     onCancel={cancelSave}
                 />
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

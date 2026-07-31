@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Download, Printer, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { printReport } from '@/components/common/ReportToolbar';
@@ -200,7 +201,7 @@ const TrialBalance = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50 font-sans min-h-screen">
+        <DashboardPageShell className="bg-slate-50 font-sans min-h-screen">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -259,20 +260,22 @@ const TrialBalance = () => {
                         </div>
                         <div className="flex gap-4 items-center">
                             <div className="flex items-center gap-2">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase">From Date</label>
                                 <input 
                                     type="date" 
                                     value={filters.startDate} 
                                     onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))} 
+                                    placeholder="From Date"
+                                    title="From Date"
                                     className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
                                 />
                             </div>
                             <div className="flex items-center gap-2">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase">To Date</label>
                                 <input 
                                     type="date" 
                                     value={filters.endDate} 
                                     onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))} 
+                                    placeholder="To Date"
+                                    title="To Date"
                                     className="border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500"
                                 />
                             </div>
@@ -387,7 +390,7 @@ const TrialBalance = () => {
                 </div>
             </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

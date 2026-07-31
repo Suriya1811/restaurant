@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import {
     Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, CheckSquare, Square
 } from 'lucide-react';
@@ -361,7 +362,7 @@ const SalesSummaryHub = () => {
     );
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -443,16 +444,16 @@ const SalesSummaryHub = () => {
                     )}
 
                     {/* Filters Row */}
-                    <div className="px-5 py-4 flex flex-wrap items-end gap-6 border-b border-slate-100 bg-white">
+                    <div className="px-5 py-4 flex flex-wrap items-center gap-6 border-b border-slate-100 bg-white">
                         {/* Sales Type */}
-                        <div className="flex flex-col gap-2 min-w-[160px]">
-                            <label className="text-[12px] font-bold text-[#ff6b00]">Sales Type</label>
+                        <div className="min-w-[160px]">
                             <div className="relative">
                                 <select
                                     className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                     value={salesType}
                                     onChange={(e) => setSalesType(e.target.value)}
                                 >
+                                    <option value="Captain Wise">Sales Type</option>
                                     <option value="Captain Wise">Captain Wise</option>
                                     <option value="Brand Wise">Brand Wise</option>
                                     <option value="Group Wise">Group Wise</option>
@@ -466,8 +467,7 @@ const SalesSummaryHub = () => {
                         {/* Captain Wise Filters */}
                         {salesType === 'Captain Wise' && (
                             <>
-                                <div className="flex flex-col gap-2 min-w-[160px]">
-                                    <label className="text-[12px] font-bold text-[#ff6b00]">Captain</label>
+                                <div className="min-w-[160px]">
                                     <div className="relative">
                                         <select
                                             className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
@@ -481,8 +481,7 @@ const SalesSummaryHub = () => {
                                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-2 min-w-[160px]">
-                                    <label className="text-[12px] font-bold text-[#ff6b00]">Category</label>
+                                <div className="min-w-[160px]">
                                     <div className="relative">
                                         <select
                                             className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
@@ -500,31 +499,33 @@ const SalesSummaryHub = () => {
                         )}
 
                         {/* Dates */}
-                        <div className="flex flex-col gap-2 min-w-[150px]">
-                            <label className="text-[12px] font-bold text-slate-800">From Date</label>
+                        <div className="min-w-[150px]">
                             <div className="relative">
                                 <input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
+                                    placeholder="From Date"
+                                    title="From Date"
                                     className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 />
                             </div>
                         </div>
-                        <div className="flex flex-col gap-2 min-w-[150px]">
-                            <label className="text-[12px] font-bold text-slate-800">To Date</label>
+                        <div className="min-w-[150px]">
                             <div className="relative">
                                 <input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => setToDate(e.target.value)}
+                                    placeholder="To Date"
+                                    title="To Date"
                                     className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 />
                             </div>
                         </div>
 
                         {/* Refresh Button */}
-                        <div className="flex flex-col gap-2">
+                        <div>
                             <button
                                 className="flex items-center justify-center gap-2 px-5 py-2 bg-[#ff6b00] hover:bg-[#e66000] text-white text-[13px] font-bold rounded-[4px] shadow-sm transition-colors min-h-[38px] cursor-pointer"
                                 onClick={fetchReport}
@@ -605,7 +606,7 @@ const SalesSummaryHub = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

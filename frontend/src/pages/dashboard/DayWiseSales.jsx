@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import ReportNavigationDropdown from '@/components/dashboard/ReportNavigationDropdown';
 import {
     Search,
@@ -237,7 +238,7 @@ const DayWiseSales = ({ isEmbedded = false }) => {
     }
 
     return (
-        <div className="dashboard-layout bg-white">
+        <DashboardPageShell className="bg-white">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
@@ -260,7 +261,7 @@ const DayWiseSales = ({ isEmbedded = false }) => {
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
-        </div>
+        </DashboardPageShell>
     );
 };
 

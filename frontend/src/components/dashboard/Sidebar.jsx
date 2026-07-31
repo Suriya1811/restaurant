@@ -7,7 +7,7 @@ import {
     History, BarChart, Grid, ChevronDown, ChevronRight, Calculator,
     PieChart, List, CreditCard, Landmark, Printer, ChefHat, Lock, Globe,
     TrendingUp, TrendingDown, Package, Monitor, Receipt, LayoutGrid, Hash,
-    MinusCircle, AlertTriangle, ArrowUpRight, Activity, Calendar, Ticket, Gift, Workflow
+    MinusCircle, AlertTriangle, ArrowUpRight, Activity, Calendar, Ticket, Gift, Workflow, Sliders
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import '../../pages/dashboard/Dashboard.css';
@@ -161,7 +161,14 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             label: "Settings",
             icon: <Settings size={18} />,
             route: "/dashboard/self-service/settings",
-            pageKey: "settings_general"
+            pageKey: "settings_general",
+            subItems: [
+                { label: "General", route: "/dashboard/self-service/settings?tab=general", icon: <Sliders size={16} />, pageKey: "settings_general" },
+                { label: "Voucher Series", route: "/dashboard/self-service/settings?tab=voucher_series", icon: <Wallet size={16} />, pageKey: "settings_general" },
+                { label: "User Rights", route: "/dashboard/self-service/settings?tab=user_rights", icon: <Shield size={16} />, pageKey: "settings_general" },
+                { label: "Backup Settings", route: "/dashboard/self-service/settings?tab=backup", icon: <Download size={16} />, pageKey: "settings_general" },
+                { label: "Extra Modules", route: "/dashboard/self-service/settings?tab=extra_modules", icon: <Settings size={16} />, pageKey: "settings_general" }
+            ]
         },
         {
             label: "Profile",
@@ -262,7 +269,16 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
             const isPathMatch = location.pathname === itemUrl.pathname;
 
             if (isPathMatch) {
-                if (itemUrl.pathname === '/dashboard/self-service/settings') return true;
+                if (itemUrl.pathname === '/dashboard/self-service/settings') {
+                    const itemParams = Array.from(itemUrl.searchParams.entries());
+                    const queryParams = new URLSearchParams(location.search);
+                    if (itemParams.length > 0) {
+                        return itemParams.every(([key, value]) => queryParams.get(key) === value);
+                    }
+                    // Parent settings item: active only when no tab or tab=general
+                    const currentTab = queryParams.get('tab');
+                    return !currentTab || currentTab === 'general';
+                }
                 const itemParams = Array.from(itemUrl.searchParams.entries());
                 const queryParams = new URLSearchParams(location.search);
 
@@ -341,15 +357,15 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
 
     return (
         <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'show' : ''}`}>
-            <div className="sidebar-brand" style={{ padding: isCollapsed ? '0.5rem 0' : '0.75rem 1rem', height: '65px', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <img src={logoSidebar} alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '38px' : '175px', maxHeight: '48px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease' }} />
+            <div className="sidebar-brand" style={{ padding: isCollapsed ? '0.4rem 0' : '0.5rem 1rem', height: '54px', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <img src={logoSidebar} alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '36px' : '165px', maxHeight: '40px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease' }} />
             </div>
 
             <nav className="sidebar-nav">
                 {menuStructure.map(item => renderMenuItem(item))}
             </nav>
 
-            <div className="sidebar-footer">
+            <div className="sidebar-footer" style={{ height: '54px', minHeight: '54px', maxHeight: '54px', display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
                 <button onClick={logoutWithBackup} className="logout-btn">
                     <LogOut size={18} />
                     {!isCollapsed && <span>Logout</span>}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import {
     Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, Search, PlusCircle, Save, Download
 } from 'lucide-react';
@@ -130,7 +131,7 @@ const PartyMasterHub = () => {
         }).map((order, idx) => {
             const d = order.delivery_date ? new Date(order.delivery_date) : null;
             const formattedDate = d ? `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}` : '---';
-            
+
             return {
                 sNo: idx + 1,
                 id: order._id,
@@ -291,8 +292,8 @@ const PartyMasterHub = () => {
             <button onClick={() => setShowColumnModal(!showColumnModal)} className="btn-column-settings">
                 <Settings size={14} /> <span>Column Settings</span>
             </button>
-            <button 
-                onClick={() => setViewMode(viewMode === 'list' ? 'create' : 'list')} 
+            <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'create' : 'list')}
                 className="btn-action-add"
             >
                 <PlusCircle size={18} />
@@ -302,17 +303,17 @@ const PartyMasterHub = () => {
     );
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
-            
+
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
             <main className="dashboard-main flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                    title={viewMode === 'create' ? "Party Order Creation" : "ORDER DISPLAY"} 
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title={viewMode === 'create' ? "Party Order Creation" : "ORDER DISPLAY"}
                     headerActions={headerActions}
                 />
 
@@ -387,10 +388,9 @@ const PartyMasterHub = () => {
                     {viewMode === 'list' ? (
                         <>
                             {/* Filter Controls Row */}
-                            <div className="px-5 py-4 flex flex-wrap items-end gap-6 border-b border-slate-100 bg-white">
+                            <div className="px-5 py-4 flex flex-wrap items-center gap-6 border-b border-slate-100 bg-white">
                                 {/* Search Order */}
-                                <div className="flex flex-col gap-2 min-w-[200px] flex-1 max-w-xs">
-                                    <label className="text-[12px] font-bold text-[#ff6b00]">Search Order</label>
+                                <div className="min-w-[200px] flex-1 max-w-xs">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                         <input
@@ -404,41 +404,42 @@ const PartyMasterHub = () => {
                                 </div>
 
                                 {/* From Date */}
-                                <div className="flex flex-col gap-2 min-w-[150px]">
-                                    <label className="text-[12px] font-bold text-slate-800">From Date</label>
+                                <div className="min-w-[150px]">
                                     <div className="relative">
                                         <input
                                             type="date"
                                             value={fromDate}
                                             onChange={(e) => setFromDate(e.target.value)}
+                                            placeholder="From Date"
+                                            title="From Date"
                                             className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         />
                                     </div>
                                 </div>
 
                                 {/* To Date */}
-                                <div className="flex flex-col gap-2 min-w-[150px]">
-                                    <label className="text-[12px] font-bold text-slate-800">To Date</label>
+                                <div className="min-w-[150px]">
                                     <div className="relative">
                                         <input
                                             type="date"
                                             value={toDate}
                                             onChange={(e) => setToDate(e.target.value)}
+                                            placeholder="To Date"
+                                            title="To Date"
                                             className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Function Type */}
-                                <div className="flex flex-col gap-2 min-w-[160px]">
-                                    <label className="text-[12px] font-bold text-[#ff6b00]">Function Type</label>
+                                <div className="min-w-[160px]">
                                     <div className="relative">
                                         <select
                                             value={selectedFunction}
                                             onChange={(e) => setSelectedFunction(e.target.value)}
                                             className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         >
-                                            <option value="">Select Function Type</option>
+                                            <option value="">Function Type</option>
                                             {functionTypes.map(ft => (
                                                 <option key={ft._id} value={ft.name}>{ft.name}</option>
                                             ))}
@@ -448,15 +449,14 @@ const PartyMasterHub = () => {
                                 </div>
 
                                 {/* Hall */}
-                                <div className="flex flex-col gap-2 min-w-[160px]">
-                                    <label className="text-[12px] font-bold text-[#ff6b00]">Hall</label>
+                                <div className="min-w-[160px]">
                                     <div className="relative">
                                         <select
                                             value={selectedHall}
                                             onChange={(e) => setSelectedHall(e.target.value)}
                                             className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         >
-                                            <option value="">Select Hall</option>
+                                            <option value="">Hall</option>
                                             <option value="Main Hall">Main Hall</option>
                                             <option value="Banquet Hall">Banquet Hall</option>
                                             <option value="VIP Lounge">VIP Lounge</option>
@@ -467,7 +467,7 @@ const PartyMasterHub = () => {
                                 </div>
 
                                 {/* Refresh Button */}
-                                <div className="flex flex-col gap-2">
+                                <div>
                                     <button
                                         onClick={fetchOrders}
                                         disabled={loading}
@@ -706,7 +706,7 @@ const PartyMasterHub = () => {
                     )}
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

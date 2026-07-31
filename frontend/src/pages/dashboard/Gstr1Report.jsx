@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import { Menu, FileSpreadsheet, FileText, Printer, Code, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import { jsPDF } from 'jspdf';
@@ -568,7 +569,7 @@ const Gstr1Report = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50 min-h-screen flex">
+        <DashboardPageShell className="bg-slate-50 min-h-screen flex">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -637,7 +638,7 @@ const Gstr1Report = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </DashboardPageShell>
     );
 };
 

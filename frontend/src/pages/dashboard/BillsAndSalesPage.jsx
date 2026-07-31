@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import BillPreviewModal from './BillPreviewModal';
 import { ClipboardList, Calendar, Search, CreditCard, Clock, MapPin, Truck, CheckCircle2, Phone, Loader2, XCircle, Package, Trash2, Save } from 'lucide-react';
 import './Dashboard.css';
@@ -318,14 +319,14 @@ const BillsAndSalesPage = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             
-            <main className="dashboard-main flex flex-col h-screen overflow-hidden relative">
+            <main className="dashboard-main flex flex-col overflow-hidden relative">
                 <Header 
                     toggleSidebar={toggleSidebar} 
                     title="PARTY MANAGEMENT" 
@@ -962,7 +963,7 @@ const BillsAndSalesPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 

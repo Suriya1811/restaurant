@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
+import DashboardPageShell from '../../components/dashboard/DashboardPageShell';
 import './Dashboard.css';
 import {
     Loader2, Truck, Package, Users2, RefreshCw,
@@ -617,7 +618,7 @@ const TableSelectionPage = () => {
     }, [fetchData]);
 
     return (
-        <div className="dashboard-layout">
+        <DashboardPageShell>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             {isMobileSidebarOpen && <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)} />}
 
@@ -952,7 +953,7 @@ const TableSelectionPage = () => {
                     loading={reserveLoading}
                 />
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 

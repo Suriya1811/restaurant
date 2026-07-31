@@ -42,8 +42,23 @@ exports.toggleCaptainStatus = async (req, res) => {
 
 exports.deleteCaptain = async (req, res) => {
     try {
-        const captain = await Captain.findOneAndDelete({ _id: req.params.id, company_id: req.user.restaurant_id });
+        const captain = await Captain.findOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         if (!captain) return res.status(404).json({ success: false, error: 'Captain not found' });
+
+        const Bill = require('../models/Bill');
+        const Order = require('../models/Order');
+        const billExists = await Bill.findOne({ $or: [{ captain: captain.name }, { captain_id: captain._id }] });
+        const orderExists = await Order.findOne({ $or: [{ captain: captain.name }, { captain_id: captain._id }] });
+
+        if (billExists || orderExists) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${captain.name}' because it has transaction history. You can deactivate it instead.`
+            });
+        }
+
+        await Captain.deleteOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         res.status(200).json({ success: true, message: 'Captain deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

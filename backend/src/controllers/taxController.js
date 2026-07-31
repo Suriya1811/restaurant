@@ -98,6 +98,21 @@ exports.deleteTax = async (req, res) => {
         if (!tax) {
             return res.status(404).json({ success: false, error: 'Tax not found' });
         }
+
+        const Product = require('../models/Product');
+        const productsCount = await Product.countDocuments({
+            tax_id: tax._id,
+            company_id: req.user.restaurant_id
+        });
+
+        if (productsCount > 0) {
+            return res.status(400).json({
+                success: false,
+                has_transactions: true,
+                message: `Cannot delete '${tax.name}' because it is used in products or transactions. You can deactivate it instead.`
+            });
+        }
+
         await Tax.deleteOne({ _id: req.params.id, company_id: req.user.restaurant_id });
         res.status(200).json({ success: true, message: 'Tax deleted successfully' });
     } catch (error) {

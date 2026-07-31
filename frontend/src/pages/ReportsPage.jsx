@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import DashboardPageShell from '../components/dashboard/DashboardPageShell';
 import StockPage from './StockPage';
 import GenericSummaryReport from './dashboard/GenericSummaryReport';
 import Gstr1Report from './dashboard/Gstr1Report';
@@ -192,7 +193,7 @@ const ReportsPage = () => {
     };
 
     return (
-        <div className="dashboard-layout bg-slate-50">
+        <DashboardPageShell className="bg-slate-50">
             {/* If GST or Sales is selected, completely bypass the wrapper and render the standalone component */}
             {category === 'gst' ? (
                 <Gstr1Report />
@@ -241,7 +242,7 @@ const ReportsPage = () => {
             </main>
                 </>
             )}
-        </div>
+        </DashboardPageShell>
     );
 };
 
