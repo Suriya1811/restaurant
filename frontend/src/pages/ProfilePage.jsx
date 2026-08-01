@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
@@ -8,7 +8,7 @@ import './SettingsPage.css';
 import {
     User, Key, Save, CheckCircle, AlertCircle, Loader2,
     Building2, Phone, Mail, Database, Edit2, Edit,
-    FileJson, HardDrive, Clock, ShieldCheck, ArrowLeft, Sliders, X,
+    FileJson, HardDrive, Clock, ShieldCheck, ArrowLeft, Sliders, X, XCircle,
     Plus, Folder, RefreshCw, Download, Upload, Trash2
 } from 'lucide-react';
 import { useFormNavigation } from '@/hooks/useFormNavigation';
@@ -20,6 +20,7 @@ const ProfilePage = () => {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const location = useLocation();
+    const navigate = useNavigate();
 
     const initialTab = new URLSearchParams(location.search).get('tab') || 'view';
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -353,9 +354,9 @@ const ProfilePage = () => {
     };
 
     const TABS = [
-        { id: 'view', icon: <User size={18} />, label: 'Profile Details' },
-        { id: 'backup', icon: <Database size={18} />, label: 'Backup Settings' },
-        { id: 'restore', icon: <RefreshCw size={18} />, label: 'Restore Data' }
+        { id: 'view', label: 'PROFILE DETAILS' },
+        { id: 'backup', label: 'BACKUP SETTINGS' },
+        { id: 'restore', label: 'RESTORE DATA' }
     ];
 
     if (loading) return (
@@ -374,29 +375,30 @@ const ProfilePage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={toggleSidebar} title="Profile" restaurantName={profileForm.businessName || profileForm.store_name} isMaster={true} />
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title="PROFILE"
+                    isMaster={true}
+                    showClose={false}
+                    headerActions={
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-red-500 border border-red-300 bg-white hover:bg-red-50 rounded shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                            <XCircle size={15} className="text-red-500" />
+                            <span>CLOSE</span>
+                        </button>
+                    }
+                    tabs={TABS.map(tab => ({
+                        id: tab.id,
+                        label: tab.label,
+                        active: activeTab === tab.id,
+                        onClick: () => { setActiveTab(tab.id); navigate(`/dashboard/self-service/profile?tab=${tab.id}`, { replace: true }); }
+                    }))}
+                />
                 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
                     <div className="max-w-7xl mx-auto space-y-6">
-                        
-                        {/* Top Navigation Tabs */}
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            {TABS.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-md font-bold text-sm transition-all shadow-sm
-                                        ${activeTab === tab.id 
-                                            ? 'bg-orange-600 text-white shadow-orange-200' 
-                                            : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-                                        }`}
-                                >
-                                    {tab.icon}
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-
                         <div>
                             {/* PROFILE TAB */}
                             {activeTab === 'view' && (

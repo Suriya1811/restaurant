@@ -243,8 +243,8 @@ const TrialBalance = () => {
                         </>
                     }
                 />
-                <div className="master-content-layout fade-in flex flex-col">
-                    <div className="toolbar-premium no-print">
+                <div className="master-content-layout fade-in flex flex-col flex-1 min-h-0 overflow-hidden">
+                    <div className="toolbar-premium flex-shrink-0 no-print mb-4">
                         <div className="flex flex-row items-center gap-4 flex-1">
                             <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
                                 <Search size={20} />
@@ -304,91 +304,115 @@ const TrialBalance = () => {
                         </div>
                     </div>
 
-<div className="flex-1 overflow-y-auto print-section relative">
-                    <div className="hidden print:block mb-6">
-                        <h2 className="text-2xl font-black text-slate-900 uppercase">Trial Balance</h2>
-                        <p className="text-slate-600 font-medium">Generated on: {new Date().toLocaleString('en-GB')}</p>
-                        <p className="text-slate-600 text-sm mt-1">Filters - From: {filters.startDate} | To: {filters.endDate}</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-full relative">
-                        <div className="overflow-x-auto flex-1 bg-white">
-                            <table className="w-full text-left min-w-[800px]">
-                                <thead className="bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm">
-                                    <tr>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider border-b border-r border-slate-700" rowSpan="2">Account Name</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Opening Balance</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Transactions</th>
-                                        <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-slate-700" colSpan="2">Closing Balance</th>
-                                    </tr>
-                                    <tr className="bg-[#1e293b] text-[#f97316]">
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
-                                        <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-slate-700 w-32">Cr.</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {data.length === 0 && (
-                                        <tr>
-                                            <td colSpan="7" className="px-6 py-8 text-center text-slate-500 font-medium">No transactions found for the selected period.</td>
-                                        </tr>
-                                    )}
-                                    {data.map((group, i) => (
-                                        <React.Fragment key={i}>
-                                            <tr className="bg-slate-50 hover:bg-slate-100 transition-colors">
-                                                <td className="px-6 py-3 text-sm font-black text-slate-900 border-r border-slate-200 uppercase">{group.group}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opDr)}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opCr)}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxDr)}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxCr)}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.clDr)}</td>
-                                                <td className="px-6 py-3 text-sm text-right font-bold text-slate-700">{fmt(group.clCr)}</td>
-                                            </tr>
-                                            {viewMode === 'DETAIL' && group.ledgers.map((ledger, j) => (
-                                                <tr key={`${i}-${j}`} className="hover:bg-orange-50/30 transition-colors bg-white">
-                                                    <td className="px-6 py-3 pl-12 text-sm font-semibold text-slate-700 border-r border-slate-200 flex items-center gap-2">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-                                                        {ledger.name}
-                                                    </td>
-                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opDr)}</td>
-                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opCr)}</td>
-                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxDr)}</td>
-                                                    <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxCr)}</td>
-                                                    <td className="px-6 py-3 text-sm text-right font-medium text-slate-800 border-r border-slate-200">{fmt(ledger.clDr)}</td>
-                                                    <td className="px-6 py-3 text-sm text-right font-medium text-slate-800">{fmt(ledger.clCr)}</td>
-                                                </tr>
-                                            ))}
-                                        </React.Fragment>
-                                    ))}
-                                </tbody>
-                                <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-orange-300">
-                                    <tr>
-                                        <td className="px-6 py-4 text-sm font-black text-orange-600 uppercase border-r border-orange-200">Total</td>
-                                        <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.opDr)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.opCr)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.trxDr)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.trxCr)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-black text-orange-600 border-r border-orange-200">{fmt(totals.clDr)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-black text-orange-600">{fmt(totals.clCr)}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden print-section relative">
+                        <div className="hidden print:block mb-6">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase">Trial Balance</h2>
+                            <p className="text-slate-600 font-medium">Generated on: {new Date().toLocaleString('en-GB')}</p>
+                            <p className="text-slate-600 text-sm mt-1">Filters - From: {filters.startDate} | To: {filters.endDate}</p>
                         </div>
-                        {isBalanced ? (
-                            <div className="bg-emerald-50 px-6 py-3 border-t border-emerald-100 flex items-center justify-center">
-                                <span className="text-emerald-700 font-bold text-sm">Difference is Zero (Balanced)</span>
+
+                        <div
+                            className="table-container-premium flex-1 flex flex-col justify-between"
+                            style={{
+                                height: 'calc(100vh - 280px)',
+                                maxHeight: 'calc(100vh - 280px)',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div className="flex-1 overflow-auto bg-white">
+                                <table className="table-premium w-full text-left min-w-[800px]">
+                                    <thead className="sticky top-0 z-10">
+                                        <tr className="bg-[#0f172a] text-[#f97316]">
+                                            <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider border-b border-r border-slate-700" rowSpan="2">Account Name</th>
+                                            <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Opening Balance</th>
+                                            <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-r border-slate-700" colSpan="2">Transactions</th>
+                                            <th className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-center border-b border-slate-700" colSpan="2">Closing Balance</th>
+                                        </tr>
+                                        <tr className="bg-[#1e293b] text-[#f97316]">
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Cr.</th>
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-r border-slate-700 w-32">Dr.</th>
+                                            <th className="px-6 py-2 text-[10px] font-bold uppercase tracking-wider text-right border-b border-slate-700 w-32">Cr.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {data.length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="px-6 py-8 text-center text-slate-500 font-medium">No transactions found for the selected period.</td>
+                                            </tr>
+                                        )}
+                                        {data.map((group, i) => (
+                                            <React.Fragment key={i}>
+                                                <tr className="bg-slate-50 hover:bg-slate-100 transition-colors">
+                                                    <td className="px-6 py-3 text-sm font-black text-slate-900 border-r border-slate-200 uppercase">{group.group}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.opCr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.trxCr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700 border-r border-slate-200">{fmt(group.clDr)}</td>
+                                                    <td className="px-6 py-3 text-sm text-right font-bold text-slate-700">{fmt(group.clCr)}</td>
+                                                </tr>
+                                                {viewMode === 'DETAIL' && group.ledgers.map((ledger, j) => (
+                                                    <tr key={`${i}-${j}`} className="hover:bg-orange-50/30 transition-colors bg-white">
+                                                        <td className="px-6 py-3 pl-12 text-sm font-semibold text-slate-700 border-r border-slate-200 flex items-center gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                                                            {ledger.name}
+                                                        </td>
+                                                        <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opDr)}</td>
+                                                        <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.opCr)}</td>
+                                                        <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxDr)}</td>
+                                                        <td className="px-6 py-3 text-sm text-right text-slate-600 border-r border-slate-200">{fmt(ledger.trxCr)}</td>
+                                                        <td className="px-6 py-3 text-sm text-right font-medium text-slate-800 border-r border-slate-200">{fmt(ledger.clDr)}</td>
+                                                        <td className="px-6 py-3 text-sm text-right font-medium text-slate-800">{fmt(ledger.clCr)}</td>
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="hidden print:table-footer-group">
+                                        <tr>
+                                            <td className="px-6 py-4 text-sm font-black text-orange-600 uppercase border-r border-orange-200">Total</td>
+                                            <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.opDr)}</td>
+                                            <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.opCr)}</td>
+                                            <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.trxDr)}</td>
+                                            <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 border-r border-orange-200">{fmt(totals.trxCr)}</td>
+                                            <td className="px-6 py-4 text-sm text-right font-black text-orange-600 border-r border-orange-200">{fmt(totals.clDr)}</td>
+                                            <td className="px-6 py-4 text-sm text-right font-black text-orange-600">{fmt(totals.clCr)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                        ) : (
-                            <div className="bg-rose-50 px-6 py-3 border-t border-rose-100 flex items-center justify-center">
-                                <span className="text-rose-700 font-bold text-sm">Difference: {fmt(Math.abs(totals.clDr - totals.clCr))} (Not Balanced)</span>
+
+                            {/* Fixed Bottom Total Summary Bar at End of Table */}
+                            <div className="bg-[#fff7ed] border-t-2 border-orange-200 px-6 py-3.5 flex flex-wrap items-center justify-between flex-shrink-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider">TRIAL BALANCE TOTALS</span>
+                                    {isBalanced ? (
+                                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded">Difference is Zero (Balanced)</span>
+                                    ) : (
+                                        <span className="text-[11px] font-bold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded">Difference: {fmt(Math.abs(totals.clDr - totals.clCr))} (Not Balanced)</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-6 text-xs font-black text-orange-600">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-500 uppercase">Op Dr/Cr:</span>
+                                        <span>₹ {fmt(totals.opDr)} / ₹ {fmt(totals.opCr)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-500 uppercase">Trx Dr/Cr:</span>
+                                        <span>₹ {fmt(totals.trxDr)} / ₹ {fmt(totals.trxCr)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 border-l border-orange-200 pl-4">
+                                        <span className="text-slate-800 uppercase font-black">Cl Dr/Cr:</span>
+                                        <span className="text-orange-600 text-sm">₹ {fmt(totals.clDr)} / ₹ {fmt(totals.clCr)}</span>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
-            </div>
             </main>
         </DashboardPageShell>
     );

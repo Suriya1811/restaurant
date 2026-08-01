@@ -284,8 +284,8 @@ const BalanceSheet = () => {
                         </>
                     }
                 />
-                <div className="master-content-layout fade-in flex flex-col">
-                    <div className="toolbar-premium no-print">
+                <div className="master-content-layout fade-in flex flex-col flex-1 min-h-0 overflow-hidden">
+                    <div className="toolbar-premium flex-shrink-0 no-print mb-4">
                         <div className="flex flex-row items-center gap-4 flex-1">
                             <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
                                 <Search size={20} />
@@ -321,78 +321,81 @@ const BalanceSheet = () => {
                         </div>
                     </div>
 
-<div className="flex-1 overflow-y-auto print-section relative">
-                    
-                    <div className="hidden print:block mb-6">
-                        <h2 className="text-2xl font-black text-slate-900 uppercase">Balance Sheet</h2>
-                        <p className="text-slate-600 font-medium">As on: {filters.endDate}</p>
+                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden print-section relative">
+                        <div className="hidden print:block mb-6">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase">Balance Sheet</h2>
+                            <p className="text-slate-600 font-medium">As on: {filters.endDate}</p>
+                        </div>
+
+                        <div
+                            className="table-container-premium flex-1 flex flex-col justify-between"
+                            style={{
+                                height: 'calc(100vh - 280px)',
+                                maxHeight: 'calc(100vh - 280px)',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            {/* Headers */}
+                            <div className="flex bg-[#0f172a] text-[#f97316] flex-shrink-0 z-10 shadow-sm min-h-[54px] items-center">
+                                <div className="flex-1 flex items-center border-r border-slate-700 h-full">
+                                    <div className="flex-1 px-6 py-[18px] text-xs font-black uppercase tracking-wider">Liabilities</div>
+                                    <div className="w-40 px-6 py-[18px] text-xs font-black uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
+                                </div>
+                                <div className="flex-1 flex items-center h-full">
+                                    <div className="flex-1 px-6 py-[18px] text-xs font-black uppercase tracking-wider">Assets</div>
+                                    <div className="w-40 px-6 py-[18px] text-xs font-black uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
+                                </div>
+                            </div>
+
+                            {/* Body content */}
+                            <div className="flex-1 overflow-y-auto bg-white flex flex-col sm:flex-row items-start relative">
+                                {data.liabilities.length === 0 && data.assets.length === 0 && (
+                                    <div className="absolute inset-0 flex items-center justify-center text-slate-500 font-medium bg-white">
+                                        No transactions found for the selected period.
+                                    </div>
+                                )}
+                                
+                                {/* Liabilities side */}
+                                <div className="flex-1 w-full sm:border-r border-slate-200 h-full">
+                                    {renderTableSide(data.liabilities)}
+                                </div>
+                                
+                                {/* Assets side */}
+                                <div className="flex-1 w-full h-full">
+                                    {renderTableSide(data.assets)}
+                                </div>
+                            </div>
+
+                            {/* Footer Totals */}
+                            <div className="flex bg-[#fff7ed] border-t-2 border-orange-200 flex-shrink-0 z-20">
+                                <div className="flex-1 flex border-r border-orange-200">
+                                    <div className="flex-1 px-6 py-3 text-sm font-black text-orange-600 uppercase">Total</div>
+                                    <div className="w-40 px-6 py-3 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalLiabilities) : ''}</div>
+                                </div>
+                                <div className="flex-1 flex">
+                                    <div className="flex-1 px-6 py-3 text-sm font-black text-orange-600 uppercase">Total</div>
+                                    <div className="w-40 px-6 py-3 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalAssets) : ''}</div>
+                                </div>
+                            </div>
+
+                            {/* Difference Row */}
+                            <div className="flex bg-[#fff7ed] border-t border-orange-200 flex-shrink-0 z-20">
+                                <div className="flex-1 flex border-r border-orange-200">
+                                    <div className="flex-1 px-6 py-3 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                    <div className="w-40 px-6 py-3 text-sm font-black text-orange-600 text-right">
+                                        {(totalLiabilities > 0 || totalAssets > 0) && totalLiabilities > totalAssets ? fmt(totalLiabilities - totalAssets) : ''}
+                                    </div>
+                                </div>
+                                <div className="flex-1 flex">
+                                    <div className="flex-1 px-6 py-3 text-sm font-black text-orange-600 uppercase">Difference</div>
+                                    <div className="w-40 px-6 py-3 text-sm font-black text-orange-600 text-right">
+                                        {(totalLiabilities > 0 || totalAssets > 0) && totalAssets > totalLiabilities ? fmt(totalAssets - totalLiabilities) : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col mb-4">
-
-
-                        {/* Headers */}
-                        <div className="flex bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm">
-                            <div className="flex-1 flex border-r border-slate-700">
-                                <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Liabilities</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
-                            </div>
-                            <div className="flex-1 flex">
-                                <div className="flex-1 px-6 py-3 text-xs font-bold uppercase tracking-wider">Assets</div>
-                                <div className="w-40 px-6 py-3 text-xs font-bold uppercase tracking-wider text-right border-l border-slate-700">Amount</div>
-                            </div>
-                        </div>
-
-                        {/* Body content */}
-                        <div className="flex flex-col sm:flex-row items-start relative min-h-[300px]">
-                            {data.liabilities.length === 0 && data.assets.length === 0 && (
-                                <div className="absolute inset-0 flex items-center justify-center text-slate-500 font-medium bg-white">
-                                    No transactions found for the selected period.
-                                </div>
-                            )}
-                            
-                            {/* Liabilities side */}
-                            <div className="flex-1 w-full sm:border-r border-slate-200 h-full">
-                                {renderTableSide(data.liabilities)}
-                            </div>
-                            
-                            {/* Assets side */}
-                            <div className="flex-1 w-full h-full">
-                                {renderTableSide(data.assets)}
-                            </div>
-                        </div>
-
-                        {/* Footer Totals */}
-                        <div className="flex bg-[#fff7ed] border-t border-orange-300 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-                            <div className="flex-1 flex border-r border-orange-200">
-                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalLiabilities) : ''}</div>
-                            </div>
-                            <div className="flex-1 flex">
-                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Total</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">{(totalLiabilities > 0 || totalAssets > 0) ? fmt(totalAssets) : ''}</div>
-                            </div>
-                        </div>
-
-                        {/* Difference Row */}
-                        <div className="flex bg-[#fff7ed] border-t border-orange-200 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-                            <div className="flex-1 flex border-r border-orange-200">
-                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
-                                    {(totalLiabilities > 0 || totalAssets > 0) && totalLiabilities > totalAssets ? fmt(totalLiabilities - totalAssets) : ''}
-                                </div>
-                            </div>
-                            <div className="flex-1 flex">
-                                <div className="flex-1 px-6 py-4 text-sm font-black text-orange-600 uppercase">Difference</div>
-                                <div className="w-40 px-6 py-4 text-sm font-black text-orange-600 text-right">
-                                    {(totalLiabilities > 0 || totalAssets > 0) && totalAssets > totalLiabilities ? fmt(totalAssets - totalLiabilities) : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-            </div>
             </main>
         </DashboardPageShell>
     );

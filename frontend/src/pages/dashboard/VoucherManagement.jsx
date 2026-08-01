@@ -380,11 +380,11 @@ const VouchersPage = () => {
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
             <main className="dashboard-main flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
-                <div className="flex-1 overflow-y-auto">
-                    <div className="mx-auto w-full">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div className="mx-auto w-full flex-1 flex flex-col min-h-0 overflow-hidden">
                         
                         {/* Header */}
-                        <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-slate-100">
+                        <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-slate-100 flex-shrink-0">
                             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Voucher Display</h1>
                             <div className="flex items-center gap-3">
                                 <button onClick={exportToCSV} className="btn-export excel" title="Export to Excel">
@@ -429,9 +429,9 @@ const VouchersPage = () => {
                             </div>
                         </div>
 
-                        <div className="p-4 md:p-6 space-y-6">
+                        <div className="p-4 md:p-6 space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden">
                             {/* Filters Row */}
-                            <div className="flex items-center justify-between gap-6 pb-2">
+                            <div className="flex items-center justify-between gap-6 pb-2 flex-shrink-0">
                                 <div className="flex-1 max-w-sm">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" size={16} />
@@ -484,7 +484,7 @@ const VouchersPage = () => {
                             </div>
 
                         {/* Metric Cards */}
-                        <div className="grid grid-cols-5 gap-4">
+                        <div className="grid grid-cols-5 gap-4 flex-shrink-0">
                             {/* Cash */}
                             <div className="bg-white rounded-xl border border-orange-300 p-4 shadow-sm flex flex-col justify-between">
                                 <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
@@ -594,10 +594,17 @@ const VouchersPage = () => {
                         </div>
 
                         {/* Data Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-center border-collapse min-w-[1000px]">
-                                    <thead>
+                        <div
+                            className="table-container-premium flex-1 flex flex-col justify-between bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+                            style={{
+                                height: 'calc(100vh - 275px)',
+                                maxHeight: 'calc(100vh - 275px)',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div className="overflow-x-auto overflow-y-auto custom-scrollbar flex-1">
+                                <table className="table-premium w-full text-center border-collapse min-w-[1000px]">
+                                    <thead className="sticky top-0 z-10 shadow-sm">
                                         <tr className="bg-[#0f172a] border-b border-slate-700">
                                             <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase w-10 text-center">
                                                 <input
@@ -684,19 +691,19 @@ const VouchersPage = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-500 flex justify-between items-center no-print">
-                                <span>Showing 1 to {filteredVouchers.length} of {filteredVouchers.length} entries</span>
+                            <div className="px-4 py-3 border-t border-slate-200 bg-[#fff7ed] text-xs font-medium text-slate-600 flex justify-between items-center flex-shrink-0 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] no-print">
+                                <span className="font-bold text-slate-700">Showing 1 to {filteredVouchers.length} of {filteredVouchers.length} entries</span>
                                 <div className="flex items-center gap-1">
                                     <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white font-bold">&lt;</button>
                                     <button className="px-2.5 py-1 border border-[#f97316] rounded bg-[#f97316] text-white font-bold">1</button>
                                     <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-400 bg-white font-bold">&gt;</button>
                                 </div>
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
+    </main>
 
             {/* Create Voucher Modal */}
             {showModal && (

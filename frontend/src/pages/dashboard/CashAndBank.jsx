@@ -285,7 +285,7 @@ const CashAndBank = () => {
                         </div>
                     </div>
 
-<div className="flex-1 overflow-y-auto print-section relative">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden print-section relative">
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-black text-slate-900 uppercase">Cash & Bank Statement</h2>
                         <p className="text-slate-600 font-medium">Audit Trail of Cash and Bank Movements</p>
@@ -293,7 +293,7 @@ const CashAndBank = () => {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="flex flex-wrap lg:flex-nowrap items-stretch gap-4 mb-6">
+                    <div className="flex flex-wrap lg:flex-nowrap items-stretch gap-4 mb-4 flex-shrink-0">
                         <div className="flex-1 bg-orange-50 border border-orange-100 rounded-lg p-4 flex flex-col justify-center items-center shadow-sm min-w-[200px]">
                             <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                                 <Wallet size={12} /> Cash in Hand
@@ -318,10 +318,17 @@ const CashAndBank = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[300px]">
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-left min-w-[900px]">
-                                <thead className="bg-[#0f172a] text-white sticky top-0 z-10">
+                    <div
+                        className="table-container-premium flex-1 flex flex-col justify-between"
+                        style={{
+                            height: 'calc(100vh - 280px)',
+                            maxHeight: 'calc(100vh - 280px)',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <div className="flex-1 overflow-auto">
+                            <table className="table-premium w-full text-left min-w-[900px]">
+                                <thead className="sticky top-0 z-10">
                                     <tr>
                                         <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 whitespace-nowrap">Date</th>
                                         <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Ref</th>
@@ -390,18 +397,39 @@ const CashAndBank = () => {
                                         </tr>
                                     ))}
                                 </tbody>
-                                <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t-2 border-orange-100">
+                                <tfoot className="hidden print:table-footer-group">
                                     <tr>
-                                        <td className="px-4 py-3 text-sm font-black text-slate-900 uppercase" colSpan={3}>Closing Liquidity Snapshot</td>
-                                        <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600">₹ {fmt(data.reduce((a,b)=>a+(b.received||0), 0))}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-bold text-rose-600">₹ {fmt(data.reduce((a,b)=>a+(b.paid||0), 0))}</td>
-                                        <td className="px-4 py-3"></td>
-                                        <td className="px-4 py-3"></td>
-                                        <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">₹ {fmt(summary.closingBalance)}</td>
-                                        <td className="px-2 py-3 no-print"></td>
+                                        <td colSpan={3} className="text-right font-bold">Closing Liquidity Snapshot</td>
+                                        <td className="text-right font-bold">₹ {fmt(data.reduce((a,b)=>a+(b.received||0), 0))}</td>
+                                        <td className="text-right font-bold">₹ {fmt(data.reduce((a,b)=>a+(b.paid||0), 0))}</td>
+                                        <td colSpan={2}></td>
+                                        <td className="text-right font-bold">₹ {fmt(summary.closingBalance)}</td>
+                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+
+                        {/* Fixed Bottom Total Bar at End of Table */}
+                        <div className="bg-[#fff7ed] border-t-2 border-orange-200 px-6 py-3.5 flex items-center justify-between flex-shrink-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-900 uppercase tracking-wider">Closing Liquidity Snapshot</span>
+                                <span className="text-[11px] font-bold text-slate-500">({data.length} Movements)</span>
+                            </div>
+                            <div className="flex items-center gap-8 text-sm font-black text-orange-600">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-emerald-600 uppercase">Inflow:</span>
+                                    <span className="text-emerald-700">₹ {fmt(data.reduce((a,b)=>a+(b.received||0), 0))}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-rose-600 uppercase">Outflow:</span>
+                                    <span className="text-rose-700">₹ {fmt(data.reduce((a,b)=>a+(b.paid||0), 0))}</span>
+                                </div>
+                                <div className="flex items-center gap-2 border-l border-orange-200 pl-6">
+                                    <span className="text-xs font-bold text-slate-600 uppercase">Current Position:</span>
+                                    <span className="text-orange-600">₹ {fmt(summary.closingBalance)}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

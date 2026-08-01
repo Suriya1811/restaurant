@@ -232,16 +232,8 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
                 )}
             </div>
 
-            {/* Center: Store / Company Name in Bold White (Only on Main Dashboard Header) — flex 1 for absolute center */}
-            {!isMasterHeader ? (
-                <div className="header-center" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 0%', minWidth: 0, pointerEvents: 'none', position: 'relative' }}>
-                    <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                        {storeName}
-                    </span>
-                </div>
-            ) : (
-                <div style={{ flex: '1 1 0%', minWidth: 0 }} />
-            )}
+            {/* Center space for header layout */}
+            <div style={{ flex: '1 1 0%', minWidth: 0 }} />
 
             {/* Right: Actions / Buttons (flex 1 to match left/center for absolute center) */}
             <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative', flex: '1 1 0%', minWidth: 0, justifyContent: 'flex-end', ...(window.electronAPI?.isElectron ? { WebkitAppRegion: 'no-drag', appRegion: 'no-drag' } : {}) }} ref={profileRef}>

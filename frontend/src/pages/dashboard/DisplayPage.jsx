@@ -7,14 +7,14 @@ import ActionDropdown from '@/components/dashboard/ActionDropdown';
 import {
     CalendarDays, FileText, ClipboardList, DollarSign, Landmark,
     RefreshCw, FileSpreadsheet, FileIcon, Printer, XCircle, ChevronDown, CheckSquare,
-    ChevronLeft, ChevronRight, Edit, Trash2, Settings, Eye, Download
+    ChevronLeft, ChevronRight, Edit, Trash2, Settings, Eye, Download, X
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Dashboard.css';
 
 const ALL_COLUMNS = [
-    { id: 'action', label: '' },
+    { id: 'action', label: 'Action' },
     { id: 'sno', label: 'S.NO' },
     { id: 'type', label: 'TYPE' },
     { id: 'kot_bill_no', label: 'KOT/BILL NUMBER' },
@@ -73,6 +73,7 @@ const DisplayPage = () => {
         }
         return ALL_COLUMNS.map(c => c.id);
     });
+    const [tempVisibleColumns, setTempVisibleColumns] = useState(visibleColumns);
 
     // Action Dropdown State
     const [openActionId, setOpenActionId] = useState(null);
@@ -544,8 +545,16 @@ const DisplayPage = () => {
                 <Printer size={14} className="text-indigo-500" />
                 <span>Print</span>
             </button>
-            <button onClick={() => setShowColumnFilter(true)} className="btn-column-settings">
-                <Settings size={14} /> <span>Column Settings</span>
+            <button
+                type="button"
+                onClick={() => {
+                    setTempVisibleColumns(visibleColumns);
+                    setShowColumnFilter(true);
+                }}
+                className="btn-column-settings cursor-pointer"
+            >
+                <Settings size={14} />
+                <span>Column Settings</span>
             </button>
         </div>
     );
@@ -565,12 +574,12 @@ const DisplayPage = () => {
                     <Header toggleSidebar={toggleSidebar} title="SALES DISPLAY" actions={headerActions} />
                 </div>
 
-                <div className="flex flex-col bg-slate-50 relative flex-1 min-h-0 overflow-y-auto print:overflow-visible print:h-auto print:bg-white print:block">
+                <div className="flex flex-col bg-slate-50 relative flex-1 min-h-0 overflow-hidden print:overflow-visible print:h-auto print:bg-white print:block">
 
-                    <div className="p-6 space-y-4 flex-1 w-full mx-auto max-w-[1400px] print:p-0 print:max-w-none">
+                    <div className="p-6 flex flex-col space-y-4 flex-1 min-h-0 w-full mx-auto max-w-[1400px] overflow-hidden print:p-0 print:max-w-none">
 
                         {/* Filters Row */}
-                        <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100 print:hidden">
+                        <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex-shrink-0 print:hidden">
                             {/* Type Filter */}
                             <div className="flex-1 min-w-[140px]">
                                 <select
@@ -681,14 +690,18 @@ const DisplayPage = () => {
                             </div>
                         </div>
 
-                        {/* Summary Cards */}
-
-                        {/* Data Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col pb-4 flex-1 print:border-none print:shadow-none print:overflow-visible print:block">
-                            <div className="overflow-x-auto custom-scrollbar flex-1 print:overflow-visible print:block">
-                                <table className="w-full text-left border-collapse min-w-[1500px] print:min-w-full print:text-[10px]">
+                        {/* Data Table Container */}
+                        <div
+                            className="table-container-premium flex-1 flex flex-col justify-between bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden print:border-none print:shadow-none print:overflow-visible print:block"
+                            style={{
+                                height: 'calc(100vh - 250px)',
+                                maxHeight: 'calc(100vh - 250px)',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div className="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 print:overflow-visible print:block">
+                                <table className="table-premium w-full text-left border-collapse min-w-[1500px] print:min-w-full print:text-[10px]">
                                     <thead className="sticky top-0 bg-[#0b1727] z-10 shadow-sm print:static">
-
                                         <tr className="border-b border-slate-200">
                                             <th className="py-4 px-3 text-center border-r border-slate-700/50 w-10">
                                                 <input
@@ -860,29 +873,24 @@ const DisplayPage = () => {
                                 </table>
                             </div>
 
-                            {/* Table Footer and Pagination */}
-                            <div className="pt-4 pb-2 px-6 flex items-center justify-between border-t border-slate-100">
-                                <span className="text-[13px] font-bold text-[#ff6b00]">
-                                    TOTAL RECORDS : {filteredRecords.length}
-                                </span>
-
-                                <div className="flex items-center gap-8 text-[13px] font-bold text-[#ff6b00]">
-                                    <span>₹ {rangeSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    <span>₹ {rangeCashAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    <span>₹ {rangeCardAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    <span>₹ {rangeUpiAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    {/* Empty span for action column width alignment if needed, or adjust spacing */}
+                            {/* Fixed Bottom Total & Pagination Bar at End of Table */}
+                            <div className="py-3 px-6 flex flex-wrap items-center justify-between border-t border-slate-200 bg-[#fff7ed] flex-shrink-0 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+                                <div className="flex flex-wrap items-center gap-4 text-[13px] font-bold text-slate-800">
+                                    <span className="text-[#ff6b00] font-black uppercase">TOTAL RECORDS: {filteredRecords.length}</span>
+                                    <span className="text-slate-300">|</span>
+                                    <span className="text-slate-600">Total: <strong className="text-[#ea580c]">₹ {rangeSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                                    <span className="text-slate-600">Cash: <strong className="text-[#ea580c]">₹ {rangeCashAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                                    <span className="text-slate-600">Card: <strong className="text-[#ea580c]">₹ {rangeCardAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                                    <span className="text-slate-600">UPI: <strong className="text-[#ea580c]">₹ {rangeUpiAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                                 </div>
-                            </div>
 
-                            {/* Original Pagination (Hidden for now to match UI exactly, or placed underneath) */}
-                            {filteredRecords.length > recordsPerPage && (
-                                <div className="pt-2 px-6 mt-auto flex items-center justify-end border-t border-slate-100">
-                                    <div className="flex items-center gap-1.5">
+                                {/* Pagination */}
+                                {filteredRecords.length > recordsPerPage && (
+                                    <div className="flex items-center gap-1.5 ml-auto">
                                         <button
                                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                             disabled={currentPage === 1}
-                                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                                         >
                                             <ChevronLeft size={16} />
                                         </button>
@@ -894,13 +902,13 @@ const DisplayPage = () => {
                                                     <button
                                                         key={page}
                                                         onClick={() => setCurrentPage(page)}
-                                                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-[13px] font-bold transition-all shadow-sm ${currentPage === page ? 'bg-orange-500 text-white border-orange-500 hover:shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow'}`}
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all shadow-sm ${currentPage === page ? 'bg-orange-500 text-white border-orange-500' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                                                     >
                                                         {page}
                                                     </button>
                                                 );
                                             } else if (page === currentPage - 2 || page === currentPage + 2) {
-                                                return <span key={page} className="text-slate-400 px-2 text-sm font-bold">...</span>;
+                                                return <span key={page} className="text-slate-400 px-1 text-xs font-bold">...</span>;
                                             }
                                             return null;
                                         })}
@@ -908,66 +916,77 @@ const DisplayPage = () => {
                                         <button
                                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                             disabled={currentPage === totalPages || totalPages === 0}
-                                            className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                                         >
                                             <ChevronRight size={16} />
                                         </button>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
                     </div>
                 </div>
             </main>
 
-            {/* Column Selection Modal */}
+            {/* Column Settings Sidebar Drawer Panel */}
             {showColumnFilter && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200 column-filter-container">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
-                            <h3 className="text-[15px] font-bold text-slate-800">Select Columns</h3>
-                            <button
-                                onClick={() => setShowColumnFilter(false)}
-                                className="text-slate-400 hover:text-red-500 transition-colors"
-                            >
-                                <XCircle size={20} />
+                <>
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColumnFilter(false)} />
+                    <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl border-l border-slate-200 z-[10000] flex flex-col animate-in slide-in-from-right duration-300">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Column Settings</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Select columns to display</p>
+                            </div>
+                            <button onClick={() => setShowColumnFilter(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800">
+                                <X size={18} />
                             </button>
                         </div>
-                        <div className="p-4 flex flex-col gap-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
                             {ALL_COLUMNS.map(col => (
-                                <div
-                                    key={col.id}
-                                    onClick={() => setVisibleColumns(prev =>
-                                        prev.includes(col.id)
-                                            ? prev.filter(id => id !== col.id)
-                                            : [...prev, col.id]
-                                    )}
-                                    className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-slate-100"
-                                >
-                                    <span className="text-[14px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{col.label}</span>
-                                    <div className={`w-[20px] h-[20px] rounded-[6px] flex items-center justify-center border transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/20' : 'border-slate-300'}`}>
-                                        {visibleColumns.includes(col.id) && <CheckSquare size={14} className="text-white" />}
-                                    </div>
-                                </div>
+                                <label key={col.id} className="flex items-center gap-3 cursor-pointer group py-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={tempVisibleColumns.includes(col.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setTempVisibleColumns(prev => [...prev, col.id]);
+                                            } else {
+                                                setTempVisibleColumns(prev => prev.filter(id => id !== col.id));
+                                            }
+                                        }}
+                                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                                        style={{ accentColor: '#f97316' }}
+                                    />
+                                    <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">
+                                        {col.label || col.id}
+                                    </span>
+                                </label>
                             ))}
                         </div>
-                        <div className="p-4 border-t border-slate-100 flex gap-3 bg-slate-50">
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
                             <button
-                                onClick={() => setVisibleColumns(ALL_COLUMNS.map(c => c.id))}
-                                className="flex-1 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-[14px] font-bold hover:bg-slate-100 hover:border-slate-300 transition-all"
+                                type="button"
+                                onClick={() => setTempVisibleColumns(ALL_COLUMNS.map(c => c.id))}
+                                className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer"
                             >
-                                Reset
+                                RESET
                             </button>
                             <button
-                                onClick={() => setShowColumnFilter(false)}
-                                className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-[14px] font-bold hover:bg-orange-600 shadow-md shadow-orange-500/20 transition-all"
+                                type="button"
+                                onClick={() => {
+                                    setVisibleColumns(tempVisibleColumns);
+                                    localStorage.setItem('displayPageColumns', JSON.stringify(tempVisibleColumns));
+                                    setShowColumnFilter(false);
+                                }}
+                                className="flex-1 py-2 text-xs font-bold text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors cursor-pointer"
                             >
-                                Apply Changes
+                                APPLY
                             </button>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </DashboardPageShell>
     );
