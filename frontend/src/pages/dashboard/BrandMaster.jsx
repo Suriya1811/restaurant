@@ -254,7 +254,7 @@ const BrandMaster = () => {
                     }
                 />
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -296,7 +296,7 @@ const BrandMaster = () => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>

@@ -133,3 +133,38 @@ app.listen(PORT, '127.0.0.1', () => {
 });
 
 module.exports = app;
+
+// ─── Table Auto-Cleanup (2 min timeout for empty occupied tables) ─────────────
+const Table = require('./models/Table');
+const Bill = require('./models/Bill');
+
+setInterval(async () => {
+    try {
+        const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const tables = await Table.find({
+            status: 'OCCUPIED',
+            occupied_since: { $lt: fiveMinsAgo },
+            bill_id: { $ne: null }
+        });
+
+        for (const table of tables) {
+            const bill = await Bill.findById(table.bill_id);
+            // If the bill has no items (not a running table), we consider it abandoned
+            if (!bill || !bill.items || bill.items.length === 0) {
+                table.status = 'AVAILABLE';
+                table.bill_id = null;
+                table.running_amount = 0;
+                table.occupied_since = null;
+                await table.save();
+
+                if (bill) {
+                    await Bill.findByIdAndDelete(bill._id);
+                }
+                console.log(`Auto-freed table ${table.table_number} after 5 mins of inactivity.`);
+            }
+        }
+    } catch (err) {
+        console.error('Error in table auto-cleanup:', err);
+    }
+}, 60000); // Check every minute
+

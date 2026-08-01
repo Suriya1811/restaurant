@@ -560,12 +560,12 @@ const DisplayPage = () => {
                 <div className="mobile-overlay print:hidden" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
-            <main className="dashboard-main flex flex-col h-screen overflow-hidden relative print:h-auto print:overflow-visible print:block">
+            <main className="dashboard-main flex flex-col h-full min-h-0 overflow-hidden relative print:h-auto print:overflow-visible print:block">
                 <div className="print:hidden">
                     <Header toggleSidebar={toggleSidebar} title="SALES DISPLAY" actions={headerActions} />
                 </div>
 
-                <div className="flex flex-col h-full bg-slate-50 relative flex-1 overflow-y-auto print:overflow-visible print:h-auto print:bg-white print:block">
+                <div className="flex flex-col bg-slate-50 relative flex-1 min-h-0 overflow-y-auto print:overflow-visible print:h-auto print:bg-white print:block">
 
                     <div className="p-6 space-y-4 flex-1 w-full mx-auto max-w-[1400px] print:p-0 print:max-w-none">
 

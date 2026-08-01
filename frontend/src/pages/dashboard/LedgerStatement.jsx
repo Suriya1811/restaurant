@@ -291,19 +291,19 @@ const LedgerStatement = () => {
                         </div>
                     </div>
 
-<div className="flex-1 overflow-y-auto print-section relative">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden print-section relative">
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-black text-slate-900 uppercase">Ledger Statement</h2>
                         <p className="text-slate-600 font-medium">Ledger: {statement?.ledger?.name || 'N/A'}</p>
                         <p className="text-slate-600 text-sm mt-1">Filters - From: {filters.startDate} | To: {filters.endDate}</p>
                     </div>
 
-                    <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 mb-6">
+                    <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 mb-4 flex-shrink-0">
                         {/* Ledger Selection */}
                         <div className="w-full xl:w-64 bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Ledger Name</label>
                             <select 
-                                className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400"
+                                className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 cursor-pointer"
                                 value={selectedLedger}
                                 onChange={(e) => setSelectedLedger(e.target.value)}
                             >
@@ -346,26 +346,33 @@ const LedgerStatement = () => {
                     </div>
 
                     {statement ? (
-                        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[300px]">
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full text-left min-w-[900px]">
-                                    <thead className="bg-[#0f172a] text-white sticky top-0 z-10">
+                        <div
+                            className="table-container-premium flex-1 flex flex-col justify-between"
+                            style={{
+                                height: 'calc(100vh - 280px)',
+                                maxHeight: 'calc(100vh - 280px)',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div className="flex-1 overflow-auto">
+                                <table className="table-premium w-full text-left min-w-[900px]">
+                                    <thead className="sticky top-0 z-10">
                                         <tr>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700">Date</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Voucher No.</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700">Particulars</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-center">Vch Type</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Debit (₹)</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 border-r border-slate-700 text-right">Credit (₹)</th>
-                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider !text-orange-500 text-right border-r border-slate-700">Balance (₹)</th>
-                                            <th className="px-2 py-3 w-10 border-slate-700 no-print"></th>
+                                            <th style={{ minWidth: '110px' }}>Date</th>
+                                            <th style={{ minWidth: '110px', textAlign: 'center' }}>Voucher No.</th>
+                                            <th style={{ minWidth: '200px' }}>Particulars</th>
+                                            <th style={{ minWidth: '110px', textAlign: 'center' }}>Vch Type</th>
+                                            <th style={{ minWidth: '120px', textAlign: 'right' }}>Debit (₹)</th>
+                                            <th style={{ minWidth: '120px', textAlign: 'right' }}>Credit (₹)</th>
+                                            <th style={{ minWidth: '130px', textAlign: 'right' }}>Balance (₹)</th>
+                                            <th className="w-10 no-print"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        <tr className="bg-slate-50">
-                                            <td className="px-4 py-3 text-xs font-semibold text-slate-700">{new Date(filters.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                        <tr className="bg-slate-50 font-bold">
+                                            <td className="px-4 py-3 text-xs text-slate-700">{new Date(filters.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                             <td className="px-4 py-3 text-xs text-center text-slate-400">OP-001</td>
-                                            <td className="px-4 py-3 text-xs font-bold text-slate-700">Opening Balance</td>
+                                            <td className="px-4 py-3 text-xs text-slate-700">Opening Balance</td>
                                             <td className="px-4 py-3 text-xs text-center text-slate-600">Opening</td>
                                             <td className="px-4 py-3 text-xs text-right text-slate-400">-</td>
                                             <td className="px-4 py-3 text-xs text-right text-slate-400">-</td>
@@ -390,15 +397,33 @@ const LedgerStatement = () => {
                                             </tr>
                                         ))}
                                     </tbody>
-                                    <tfoot className="bg-[#fff7ed] sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t-2 border-orange-100">
-                                        <tr className="bg-slate-50 border-t-2 border-slate-200">
-                                            <td colSpan="4" className="px-4 py-3 text-sm font-black text-slate-800 text-right uppercase tracking-wider">Total Transactions</td>
-                                            <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">₹ {fmt(totalDebit)}</td>
-                                            <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">₹ {fmt(totalCredit)}</td>
+                                    <tfoot className="hidden print:table-footer-group">
+                                        <tr className="font-bold">
+                                            <td colSpan="4" className="text-right">Total Transactions</td>
+                                            <td className="text-right">₹ {fmt(totalDebit)}</td>
+                                            <td className="text-right">₹ {fmt(totalCredit)}</td>
                                             <td colSpan="2"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+
+                            {/* Fixed Bottom Total Bar at End of Table */}
+                            <div className="bg-[#fff7ed] border-t-2 border-orange-200 px-6 py-3.5 flex items-center justify-between flex-shrink-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider">Total Transactions</span>
+                                    <span className="text-[11px] font-bold text-slate-500">({statement.data.length} Entries)</span>
+                                </div>
+                                <div className="flex items-center gap-8 text-sm font-black text-orange-600">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-500 uppercase">Debit:</span>
+                                        <span>₹ {fmt(totalDebit)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-500 uppercase">Credit:</span>
+                                        <span>₹ {fmt(totalCredit)}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ) : (

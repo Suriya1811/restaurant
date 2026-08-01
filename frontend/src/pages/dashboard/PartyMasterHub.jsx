@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SearchableSelect from '@/components/common/SearchableSelect';
 import '../dashboard/Dashboard.css';
 
 const PartyMasterHub = () => {
@@ -632,54 +633,53 @@ const PartyMasterHub = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-3 text-[13px] font-bold text-slate-800">Hall</label>
                                                 <div className="col-span-9 flex gap-1 items-center">
-                                                    <select
+                                                    <SearchableSelect
+                                                        name="hall"
                                                         value={newPartyData.hall || ''}
+                                                        options={[
+                                                            'Main Hall',
+                                                            'Banquet Hall',
+                                                            'VIP Lounge',
+                                                            'Outdoor Terrace'
+                                                        ]}
+                                                        placeholder="Select Hall"
                                                         onChange={e => setNewPartyData({ ...newPartyData, hall: e.target.value })}
-                                                        className="flex-1 px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer"
-                                                    >
-                                                        <option value="">Select Hall</option>
-                                                        <option value="Main Hall">Main Hall</option>
-                                                        <option value="Banquet Hall">Banquet Hall</option>
-                                                        <option value="VIP Lounge">VIP Lounge</option>
-                                                        <option value="Outdoor Terrace">Outdoor Terrace</option>
-                                                    </select>
-                                                    <button type="button" className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm cursor-pointer">+</button>
+                                                    />
+                                                    <button type="button" className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm cursor-pointer flex-shrink-0">+</button>
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-3 text-[13px] font-bold text-slate-800">Function *</label>
                                                 <div className="col-span-9 flex gap-1 items-center">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
+                                                        name="function_type"
                                                         value={newPartyData.function_type}
+                                                        options={functionTypes.map(ft => ft.name)}
+                                                        placeholder="Select Function"
                                                         onChange={e => setNewPartyData({ ...newPartyData, function_type: e.target.value })}
-                                                        className="flex-1 px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer"
-                                                    >
-                                                        <option value="">Select Function</option>
-                                                        {functionTypes.map(ft => (
-                                                            <option key={ft._id} value={ft.name}>{ft.name}</option>
-                                                        ))}
-                                                    </select>
-                                                    <button type="button" onClick={() => navigate('/dashboard/self-service/master/function')} className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm cursor-pointer">+</button>
+                                                    />
+                                                    <button type="button" onClick={() => navigate('/dashboard/self-service/master/function')} className="w-[38px] h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm cursor-pointer flex-shrink-0">+</button>
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-3 text-[13px] font-bold text-slate-800">Packs</label>
                                                 <div className="col-span-9">
-                                                    <select
+                                                    <SearchableSelect
+                                                        name="packs"
                                                         value={newPartyData.packs || ''}
+                                                        options={[
+                                                            '50 Packs',
+                                                            '100 Packs',
+                                                            '200 Packs',
+                                                            '500 Packs',
+                                                            'Custom Packs'
+                                                        ]}
+                                                        placeholder="Select Packs"
                                                         onChange={e => setNewPartyData({ ...newPartyData, packs: e.target.value })}
-                                                        className="w-full px-3 py-2 bg-white border border-orange-400 rounded text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-semibold cursor-pointer"
-                                                    >
-                                                        <option value="">Select Packs</option>
-                                                        <option value="50 Packs">50 Packs</option>
-                                                        <option value="100 Packs">100 Packs</option>
-                                                        <option value="200 Packs">200 Packs</option>
-                                                        <option value="500 Packs">500 Packs</option>
-                                                        <option value="Custom Packs">Custom Packs</option>
-                                                    </select>
+                                                    />
                                                 </div>
                                             </div>
                                         </div>

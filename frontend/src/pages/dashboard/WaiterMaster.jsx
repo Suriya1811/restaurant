@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
@@ -355,7 +356,7 @@ const WaiterMaster = () => {
                     }
                 />
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -397,7 +398,7 @@ const WaiterMaster = () => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -597,17 +598,18 @@ const WaiterMaster = () => {
                                     <div className="form-group-premium">
                                         <label className="block text-xs font-bold text-slate-700 uppercase mb-2">ID Proof Verification</label>
                                         <div className="relative">
-                                            <CreditCard size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                            <select
-                                                className="input-premium !pl-12 !appearance-none cursor-pointer"
+                                            <SearchableSelect
+                                                name="id_proof_type"
                                                 value={formData.id_proof_type}
+                                                options={[
+                                                    { value: 'NONE', label: 'SELECT ID PROOF' },
+                                                    { value: 'ADHAR CARD', label: 'ADHAR CARD' },
+                                                    { value: 'VOTER ID', label: 'VOTER ID' },
+                                                    { value: 'DRIVING LICENSE', label: 'DRIVING LICENSE' }
+                                                ]}
+                                                placeholder="SELECT ID PROOF"
                                                 onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
-                                            >
-                                                <option value="NONE">SELECT ID PROOF</option>
-                                                <option value="ADHAR CARD">ADHAR CARD</option>
-                                                <option value="VOTER ID">VOTER ID</option>
-                                                <option value="DRIVING LICENSE">DRIVING LICENSE</option>
-                                            </select>
+                                            />
                                         </div>
                                     </div>
                                 </div>

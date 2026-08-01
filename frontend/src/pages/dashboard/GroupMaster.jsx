@@ -7,6 +7,7 @@ import { PlusCircle, Search, Edit, Trash2, Loader2, AlertCircle, XCircle, CheckC
 import { STANDARD_GROUPS, getNatureForGroup, ACCOUNT_NATURES } from '../../utils/standardGroups';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
@@ -328,7 +329,7 @@ const GroupMaster = () => {
                 />
 
                 {!showDrawer ? (
-                    <div className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -384,9 +385,8 @@ const GroupMaster = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
-                            <div className="overflow-x-auto flex-1 custom-scrollbar">
-                                <table className="table-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
+                            <table className="table-premium">
                                     <thead>
                                         <tr>
                                             <th style={{ width: '40px', textAlign: 'center' }}>
@@ -422,7 +422,6 @@ const GroupMaster = () => {
                                         )}
                                     </tbody>
                                 </table>
-                            </div>
                         </div>
 
                         {/* Bottom Total Buttons */}
@@ -461,36 +460,24 @@ const GroupMaster = () => {
                                         </div>
 
                                         <div className="grid grid-cols-12 items-center gap-4">
-                                            <label className="col-span-3 text-[14px] font-bold text-slate-800 uppercase">Parent Group (Under)</label>
-                                            <div className="col-span-9">
-                                                <select
-                                                    value={formData.parent || ''}
-                                                    onChange={(e) => {
-                                                        const selParent = e.target.value;
-                                                        const nat = getNatureForGroup(selParent) || formData.nature || 'ASSETS';
-                                                        setFormData({ ...formData, parent: selParent, nature: nat });
-                                                    }}
-                                                    className="w-full px-4 py-2.5 rounded-lg border border-orange-500 text-sm font-semibold text-black focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-                                                >
-                                                    <option value="">Primary Group (No Parent)</option>
-                                                    {(() => {
-                                                        const grouped = {};
-                                                        if (Array.isArray(groups)) {
-                                                            groups.forEach(g => {
-                                                                const nat = g.nature || getNatureForGroup(g.name) || 'ASSETS';
-                                                                if (!grouped[nat]) grouped[nat] = new Set();
-                                                                grouped[nat].add(g.name);
-                                                            });
-                                                        }
-                                                        return Object.entries(grouped).map(([nature, gSet]) => (
-                                                            <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
-                                                                {Array.from(gSet).sort().map(g => <option key={g} value={g}>{g}</option>)}
-                                                            </optgroup>
-                                                        ));
-                                                    })()}
-                                                </select>
-                                            </div>
-                                        </div>
+                                             <label className="col-span-3 text-[14px] font-bold text-slate-800 uppercase">Parent Group (Under)</label>
+                                             <div className="col-span-9">
+                                                 <SearchableSelect
+                                                     name="parent"
+                                                     value={formData.parent || ''}
+                                                     options={[
+                                                         { value: '', label: 'Primary Group (No Parent)' },
+                                                         ...(Array.isArray(groups) ? groups.map(g => ({ value: g.name, label: `${g.name} (${g.nature || getNatureForGroup(g.name) || 'ASSETS'})` })) : [])
+                                                     ]}
+                                                     placeholder="Primary Group (No Parent)"
+                                                     onChange={(e) => {
+                                                         const selParent = e.target.value;
+                                                         const nat = getNatureForGroup(selParent) || formData.nature || 'ASSETS';
+                                                         setFormData({ ...formData, parent: selParent, nature: nat });
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
                                     </div>
                                 </div>
 

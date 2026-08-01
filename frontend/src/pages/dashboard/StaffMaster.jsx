@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
@@ -378,7 +379,7 @@ const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
                 />
 
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -420,7 +421,7 @@ const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -591,17 +592,18 @@ const StaffMaster = ({ defaultType = 'CAPTAIN' }) => {
                                                 ID Proof
                                             </label>
                                             <div className="col-span-9">
-                                                <select
+                                                <SearchableSelect
+                                                    name="id_proof_type"
                                                     value={formData.id_proof_type}
+                                                    options={[
+                                                        { value: 'NONE', label: 'SELECT ID PROOF' },
+                                                        { value: 'ADHAR CARD', label: 'ADHAR CARD' },
+                                                        { value: 'VOTER ID', label: 'VOTER ID' },
+                                                        { value: 'DRIVING LICENSE', label: 'DRIVING LICENSE' }
+                                                    ]}
+                                                    placeholder="SELECT ID PROOF"
                                                     onChange={(e) => setFormData({ ...formData, id_proof_type: e.target.value })}
-                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
-                                                    style={{ border: '1px solid #f97316' }}
-                                                >
-                                                    <option value="NONE">SELECT ID PROOF</option>
-                                                    <option value="ADHAR CARD">ADHAR CARD</option>
-                                                    <option value="VOTER ID">VOTER ID</option>
-                                                    <option value="DRIVING LICENSE">DRIVING LICENSE</option>
-                                                </select>
+                                                />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-12 items-start gap-4">

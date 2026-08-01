@@ -14,15 +14,11 @@ import {
     User, Key, Printer, FileText, Eye, EyeOff,
     Save, CheckCircle, Palette, AlertCircle, Loader2,
     Building2, Phone, Mail, Lock, Settings, TestTube,
-    LayoutTemplate, Shield, ChevronRight, Sliders, Hash, List, CalendarDays, Search, Wallet, ShieldCheck,
-    Database, Folder, Clock, Download, HardDrive, RefreshCw, Paperclip, UploadCloud
+    LayoutTemplate, Shield, ChevronRight, ChevronDown, Sliders, Hash, List, CalendarDays, Search, Wallet, ShieldCheck,
+    Database, Folder, Clock, Download, HardDrive, RefreshCw, Paperclip, UploadCloud, XCircle
 } from 'lucide-react';
 
-const SYSTEM_MODULES_CONFIG = [
-    { key: 'pay_mode_enabled', title: 'Pay Mode', subtitle: 'Show Popup on Save' },
-    { key: 'dashboard_enabled', title: 'Dashboard', subtitle: 'Analytics & Stats' },
-    { key: 'stock_level_enabled', title: 'Stock Level', subtitle: 'Inventory Options' }
-];
+
 
 const GENERAL_SETTINGS_ITEMS = [
     { key: 'pay_mode_enabled', label: 'Pay Mode in Sales', type: 'module' },
@@ -44,7 +40,7 @@ const SettingsPage = () => {
     const [loading, setLoading] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
-    
+
     // Read initial tab from URL or default to general
     const initialTab = new URLSearchParams(location.search).get('tab') || 'general';
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -67,8 +63,8 @@ const SettingsPage = () => {
     });
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [passwordEnabled, setPasswordEnabled] = useState(true);
-    const [printerForm, setPrinterForm] = useState({ 
-        enabled: true, 
+    const [printerForm, setPrinterForm] = useState({
+        enabled: true,
         width: '80mm',
         sales_bill_printer: 'Sales Bill Printer (POS-80)',
         kot_printer: 'KOT Kitchen Printer (KOT-80)',
@@ -273,12 +269,12 @@ const SettingsPage = () => {
                 body: JSON.stringify(passwordForm)
             });
             const result = await response.json();
-            if (result.success) { 
-                setSuccess(prev => ({ ...prev, password: true })); 
-                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); 
+            if (result.success) {
+                setSuccess(prev => ({ ...prev, password: true }));
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 // Set password enabled to true if they created a new one
                 setPasswordEnabled(true);
-                setTimeout(() => setSuccess(prev => ({ ...prev, password: false })), 3000); 
+                setTimeout(() => setSuccess(prev => ({ ...prev, password: false })), 3000);
             }
             else { setErrors(prev => ({ ...prev, password: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, password: 'Failed to change password' })); }
@@ -291,17 +287,17 @@ const SettingsPage = () => {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
             const newEnabledState = !passwordEnabled;
-            
+
             const response = await fetch(`${import.meta.env.VITE_API_URL}/settings/toggle-password`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ enabled: newEnabledState, currentPassword: passwordForm.currentPassword })
             });
             const result = await response.json();
-            if (result.success) { 
+            if (result.success) {
                 setPasswordEnabled(result.data.password_enabled);
-                setSuccess(prev => ({ ...prev, passwordToggle: true })); 
+                setSuccess(prev => ({ ...prev, passwordToggle: true }));
                 setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                setTimeout(() => setSuccess(prev => ({ ...prev, passwordToggle: false })), 3000); 
+                setTimeout(() => setSuccess(prev => ({ ...prev, passwordToggle: false })), 3000);
             }
             else { setErrors(prev => ({ ...prev, passwordToggle: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, passwordToggle: 'Failed to toggle password protection' })); }
@@ -318,12 +314,12 @@ const SettingsPage = () => {
                 body: JSON.stringify(printerForm)
             });
             const result = await response.json();
-            if (result.success) { 
+            if (result.success) {
                 localStorage.setItem('pos_printer_settings', JSON.stringify(printerForm));
                 if (printerForm.sales_bill_printer) localStorage.setItem('pos_sales_bill_printer', printerForm.sales_bill_printer);
                 if (printerForm.kot_printer) localStorage.setItem('pos_kot_printer', printerForm.kot_printer);
-                setSuccess(prev => ({ ...prev, printer: true, general: true })); 
-                setTimeout(() => setSuccess(prev => ({ ...prev, printer: false, general: false })), 3000); 
+                setSuccess(prev => ({ ...prev, printer: true, general: true }));
+                setTimeout(() => setSuccess(prev => ({ ...prev, printer: false, general: false })), 3000);
             }
             else { setErrors(prev => ({ ...prev, printer: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, printer: 'Failed to update printer settings' })); }
@@ -340,9 +336,9 @@ const SettingsPage = () => {
                 body: JSON.stringify(backupForm)
             });
             const result = await response.json();
-            if (result.success) { 
-                setSuccess(prev => ({ ...prev, backup: true })); 
-                setTimeout(() => setSuccess(prev => ({ ...prev, backup: false })), 3000); 
+            if (result.success) {
+                setSuccess(prev => ({ ...prev, backup: true }));
+                setTimeout(() => setSuccess(prev => ({ ...prev, backup: false })), 3000);
             }
             else { setErrors(prev => ({ ...prev, backup: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, backup: 'Failed to update backup settings' })); }
@@ -395,7 +391,7 @@ const SettingsPage = () => {
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
-            
+
             const payload = {
                 mode: restoreMode,
                 filename: selectedBackupFile,
@@ -463,25 +459,86 @@ const SettingsPage = () => {
                 body: JSON.stringify(moduleForm)
             });
             const result = await response.json();
-            if (result.success) { 
+            if (result.success) {
                 if (result.data) {
                     setModuleSettings(result.data);
                     localStorage.setItem('moduleSettings', JSON.stringify(result.data));
                 }
-                setSuccess(prev => ({ ...prev, general: true })); 
-                setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 3000); 
+                setSuccess(prev => ({ ...prev, general: true }));
+                setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 3000);
             }
             else { setErrors(prev => ({ ...prev, general: result.message })); }
         } catch (err) { setErrors(prev => ({ ...prev, general: 'Failed to update module settings' })); }
         finally { setSaving(prev => ({ ...prev, general: false })); }
     };
 
+    const handleToggleModuleSetting = async (key, checked) => {
+        const updated = { ...moduleForm, [key]: checked };
+        setModuleForm(updated);
+        setModuleSettings(updated);
+        localStorage.setItem('moduleSettings', JSON.stringify(updated));
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+            await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(updated)
+            });
+            setSuccess(prev => ({ ...prev, general: true }));
+            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleToggleBackupSetting = async (key, checked) => {
+        const updated = { ...backupForm, [key]: checked };
+        setBackupForm(updated);
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+            await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(updated)
+            });
+            setSuccess(prev => ({ ...prev, general: true }));
+            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handlePrinterSelectSetting = async (field, val) => {
+        const updated = { ...printerForm, [field]: val };
+        setPrinterForm(updated);
+        if (field === 'sales_bill_printer') localStorage.setItem('pos_sales_bill_printer', val);
+        if (field === 'kot_printer') localStorage.setItem('pos_kot_printer', val);
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (!savedUser) return;
+            const { token } = JSON.parse(savedUser);
+            await fetch(`${import.meta.env.VITE_API_URL}/settings/printer`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(updated)
+            });
+            setSuccess(prev => ({ ...prev, general: true }));
+            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const TABS = [
-        { id: 'general', icon: <Sliders size={18} />, label: 'General', sub: 'Enable modules' },
-        { id: 'voucher_series', icon: <Wallet size={18} />, label: 'Voucher Series', sub: 'Dynamic vouchers' },
-        { id: 'user_rights', icon: <Lock size={18} />, label: 'User Rights', sub: 'Roles & permissions' },
-        { id: 'backup', icon: <Database size={18} />, label: 'Backup Settings', sub: 'Location & Auto Interval' },
-        { id: 'extra_modules', icon: <Settings size={18} />, label: 'Extra Modules', sub: 'Password protected modules' }
+        { id: 'general', label: 'GENERAL' },
+        { id: 'voucher_series', label: 'VOUCHER SERIES' },
+        { id: 'user_rights', label: 'USER RIGHTS' },
+        { id: 'backup', label: 'BACKUP SETTINGS' },
+        { id: 'extra_modules', label: 'EXTRA MODULES' }
     ];
 
     if (loading) return (
@@ -500,10 +557,20 @@ const SettingsPage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             <main className="dashboard-main flex flex-col h-screen overflow-hidden">
-                <Header 
-                    toggleSidebar={toggleSidebar} 
-                    title="Settings" 
+                <Header
+                    toggleSidebar={toggleSidebar}
+                    title="SETTINGS"
                     isMaster={true}
+                    showClose={false}
+                    headerActions={
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-red-500 border border-red-300 bg-white hover:bg-red-50 rounded shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                            <XCircle size={15} className="text-red-500" />
+                            <span>CLOSE</span>
+                        </button>
+                    }
                     tabs={TABS.map(tab => ({
                         id: tab.id,
                         label: tab.label,
@@ -511,294 +578,143 @@ const SettingsPage = () => {
                         onClick: () => { setActiveTab(tab.id); navigate(`/dashboard/self-service/settings?tab=${tab.id}`, { replace: true }); }
                     }))}
                 />
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 fade-in">
-                    <div className="max-w-7xl mx-auto space-y-6">
+                <div className={`flex-1 ${activeTab === 'general' || activeTab === 'voucher_series' ? 'overflow-hidden' : 'overflow-y-auto'} p-5 bg-slate-50 fade-in flex flex-col`}>
+                    <div className="w-full max-w-6xl mx-auto h-full flex flex-col">
 
                         <div>
-                            
+
                             {/* General Settings */}
                             {activeTab === 'general' && (
-                                <div className="fade-in max-w-4xl">
-                                    <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">
-                                        <h2 className="text-xl font-bold text-slate-900">General Settings</h2>
+                                <div className="fade-in w-full space-y-4">
+                                    {errors.general && (
+                                        <div className="bg-rose-50 border border-rose-100 p-2.5 rounded-lg flex items-center gap-2 text-rose-600 font-bold text-xs">
+                                            <AlertCircle size={16} /> {errors.general}
+                                        </div>
+                                    )}
+                                    {success.general && (
+                                        <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg flex items-center gap-2 text-emerald-700 font-bold text-xs">
+                                            <CheckCircle size={16} /> Settings saved successfully!
+                                        </div>
+                                    )}
+
+                                    {/* Card 1: GENERAL SETTINGS */}
+                                    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs">
+                                        <div className="mb-4">
+                                            <span className="inline-block px-3.5 py-1.5 bg-[#ff5a1f] text-white text-xs font-black uppercase tracking-wider rounded-[4px]">
+                                                GENERAL SETTINGS
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                            {/* Left Column */}
+                                            <div className="space-y-3 pr-0 md:pr-4">
+                                                {[
+                                                    { key: 'pay_mode_enabled', label: 'Pay Mode in Sales' },
+                                                    { key: 'direct_quantity_edit_enabled', label: 'Direct Quantity Editing' },
+                                                    { key: 'show_stock_alert_enabled', label: 'Show Stock Alert' },
+                                                    { key: 'show_negative_stock_alert_enabled', label: 'Show Negative Stock Alert' },
+                                                    { key: 'lock_stock_in_negative_enabled', label: 'Lock Stock in Negative' },
+                                                    { key: 'show_item_image_in_sales_enabled', label: 'Show Item Image in Sales' },
+                                                ].map(item => {
+                                                    const isChecked = !!moduleForm[item.key];
+                                                    return (
+                                                        <label key={item.key} className="flex items-center justify-between py-1 cursor-pointer group select-none">
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={(e) => handleToggleModuleSetting(item.key, e.target.checked)}
+                                                                    className="w-4 h-4 rounded text-[#ff5a1f] focus:ring-[#ff5a1f] accent-[#ff5a1f] cursor-pointer"
+                                                                    style={{ accentColor: '#ff5a1f' }}
+                                                                />
+                                                                <span className="text-[13px] font-bold text-slate-800 group-hover:text-[#ff5a1f] transition-colors">
+                                                                    {item.label}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Right Column */}
+                                            <div className="space-y-3 pl-0 md:pl-8 pt-3 md:pt-0">
+                                                {[
+                                                    { key: 'show_customer_balance_enabled', label: 'Show Customer Balance in Sales Bill', isBackup: false },
+                                                    { key: 'enable_barcode_scanning_enabled', label: 'Enable Barcode Scanning', isBackup: false },
+                                                    { key: 'on_startup', label: 'Auto Backup on Startup', isBackup: true },
+                                                    { key: 'on_exit', label: 'Auto Backup on Exit', isBackup: true },
+                                                ].map(item => {
+                                                    const isChecked = item.isBackup ? !!backupForm[item.key] : !!moduleForm[item.key];
+                                                    return (
+                                                        <label key={item.key} className="flex items-center justify-between py-1 cursor-pointer group select-none">
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={(e) => {
+                                                                        if (item.isBackup) handleToggleBackupSetting(item.key, e.target.checked);
+                                                                        else handleToggleModuleSetting(item.key, e.target.checked);
+                                                                    }}
+                                                                    className="w-4 h-4 rounded text-[#ff5a1f] focus:ring-[#ff5a1f] accent-[#ff5a1f] cursor-pointer"
+                                                                    style={{ accentColor: '#ff5a1f' }}
+                                                                />
+                                                                <span className="text-[13px] font-bold text-slate-800 group-hover:text-[#ff5a1f] transition-colors">
+                                                                    {item.label}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {errors.general && <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-xs mb-4"><AlertCircle size={16} /> {errors.general}</div>}
-                                    {success.general && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-xs mb-4"><CheckCircle size={16} /> General Settings updated successfully!</div>}
-
-                                    <div className="bg-white rounded-lg border border-slate-200/80 p-6 shadow-sm">
-                                        <div className="divide-y divide-slate-100">
-                                            {GENERAL_SETTINGS_ITEMS.map((setting) => {
-                                                const isEnabled = setting.type === 'backup'
-                                                    ? !!backupForm[setting.key]
-                                                    : (setting.key === 'split_rate_tax_enabled' ? !!moduleForm[setting.key] : moduleForm[setting.key] !== false);
-
-                                                const handleToggle = async () => {
-                                                    if (setting.type === 'backup') {
-                                                        const updated = { ...backupForm, [setting.key]: !isEnabled };
-                                                        setBackupForm(updated);
-                                                        try {
-                                                            const savedUser = localStorage.getItem('user');
-                                                            const { token } = JSON.parse(savedUser);
-                                                            await fetch(`${import.meta.env.VITE_API_URL}/settings/backup/settings`, {
-                                                                method: 'PUT',
-                                                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                body: JSON.stringify(updated)
-                                                            });
-                                                            setSuccess(prev => ({ ...prev, general: true }));
-                                                            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
-                                                        } catch (err) { console.error(err); }
-                                                    } else {
-                                                        const updated = { ...moduleForm, [setting.key]: !isEnabled };
-                                                        setModuleForm(updated);
-                                                        setModuleSettings(updated);
-                                                        localStorage.setItem('moduleSettings', JSON.stringify(updated));
-                                                        try {
-                                                            const savedUser = localStorage.getItem('user');
-                                                            const { token } = JSON.parse(savedUser);
-                                                            await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                                                                method: 'PUT',
-                                                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                body: JSON.stringify(updated)
-                                                            });
-                                                            setSuccess(prev => ({ ...prev, general: true }));
-                                                            setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
-                                                        } catch (err) { console.error(err); }
-                                                    }
-                                                };
-
-                                                return (
-                                                    <div key={setting.key} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
-                                                        <span className="font-semibold text-slate-800 text-sm">{setting.label}</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={isEnabled} 
-                                                                    onChange={handleToggle} 
-                                                                    className="sr-only peer" 
-                                                                />
-                                                                <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
-                                                            </label>
-                                                            <span className={`text-sm font-semibold min-w-[50px] ${isEnabled ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                                                {isEnabled ? 'Enable' : 'Disable'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-
-                                            <div className="py-4 flex items-center justify-between border-t border-slate-100">
-                                                <div>
-                                                    <span className="font-semibold text-slate-800 text-sm block">Number of Cards per Row</span>
-                                                    <span className="text-xs text-slate-500 font-medium">Choose grid card density (Min: 4, Max: 7)</span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <select
-                                                        value={moduleForm.cards_per_row || 7}
-                                                        onChange={async (e) => {
-                                                            const val = parseInt(e.target.value, 10);
-                                                            const updated = { ...moduleForm, cards_per_row: val };
-                                                            setModuleForm(updated);
-                                                            setModuleSettings(updated);
-                                                            localStorage.setItem('moduleSettings', JSON.stringify(updated));
-                                                            localStorage.setItem('pos_cards_per_row', String(val));
-                                                            try {
-                                                                const savedUser = localStorage.getItem('user');
-                                                                const { token } = JSON.parse(savedUser);
-                                                                await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                                                                    method: 'PUT',
-                                                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                    body: JSON.stringify(updated)
-                                                                });
-                                                                setSuccess(prev => ({ ...prev, general: true }));
-                                                                setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
-                                                            } catch (err) { console.error(err); }
-                                                        }}
-                                                        className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
-                                                    >
-                                                         <option value={4}>4 Cards / Row</option>
-                                                        <option value={5}>5 Cards / Row</option>
-                                                        <option value={6}>6 Cards / Row</option>
-                                                        <option value={7}>7 Cards / Row</option>
-                                                    </select>
-                                                </div>
-                                            </div>
+                                    {/* Card 2: PRINTER SETTINGS */}
+                                    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs">
+                                        <div className="mb-4">
+                                            <span className="inline-block px-3.5 py-1.5 bg-[#ff5a1f] text-white text-xs font-black uppercase tracking-wider rounded-[4px]">
+                                                PRINTER SETTINGS
+                                            </span>
                                         </div>
 
-                                        {/* Data Auto Lock Settings under General Settings */}
-                                        <div className="mt-8 pt-6 border-t border-slate-200">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                                        <Lock size={16} className="text-orange-600" /> Data Auto Lock
-                                                    </h3>
-                                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">
-                                                        Lock historical entries from alteration or deletion
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!moduleForm.data_auto_lock_enabled}
-                                                            onChange={async (e) => {
-                                                                const isChecked = e.target.checked;
-                                                                const updated = { ...moduleForm, data_auto_lock_enabled: isChecked };
-                                                                setModuleForm(updated);
-                                                                setModuleSettings(updated);
-                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
-                                                                try {
-                                                                    const savedUser = localStorage.getItem('user');
-                                                                    const { token } = JSON.parse(savedUser);
-                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                                                                        method: 'PUT',
-                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                        body: JSON.stringify(updated)
-                                                                    });
-                                                                    setSuccess(prev => ({ ...prev, general: true }));
-                                                                    setTimeout(() => setSuccess(prev => ({ ...prev, general: false })), 2000);
-                                                                } catch (err) { console.error(err); }
-                                                            }}
-                                                            className="sr-only peer"
-                                                        />
-                                                        <div className="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
-                                                    </label>
-                                                    <span className={`text-sm font-semibold min-w-[50px] ${moduleForm.data_auto_lock_enabled ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                                        {moduleForm.data_auto_lock_enabled ? 'Enable' : 'Disable'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {moduleForm.data_auto_lock_enabled && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-200 animate-in fade-in duration-200">
-                                                    <div className="form-group-premium">
-                                                        <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1.5">
-                                                            Unlock Days
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            placeholder="e.g. 3"
-                                                            value={moduleForm.unlock_days !== null && moduleForm.unlock_days !== undefined ? moduleForm.unlock_days : ''}
-                                                            onChange={async (e) => {
-                                                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                                                const updated = { ...moduleForm, unlock_days: val };
-                                                                setModuleForm(updated);
-                                                                setModuleSettings(updated);
-                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
-                                                                try {
-                                                                    const savedUser = localStorage.getItem('user');
-                                                                    const { token } = JSON.parse(savedUser);
-                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                                                                        method: 'PUT',
-                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                        body: JSON.stringify(updated)
-                                                                    });
-                                                                } catch (err) { console.error(err); }
-                                                            }}
-                                                            className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 shadow-sm"
-                                                        />
-                                                        <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
-                                                            Enter the number of days. (e.g., 3 means users can alter entries only for the last 3 days).
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="form-group-premium">
-                                                        <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1.5">
-                                                            Lock Date Up To
-                                                        </label>
-                                                        <input
-                                                            type="date"
-                                                            value={moduleForm.lock_date_up_to ? new Date(moduleForm.lock_date_up_to).toISOString().split('T')[0] : ''}
-                                                            onChange={async (e) => {
-                                                                const val = e.target.value || null;
-                                                                const updated = { ...moduleForm, lock_date_up_to: val };
-                                                                setModuleForm(updated);
-                                                                setModuleSettings(updated);
-                                                                localStorage.setItem('moduleSettings', JSON.stringify(updated));
-                                                                try {
-                                                                    const savedUser = localStorage.getItem('user');
-                                                                    const { token } = JSON.parse(savedUser);
-                                                                    await fetch(`${import.meta.env.VITE_API_URL}/settings/modules`, {
-                                                                        method: 'PUT',
-                                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                                                        body: JSON.stringify(updated)
-                                                                    });
-                                                                } catch (err) { console.error(err); }
-                                                            }}
-                                                            className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 shadow-sm"
-                                                        />
-                                                        <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
-                                                            If Unlock Days is left blank, select a manual date to lock all entries up to that date.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Printer Settings under General Settings */}
-                                        <div className="mt-8 pt-6 border-t border-slate-200">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                                        <Printer size={16} className="text-orange-600" /> System Printer Settings
-                                                    </h3>
-                                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">
-                                                        Assign installed printers for Sales Bills and Kitchen KOTs
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={savePrinterSettings}
-                                                    disabled={saving.printer}
-                                                    className="btn-premium-primary !py-1.5 !px-4 !text-xs flex items-center gap-1.5 cursor-pointer"
-                                                >
-                                                    {saving.printer ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} SAVE PRINTERS
-                                                </button>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-200">
-                                                <div className="form-group-premium">
-                                                    <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5 mb-1.5">
-                                                        <Printer size={14} className="text-orange-600" /> Sales Bill Printer
-                                                    </label>
+                                        <div className="space-y-3 divide-y divide-slate-100">
+                                            {/* Sales Bill Printer */}
+                                            <div className="flex items-center justify-between py-2 first:pt-0">
+                                                <span className="text-[13px] font-bold text-slate-800">
+                                                    Default Printer for Sales Bill
+                                                </span>
+                                                <div className="relative w-72">
                                                     <select
-                                                        className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 cursor-pointer shadow-sm"
                                                         value={printerForm.sales_bill_printer || ''}
-                                                        onChange={e => {
-                                                            const val = e.target.value;
-                                                            setPrinterForm(prev => ({ ...prev, sales_bill_printer: val }));
-                                                            localStorage.setItem('pos_sales_bill_printer', val);
-                                                        }}
+                                                        onChange={e => handlePrinterSelectSetting('sales_bill_printer', e.target.value)}
+                                                        className="w-full appearance-none bg-white border border-orange-300 text-slate-800 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[6px] focus:outline-none focus:border-[#ff5a1f] cursor-pointer shadow-2xs"
                                                     >
-                                                        <option value="">-- Select Installed System Printer --</option>
+                                                        <option value="">Select Printer</option>
                                                         {systemPrinters.map(p => (
                                                             <option key={p} value={p}>{p}</option>
                                                         ))}
                                                     </select>
-                                                    <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">Selected printer will be used for customer sales bills & receipts</p>
+                                                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                                                 </div>
+                                            </div>
 
-                                                <div className="form-group-premium">
-                                                    <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5 mb-1.5">
-                                                        <Printer size={14} className="text-orange-600" /> KOT Printer
-                                                    </label>
+                                            {/* KOT Printer */}
+                                            <div className="flex items-center justify-between py-2 pt-3">
+                                                <span className="text-[13px] font-bold text-slate-800">
+                                                    Default Printer for KOT
+                                                </span>
+                                                <div className="relative w-72">
                                                     <select
-                                                        className="w-full h-11 px-3 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-orange-500 cursor-pointer shadow-sm"
                                                         value={printerForm.kot_printer || ''}
-                                                        onChange={e => {
-                                                            const val = e.target.value;
-                                                            setPrinterForm(prev => ({ ...prev, kot_printer: val }));
-                                                            localStorage.setItem('pos_kot_printer', val);
-                                                        }}
+                                                        onChange={e => handlePrinterSelectSetting('kot_printer', e.target.value)}
+                                                        className="w-full appearance-none bg-white border border-orange-300 text-slate-800 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[6px] focus:outline-none focus:border-[#ff5a1f] cursor-pointer shadow-2xs"
                                                     >
-                                                        <option value="">-- Select Installed System Printer --</option>
+                                                        <option value="">Select Printer</option>
                                                         {systemPrinters.map(p => (
                                                             <option key={p} value={p}>{p}</option>
                                                         ))}
                                                     </select>
-                                                    <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">Selected printer will be used for kitchen order tickets (KOT)</p>
+                                                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                                                 </div>
                                             </div>
                                         </div>
@@ -825,10 +741,10 @@ const SettingsPage = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {errors.printer && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.printer}</div>}
                                     {success.printer && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Printer settings & formats saved successfully!</div>}
-                                    
+
                                     <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
                                         <div className="flex items-center justify-between p-5 bg-slate-50 rounded border border-slate-100">
                                             <div>
@@ -849,7 +765,7 @@ const SettingsPage = () => {
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">Sales Bill Printer</label>
-                                                            <select 
+                                                            <select
                                                                 className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.sales_bill_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, sales_bill_printer: e.target.value })}
@@ -863,7 +779,7 @@ const SettingsPage = () => {
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">KOT Printer</label>
-                                                            <select 
+                                                            <select
                                                                 className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.kot_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, kot_printer: e.target.value })}
@@ -877,7 +793,7 @@ const SettingsPage = () => {
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label className="text-[11px] font-bold text-slate-600 uppercase">Delivery Printer</label>
-                                                            <select 
+                                                            <select
                                                                 className="pef-f-input !h-10 font-bold bg-white cursor-pointer"
                                                                 value={printerForm.delivery_printer || ''}
                                                                 onChange={e => setPrinterForm({ ...printerForm, delivery_printer: e.target.value })}
@@ -896,7 +812,7 @@ const SettingsPage = () => {
                                                 <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
                                                     <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Thermal Receipt Format</h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div 
+                                                        <div
                                                             onClick={() => setPrinterForm({ ...printerForm, print_format: 'NORMAL_3_INCH' })}
                                                             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${printerForm.print_format === 'NORMAL_3_INCH' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                                                         >
@@ -909,7 +825,7 @@ const SettingsPage = () => {
                                                             </p>
                                                         </div>
 
-                                                        <div 
+                                                        <div
                                                             onClick={() => setPrinterForm({ ...printerForm, print_format: 'NORMAL_3_INCH_WITH_TOKEN' })}
                                                             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${printerForm.print_format === 'NORMAL_3_INCH_WITH_TOKEN' ? 'border-orange-500 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                                                         >
@@ -943,7 +859,7 @@ const SettingsPage = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {errors.bill && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.bill}</div>}
                                     {success.bill && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Bill format updated!</div>}
 
@@ -995,10 +911,10 @@ const SettingsPage = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {errors.backup && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.backup}</div>}
                                     {success.backup && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Backup created / settings updated successfully!</div>}
-                                    
+
                                     <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
                                         {/* Storage Directory Selection */}
                                         <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
@@ -1006,27 +922,27 @@ const SettingsPage = () => {
                                                 <Folder size={16} className="text-orange-600" /> Backup Storage Directory
                                             </h4>
                                             <div className="flex gap-2 items-center">
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     className="pef-f-input !h-10 font-mono font-bold flex-1"
                                                     value={backupForm.backup_dir || defaultDir || ''}
                                                     placeholder={defaultDir || 'Software Installation Directory/Backup'}
                                                     onChange={e => setBackupForm({ ...backupForm, backup_dir: e.target.value })}
                                                 />
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     onClick={() => {
                                                         const customPath = prompt("Enter or select backup directory path (e.g., D:\\RestaurantBackup):", backupForm.backup_dir || defaultDir || '');
                                                         if (customPath && customPath.trim() !== '') {
                                                             setBackupForm({ ...backupForm, backup_dir: customPath.trim() });
                                                         }
-                                                    }} 
+                                                    }}
                                                     className="px-4 h-10 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 shrink-0"
                                                 >
                                                     <Folder size={14} /> BROWSE...
                                                 </button>
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     onClick={() => setBackupForm({ ...backupForm, backup_dir: defaultDir })}
                                                     className="px-4 h-10 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-md transition-colors shrink-0"
                                                 >
@@ -1047,7 +963,7 @@ const SettingsPage = () => {
                                                 Each backup file is automatically generated with current Date & Time in filename:
                                             </p>
                                             <div className="bg-slate-900 text-orange-400 p-3 rounded-lg font-mono text-xs font-bold">
-                                                resfin_backup_{new Date().toISOString().slice(0,10)}_{new Date().toTimeString().slice(0,8).replace(/:/g,'-')}.json
+                                                resfin_backup_{new Date().toISOString().slice(0, 10)}_{new Date().toTimeString().slice(0, 8).replace(/:/g, '-')}.json
                                             </div>
                                         </div>
 
@@ -1056,15 +972,15 @@ const SettingsPage = () => {
                                             <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                                                 <HardDrive size={16} className="text-orange-600" /> Automatic Backup Triggers & Silent Intervals
                                             </h4>
-                                            
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <label className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-orange-300 transition-all">
                                                     <div>
                                                         <span className="font-extrabold text-xs text-slate-800 uppercase block">Take Backup on Startup</span>
                                                         <span className="text-[11px] font-bold text-slate-400">Automatically take backup on startup then open company selection</span>
                                                     </div>
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         checked={!!backupForm.on_startup}
                                                         onChange={e => setBackupForm({ ...backupForm, on_startup: e.target.checked })}
                                                         className="w-4 h-4 text-orange-600 rounded accent-orange-600 cursor-pointer"
@@ -1076,8 +992,8 @@ const SettingsPage = () => {
                                                         <span className="font-extrabold text-xs text-slate-800 uppercase block">Take Auto Backup on open / exit</span>
                                                         <span className="text-[11px] font-bold text-slate-400">Take backup on exit before closing software</span>
                                                     </div>
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         checked={!!backupForm.on_exit}
                                                         onChange={e => setBackupForm({ ...backupForm, on_exit: e.target.checked })}
                                                         className="w-4 h-4 text-orange-600 rounded accent-orange-600 cursor-pointer"
@@ -1087,7 +1003,7 @@ const SettingsPage = () => {
 
                                             <div className="form-group-premium pt-2">
                                                 <label className="text-[11px] font-bold text-slate-600 uppercase">Silent Auto Backup Interval</label>
-                                                <select 
+                                                <select
                                                     className="pef-f-input !h-10 font-bold"
                                                     value={backupForm.auto_interval || 0}
                                                     onChange={e => setBackupForm({ ...backupForm, auto_interval: parseInt(e.target.value, 10) || 0 })}
@@ -1120,7 +1036,7 @@ const SettingsPage = () => {
 
                                             {/* Restore Options Selector */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div 
+                                                <div
                                                     onClick={() => setRestoreMode('RESTORE')}
                                                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreMode === 'RESTORE' ? 'border-orange-600 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                                                 >
@@ -1135,7 +1051,7 @@ const SettingsPage = () => {
                                                     </p>
                                                 </div>
 
-                                                <div 
+                                                <div
                                                     onClick={() => setRestoreMode('ATTACH')}
                                                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${restoreMode === 'ATTACH' ? 'border-orange-600 bg-orange-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                                                 >
@@ -1155,7 +1071,7 @@ const SettingsPage = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                                 <div className="space-y-1">
                                                     <label className="text-[11px] font-bold text-slate-600 uppercase">Select From Installation Backup Folder</label>
-                                                    <select 
+                                                    <select
                                                         className="pef-f-input !h-10 font-mono font-bold"
                                                         value={selectedBackupFile}
                                                         onChange={e => {
@@ -1165,7 +1081,7 @@ const SettingsPage = () => {
                                                     >
                                                         <option value="">-- Choose file from Installation Directory Backup --</option>
                                                         {backupHistory.map((item, idx) => (
-                                                            <option key={idx} value={item.filename}>{item.filename} ({(item.size/1024).toFixed(1)} KB)</option>
+                                                            <option key={idx} value={item.filename}>{item.filename} ({(item.size / 1024).toFixed(1)} KB)</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -1185,7 +1101,7 @@ const SettingsPage = () => {
                                             </div>
 
                                             <div className="pt-2 flex justify-end">
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={handlePerformRestoreOrAttach}
                                                     disabled={saving.restore}
@@ -1220,8 +1136,8 @@ const SettingsPage = () => {
                                                                     <td className="py-2 font-bold text-slate-600">{new Date(item.mtime).toLocaleString()}</td>
                                                                     <td className="py-2 text-right font-mono font-bold text-slate-500">{(item.size / 1024).toFixed(1)} KB</td>
                                                                     <td className="py-2 text-right">
-                                                                        <button 
-                                                                            type="button" 
+                                                                        <button
+                                                                            type="button"
                                                                             onClick={() => {
                                                                                 setSelectedBackupFile(item.filename);
                                                                                 setUploadedBackupData(null);
@@ -1283,51 +1199,7 @@ const SettingsPage = () => {
                                 </div>
                             )}
 
-                            {/* General Settings */}
-                            {activeTab === 'general' && (
-                                <div className="fade-in">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
-                                        <div>
-                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">General Settings</h3>
-                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Application configuration</p>
-                                        </div>
-                                    </div>
 
-                                    {errors.profile && <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {errors.profile}</div>}
-                                    {success.profile && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> Settings updated!</div>}
-
-
-
-                                    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h4 className="font-bold text-slate-800 text-sm">System Modules</h4>
-                                            <button onClick={saveModuleSettings} disabled={saving.general} className="btn-premium-outline !py-1 !px-3 !text-xs flex items-center gap-1.5">
-                                                {saving.general ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} SAVE TOGGLES
-                                            </button>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {SYSTEM_MODULES_CONFIG.map((toggle) => (
-                                                <div key={toggle.key} className="p-4 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-between">
-                                                    <div>
-                                                        <h5 className="font-bold text-slate-800 text-sm">{toggle.title}</h5>
-                                                        <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">{toggle.subtitle}</p>
-                                                    </div>
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={moduleForm[toggle.key] ?? true} 
-                                                            onChange={(e) => setModuleForm({ ...moduleForm, [toggle.key]: e.target.checked })} 
-                                                            className="sr-only peer" 
-                                                        />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* Bill Numbering Settings */}
                             {activeTab === 'bill_numbering' && (
@@ -1358,8 +1230,8 @@ const SettingsPage = () => {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                         <div className="form-group-premium">
                                                             <label>Numbering Method</label>
-                                                            <select className="input-premium !rounded" 
-                                                                value={billSeriesForm[key].numbering_method || 'Automatic'} 
+                                                            <select className="input-premium !rounded"
+                                                                value={billSeriesForm[key].numbering_method || 'Automatic'}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], numbering_method: e.target.value }
@@ -1370,8 +1242,8 @@ const SettingsPage = () => {
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label>Restart After</label>
-                                                            <select className="input-premium !rounded" 
-                                                                value={billSeriesForm[key].restart_after || 'Never'} 
+                                                            <select className="input-premium !rounded"
+                                                                value={billSeriesForm[key].restart_after || 'Never'}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], restart_after: e.target.value }
@@ -1384,8 +1256,8 @@ const SettingsPage = () => {
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label>Starting Number</label>
-                                                            <input type="number" className="input-premium !rounded" 
-                                                                value={billSeriesForm[key].starting_number || 1} 
+                                                            <input type="number" className="input-premium !rounded"
+                                                                value={billSeriesForm[key].starting_number || 1}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], starting_number: parseInt(e.target.value) || 1 }
@@ -1393,28 +1265,28 @@ const SettingsPage = () => {
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label>Prefix</label>
-                                                            <input type="text" className="input-premium uppercase !rounded" 
-                                                                value={billSeriesForm[key].prefix || ''} 
+                                                            <input type="text" className="input-premium uppercase !rounded"
+                                                                value={billSeriesForm[key].prefix || ''}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], prefix: e.target.value.toUpperCase() }
-                                                                })} 
+                                                                })}
                                                                 placeholder="e.g. DI" />
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label>Suffix</label>
-                                                            <input type="text" className="input-premium uppercase !rounded" 
-                                                                value={billSeriesForm[key].suffix || ''} 
+                                                            <input type="text" className="input-premium uppercase !rounded"
+                                                                value={billSeriesForm[key].suffix || ''}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], suffix: e.target.value.toUpperCase() }
-                                                                })} 
+                                                                })}
                                                                 placeholder="e.g. 24-25" />
                                                         </div>
                                                         <div className="form-group-premium">
                                                             <label>Next Number (Current)</label>
-                                                            <input type="number" className="input-premium !rounded" 
-                                                                value={billSeriesForm[key].next_number || 1} 
+                                                            <input type="number" className="input-premium !rounded"
+                                                                value={billSeriesForm[key].next_number || 1}
                                                                 onChange={e => setBillSeriesForm({
                                                                     ...billSeriesForm,
                                                                     [key]: { ...billSeriesForm[key], next_number: parseInt(e.target.value) || 1 }

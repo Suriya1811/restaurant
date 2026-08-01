@@ -213,7 +213,7 @@ const CounterMaster = () => {
                     </>
 }
                 />
-                <div className="master-content-layout fade-in">
+                <div className="master-content-layout fade-in flex flex-col">
                     {/* Header relocated */}
 
                     <div className="toolbar-premium">
@@ -237,13 +237,10 @@ const CounterMaster = () => {
                                 <option value="ACTIVE">Active</option>
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
-                            <span className="whitespace-nowrap text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 italic">
-                                Active Nodes: {filteredCounters.length}
-                            </span>
                         </div>
                     </div>
 
-                    <div className="table-container-premium">
+                    <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                         <table className="table-premium">
                             <thead>
                                 <tr>
@@ -312,6 +309,14 @@ const CounterMaster = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Bottom Total Buttons */}
+                    <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                            <span>TOTAL RECORDS:</span>
+                            <span className="text-sm">{filteredCounters.length}</span>
+                        </div>
                     </div>
                 </div>
 

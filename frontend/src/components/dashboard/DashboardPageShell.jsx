@@ -10,8 +10,14 @@ import Footer from './Footer';
  */
 const DashboardPageShell = ({ children, companyName, className = '' }) => {
     const childArray = Children.toArray(children);
-    const sidebarEl = childArray[0];
-    const mainEls = childArray.slice(1);
+    const firstChild = childArray[0];
+    const isFirstChildMain = firstChild && isValidElement(firstChild) && (
+        firstChild.type === 'main' || 
+        (firstChild.props?.className && String(firstChild.props.className).includes('dashboard-main'))
+    );
+
+    const sidebarEl = isFirstChildMain ? null : childArray[0];
+    const mainEls = isFirstChildMain ? childArray : childArray.slice(1);
 
     const shellClass = ['dashboard-layout', className]
         .filter(Boolean)

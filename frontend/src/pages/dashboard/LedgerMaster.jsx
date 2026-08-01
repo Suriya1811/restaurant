@@ -15,6 +15,7 @@ import autoTable from 'jspdf-autotable';
 import { STANDARD_GROUPS, getNatureForGroup } from '../../utils/standardGroups';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 
 const API = import.meta.env.VITE_API_URL;
@@ -636,29 +637,36 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     actions={
                         !showDrawer ? (
                             <>
-                                <button type="button" className="btn-export excel" onClick={exportToCSV} title="Export to Excel">
-                                    <Download size={14} />
-                                    <span className="text-[10px] uppercase font-black text-emerald-500">Excel</span>
+                                <button type="button" className="px-3 py-1.5 border border-emerald-500 bg-white text-emerald-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-emerald-50 transition-colors shadow-sm" onClick={exportToCSV} title="Export to Excel">
+                                    <Download size={14} className="text-emerald-500" />
+                                    <span>Excel</span>
                                 </button>
-                                <button type="button" className="btn-export pdf" onClick={exportToPDF} title="Export to PDF">
-                                    <Download size={14} />
-                                    <span className="text-[10px] uppercase font-black text-rose-500">PDF</span>
+                                <button type="button" className="px-3 py-1.5 border border-rose-500 bg-white text-rose-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-rose-50 transition-colors shadow-sm" onClick={exportToPDF} title="Export to PDF">
+                                    <Download size={14} className="text-rose-500" />
+                                    <span>PDF</span>
                                 </button>
-                                <button type="button" className="btn-export print" onClick={() => window.print()} title="Print">
-                                    <Printer size={14} />
-                                    <span className="text-[10px] uppercase font-black text-[#f97316]">Print</span>
+                                <button type="button" className="px-3 py-1.5 border border-indigo-500 bg-white text-indigo-600 rounded text-[11px] font-black uppercase flex items-center gap-1.5 hover:bg-indigo-50 transition-colors shadow-sm" onClick={() => window.print()} title="Print">
+                                    <Printer size={14} className="text-indigo-500" />
+                                    <span>Print</span>
                                 </button>
                                 <button
+                                    type="button"
+                                    className="btn-column-settings"
                                     onClick={() => {
                                         setTempVisibleColumns(visibleColumns);
                                         setShowColumnModal(true);
                                     }}
-                                    className="px-4 py-1.5 bg-[#0f172a] hover:bg-slate-900 border border-[#0f172a] rounded-[4px] font-bold text-[13px] uppercase tracking-wider flex items-center gap-1.5 transition-all text-white shadow-sm cursor-pointer whitespace-nowrap flex-shrink-0"
                                 >
-                                    <Settings size={14} /> COLUMN SETTINGS
+                                    <Settings size={14} />
+                                    <span>Column Settings</span>
                                 </button>
-                                <button onClick={() => { resetForm(); setShowDrawer(true); }} className="btn-action-add whitespace-nowrap flex-shrink-0">
-                                    <PlusCircle size={16} /> Create Ledger
+                                <button
+                                    type="button"
+                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-[11px] font-black uppercase flex items-center gap-1.5 transition-colors shadow-md whitespace-nowrap flex-shrink-0"
+                                    onClick={() => { resetForm(); setSearchTerm(''); setShowDrawer(true); }}
+                                >
+                                    <PlusCircle size={14} />
+                                    <span>Create Ledger</span>
                                 </button>
                             </>
                         ) : null
@@ -712,22 +720,24 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                             </select>
                         </div>
 
-                        <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowBulkMenu(!showBulkMenu)}
-                                    className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                                >
-                                    Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
-                                </button>
-                                {showBulkMenu && (
-                                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
-                                        <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
-                                        <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
-                                        <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
-                                    </div>
-                                )}
-                            </div>
+                        {/* Action Dropdown Button - right aligned, white/orange */}
+                        <div className="relative ml-auto">
+                            <button
+                                type="button"
+                                onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                            >
+                                Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                <ChevronDown size={14} />
+                            </button>
+                            {showBulkMenu && (
+                                <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                    <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                    <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                    <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                </div>
+                            )}
+                        </div>
 
                             {/* Column Settings Drawer Panel */}
                             {showColumnModal && (
@@ -793,9 +803,20 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                     </div>
 
                     {/* Table View */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
-                        <div className="overflow-x-auto overflow-y-auto flex-1">
-                            <table className="table-premium">
+                    <div
+                        className="table-container-premium"
+                        style={{
+                            overflowX: 'auto',
+                            overflowY: 'auto',
+                            maxHeight: 'calc(100vh - 275px)',
+                            maxWidth: '100%',
+                            borderRadius: '1rem',
+                            background: 'white',
+                            border: '1px solid #e2e8f0',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <table className="table-premium">
                                 <thead>
                                     <tr className="bg-[#0b1727] border-b border-slate-200 text-[10px] font-black text-[#f97316] uppercase tracking-widest">
                                         <th style={{ width: '40px', textAlign: 'center' }}>
@@ -886,10 +907,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         </div>
 
                         {/* Bottom Total Bar + Pagination */}
-                        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 flex-shrink-0">
-                            <span className="text-[13px] font-bold text-[#ff6b00] uppercase tracking-wide">
-                                TOTAL RECORDS : {filteredLedgers.length}
-                            </span>
+                        <div className="mt-2 flex items-center justify-between gap-3 flex-shrink-0">
                             {!loading && filteredLedgers.length > 0 && (
                                 <div className="flex items-center gap-3">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
@@ -943,10 +961,12 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     </select>
                                 </div>
                             )}
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider ml-auto">
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm">{filteredLedgers.length}</span>
+                            </div>
                         </div>
                     </div>
-
-                </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden bg-white animate-in fade-in duration-200">
                         <div className="p-4 flex flex-col flex-1 overflow-hidden relative bg-white">
@@ -996,27 +1016,29 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 <span>UNDER <span className="text-red-500">*</span></span>
                                                 <span>:</span>
                                             </label>
-                                            <select
-                                                required
-                                                value={mapStandardGroupToUI(formData.group) || ''}
-                                                onChange={e => setFormData({ ...formData, group: mapUIGroupToStandard(e.target.value) })}
-                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            >
-                                                <option value="" disabled>Select Under</option>
-                                                <option value="Sundry Debtors">Sundry Debtors</option>
-                                                <option value="Sundry Creditors">Sundry Creditors</option>
-                                                <option value="Purchase Account">Purchase Account</option>
-                                                <option value="Sales Account">Sales Account</option>
-                                                <option value="Cash-in-Hand">Cash-in-Hand</option>
-                                                <option value="Bank Accounts">Bank Accounts</option>
-                                                <option value="Duties & Taxes">Duties & Taxes</option>
-                                                <option value="Expenses">Expenses</option>
-                                                <option value="Income">Income</option>
-                                                <option value="Assets">Assets</option>
-                                                <option value="Liabilities">Liabilities</option>
-                                                <option value="Capital Account">Capital Account</option>
-                                            </select>
+                                            <div className="flex-1">
+                                                <SearchableSelect
+                                                    required
+                                                    name="group"
+                                                    value={mapStandardGroupToUI(formData.group) || ''}
+                                                    options={[
+                                                        'Sundry Debtors',
+                                                        'Sundry Creditors',
+                                                        'Purchase Account',
+                                                        'Sales Account',
+                                                        'Cash-in-Hand',
+                                                        'Bank Accounts',
+                                                        'Duties & Taxes',
+                                                        'Expenses',
+                                                        'Income',
+                                                        'Assets',
+                                                        'Liabilities',
+                                                        'Capital Account'
+                                                    ]}
+                                                    placeholder="Select Under"
+                                                    onChange={e => setFormData({ ...formData, group: mapUIGroupToStandard(e.target.value) })}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center">
@@ -1153,17 +1175,19 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 <span>REGISTERED TYPE</span>
                                                 <span>:</span>
                                             </label>
-                                            <select
-                                                value={formData.registration_type || ''}
-                                                onChange={e => setFormData({ ...formData, registration_type: e.target.value })}
-                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            >
-                                                <option value="" disabled>Select Registered Type</option>
-                                                <option value="Composition">Composition</option>
-                                                <option value="Regular">Registered</option>
-                                                <option value="Unregistered">Unregistered</option>
-                                            </select>
+                                            <div className="flex-1">
+                                                <SearchableSelect
+                                                    name="registration_type"
+                                                    value={formData.registration_type || ''}
+                                                    options={[
+                                                        { value: 'Composition', label: 'Composition' },
+                                                        { value: 'Regular', label: 'Registered' },
+                                                        { value: 'Unregistered', label: 'Unregistered' }
+                                                    ]}
+                                                    placeholder="Select Registered Type"
+                                                    onChange={e => setFormData({ ...formData, registration_type: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center">
@@ -1171,21 +1195,26 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                                 <span>STATE</span>
                                                 <span>:</span>
                                             </label>
-                                            <select
-                                                value={formData.state || ''}
-                                                onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                                className="flex-1 rounded-md px-3 py-1.5 outline-none text-sm font-semibold bg-white transition-shadow focus:ring-1 focus:ring-[#FF5722]"
-                                                style={{ border: '1px solid #FF7A50' }}
-                                            >
-                                                <option value="" disabled>Select State</option>
-                                                <option value="Tamil Nadu">Tamil Nadu</option>
-                                                <option value="Kerala">Kerala</option>
-                                                <option value="Karnataka">Karnataka</option>
-                                                <option value="Andhra Pradesh">Andhra Pradesh</option>
-                                                <option value="Telangana">Telangana</option>
-                                                <option value="Maharashtra">Maharashtra</option>
-                                                <option value="Gujarat">Gujarat</option>
-                                            </select>
+                                            <div className="flex-1">
+                                                <SearchableSelect
+                                                    name="state"
+                                                    value={formData.state || ''}
+                                                    options={[
+                                                        'Tamil Nadu',
+                                                        'Kerala',
+                                                        'Karnataka',
+                                                        'Andhra Pradesh',
+                                                        'Telangana',
+                                                        'Maharashtra',
+                                                        'Gujarat',
+                                                        'Delhi',
+                                                        'Uttar Pradesh',
+                                                        'West Bengal'
+                                                    ]}
+                                                    placeholder="Select State"
+                                                    onChange={e => setFormData({ ...formData, state: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Bank Details Fieldset */}

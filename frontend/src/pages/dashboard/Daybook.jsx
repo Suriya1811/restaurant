@@ -276,14 +276,14 @@ const Daybook = () => {
                         </div>
                     </div>
 
-<div className="flex-1 overflow-y-auto print-section">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden print-section">
                     <div className="hidden print:block mb-6">
                         <h2 className="text-2xl font-black text-slate-900 uppercase">Daybook Entry Report</h2>
                         <p className="text-slate-600 font-medium">Generated on: {new Date().toLocaleString('en-GB')}</p>
                         <p className="text-slate-600 text-sm mt-1">Filters - From: {filters.startDate} | To: {filters.endDate}</p>
                     </div>
 
-                    <div className="summary-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="summary-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 flex-shrink-0">
                         <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-4 flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
                                 <FileText size={24} />
@@ -326,68 +326,66 @@ const Daybook = () => {
                     </div>
 
                     {/* Table Section */}
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-                        <div className="flex-1 overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[800px]">
-                                <thead className="bg-[#0f172a] text-[#f97316] sticky top-0 z-10 shadow-sm border-b border-[#0f172a]">
+                    <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 310px)' }}>
+                        <table className="table-premium w-full">
+                            <thead className="sticky top-0 z-10">
+                                <tr>
+                                    <th style={{ minWidth: '120px' }}>Date</th>
+                                    <th style={{ minWidth: '120px', textAlign: 'center' }}>Voucher No.</th>
+                                    <th style={{ minWidth: '200px' }}>Particulars</th>
+                                    <th style={{ minWidth: '130px', textAlign: 'center' }}>Pay In (₹)</th>
+                                    <th style={{ minWidth: '130px', textAlign: 'center' }}>Pay Out (₹)</th>
+                                    <th style={{ minWidth: '200px' }}>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading ? (
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-r border-slate-700">Date</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-center border-r border-slate-700">Voucher No.</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-r border-slate-700">Particulars</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-center border-r border-slate-700">Pay In (₹)</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-center border-r border-slate-700">Pay Out (₹)</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Remarks</th>
+                                        <td colSpan={6} className="p-8 text-center text-slate-400">
+                                            <Loader2 size={24} className="animate-spin mb-2 mx-auto text-indigo-500" />
+                                            <p className="text-[10px] font-bold uppercase tracking-wider">Loading Daybook...</p>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={6} className="p-8 text-center text-slate-400">
-                                                <Loader2 size={24} className="animate-spin mb-2 mx-auto text-indigo-500" />
-                                                <p className="text-[10px] font-bold uppercase tracking-wider">Loading Daybook...</p>
+                                ) : data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-8 text-center text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                            No entries found for this date range
+                                        </td>
+                                    </tr>
+                                ) : data.map((d, i) => {
+                                    const isBalance = isBalanceRow(d);
+                                    return (
+                                        <tr key={i} className={`hover:bg-slate-50 transition-colors cursor-pointer ${isBalance ? 'text-orange-500 font-bold' : 'text-slate-800 font-semibold'}`} onClick={() => handleRowClick(d)}>
+                                            <td className="px-6 py-3 text-sm">
+                                                {new Date(d.date).toLocaleDateString('en-GB')}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-center">
+                                                {d.voucher_no || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm uppercase">
+                                                {isBalance && !d.party ? d.narration : d.party || d.narration || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-center">
+                                                {fmt(d.payment_in)}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-center">
+                                                {fmt(d.payment_out)}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm font-medium">
+                                                {isBalance && !d.party ? 'Balance Entry' : d.narration || '-'}
                                             </td>
                                         </tr>
-                                    ) : data.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="p-8 text-center text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                                                No entries found for this date range
-                                            </td>
-                                        </tr>
-                                    ) : data.map((d, i) => {
-                                        const isBalance = isBalanceRow(d);
-                                        return (
-                                            <tr key={i} className={`hover:bg-slate-50 transition-colors cursor-pointer ${isBalance ? 'text-orange-500 font-bold' : 'text-slate-800 font-semibold'}`} onClick={() => handleRowClick(d)}>
-                                                <td className="px-6 py-4 text-sm">
-                                                    {new Date(d.date).toLocaleDateString('en-GB')}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-center">
-                                                    {d.voucher_no || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm uppercase">
-                                                    {isBalance && !d.party ? d.narration : d.party || d.narration || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-center">
-                                                    {fmt(d.payment_in)}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-center">
-                                                    {fmt(d.payment_out)}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm font-medium">
-                                                    {isBalance && !d.party ? 'Balance Entry' : d.narration || '-'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
 
-                        {/* Footer */}
-                        <div className="bg-white border-t border-slate-200 px-6 py-4">
-                            <span className="text-xs font-bold text-slate-500">
-                                Showing 1 to {data.length} of {data.length} entries
-                            </span>
-                        </div>
+                    {/* Footer */}
+                    <div className="mt-2 flex items-center justify-between gap-3 flex-shrink-0">
+                        <span className="text-xs font-bold text-slate-500 uppercase">
+                            Showing 1 to {data.length} of {data.length} entries
+                        </span>
                     </div>
                 </div>
 

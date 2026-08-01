@@ -40,6 +40,7 @@ const FunctionMaster = () => {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+    const functionNameInputRef = useRef(null);
 
     // Selection & Bulk Action State
     const [selectedIds, setSelectedIds] = useState([]);
@@ -310,7 +311,7 @@ const FunctionMaster = () => {
                     }
                 />
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -353,7 +354,7 @@ const FunctionMaster = () => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>

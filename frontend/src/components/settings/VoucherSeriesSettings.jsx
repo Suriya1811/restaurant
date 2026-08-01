@@ -164,8 +164,8 @@ const VoucherSeriesSettings = () => {
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-orange-600" size={32} /></div>;
 
     return (
-        <div className="fade-in relative min-h-[500px]">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200">
+        <div className="fade-in flex flex-col h-[calc(100vh-150px)] overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 flex-shrink-0">
                 <div>
                     <h3 className="text-base font-black text-slate-800 uppercase tracking-wider">Voucher Series</h3>
                     <p className="text-xs font-medium text-slate-400 mt-0.5">Configure all voucher series for the application.</p>
@@ -175,23 +175,23 @@ const VoucherSeriesSettings = () => {
                 </button>
             </div>
 
-            {error && <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-sm mb-6"><AlertCircle size={18} /> {error}</div>}
-            {success && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-sm mb-6"><CheckCircle size={18} /> {success}</div>}
+            {error && <div className="mt-3 bg-rose-50 border border-rose-100 p-3 rounded-xl flex items-center gap-3 text-rose-600 font-bold text-xs flex-shrink-0"><AlertCircle size={16} /> {error}</div>}
+            {success && <div className="mt-3 bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex items-center gap-3 text-emerald-700 font-bold text-xs flex-shrink-0"><CheckCircle size={16} /> {success}</div>}
 
-            {/* List of Existing Series Table */}
-            <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden mb-6">
-                <div className="overflow-x-auto">
+            {/* List of Existing Series Table - Scrollable Table Container */}
+            <div className="mt-4 flex-1 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                <th className="py-3.5 px-6 text-center w-20">S. No</th>
-                                <th className="py-3.5 px-6">Series Name</th>
-                                <th className="py-3.5 px-6">Numbering Method</th>
-                                <th className="py-3.5 px-6 text-center">Starting Number</th>
-                                <th className="py-3.5 px-6 text-center">Prefix</th>
-                                <th className="py-3.5 px-6 text-center">Suffix</th>
-                                <th className="py-3.5 px-6">Restart After</th>
-                                <th className="py-3.5 px-6 text-center w-28">Action</th>
+                        <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+                            <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                <th className="py-3.5 px-6 text-center w-20 bg-slate-50">S. No</th>
+                                <th className="py-3.5 px-6 bg-slate-50">Series Name</th>
+                                <th className="py-3.5 px-6 bg-slate-50">Numbering Method</th>
+                                <th className="py-3.5 px-6 text-center bg-slate-50">Starting Number</th>
+                                <th className="py-3.5 px-6 text-center bg-slate-50">Prefix</th>
+                                <th className="py-3.5 px-6 text-center bg-slate-50">Suffix</th>
+                                <th className="py-3.5 px-6 bg-slate-50">Restart After</th>
+                                <th className="py-3.5 px-6 text-center w-28 bg-slate-50">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
@@ -220,13 +220,13 @@ const VoucherSeriesSettings = () => {
                                         <td className="py-4 px-6 text-center flex items-center justify-center gap-2">
                                             <button 
                                                 onClick={() => openEditModal(series)} 
-                                                className="px-3 py-1.5 border border-orange-100 hover:border-orange-200 text-orange-600 hover:bg-orange-50/40 rounded font-bold text-xs transition-all flex items-center gap-1"
+                                                className="px-3 py-1.5 border border-orange-100 hover:border-orange-200 text-orange-600 hover:bg-orange-50/40 rounded font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
                                             >
                                                 ✏️ Alter
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(series._id)} 
-                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50/50 rounded transition-colors"
+                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50/50 rounded transition-colors cursor-pointer"
                                                 title="Delete Series"
                                             >
                                                 <Trash2 size={14} />
@@ -240,7 +240,7 @@ const VoucherSeriesSettings = () => {
                 </div>
             </div>
 
-            <div className="text-[11px] font-bold text-rose-500 uppercase tracking-wide mb-8">
+            <div className="text-[11px] font-bold text-rose-500 uppercase tracking-wide mt-3 flex-shrink-0">
                 Note : Prefix and Suffix will be added around the auto generated number.
             </div>
 

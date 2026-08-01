@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
@@ -341,7 +342,7 @@ const TableMaster = () => {
                 />
 
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -383,7 +384,7 @@ const TableMaster = () => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -507,21 +508,14 @@ const TableMaster = () => {
                                                 Table Type <span className="text-[#f97316]">*</span>
                                             </label>
                                             <div className="col-span-9">
-                                                <select
+                                                <SearchableSelect
                                                     required
+                                                    name="table_type"
                                                     value={formData.table_type}
+                                                    options={tableTypes}
+                                                    placeholder="Select table type"
                                                     onChange={(e) => setFormData({ ...formData, table_type: e.target.value })}
-                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
-                                                    style={{ border: '1px solid #f97316' }}
-                                                >
-                                                    <option value="">Select table type</option>
-                                                    {tableTypes.map(type => (
-                                                        <option key={type._id} value={type.name}>{type.name}</option>
-                                                    ))}
-                                                    {tableTypes.length === 0 && (
-                                                        <option disabled>No types yet — create in Table Type Master</option>
-                                                    )}
-                                                </select>
+                                                />
                                             </div>
                                         </div>
 
@@ -547,18 +541,14 @@ const TableMaster = () => {
                                                 Captain <span className="text-[#f97316]">*</span>
                                             </label>
                                             <div className="col-span-9">
-                                                <select
+                                                <SearchableSelect
                                                     required
+                                                    name="captain"
                                                     value={formData.captain}
+                                                    options={captains}
+                                                    placeholder="Select captain"
                                                     onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
-                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
-                                                    style={{ border: '1px solid #f97316' }}
-                                                >
-                                                    <option value="">Select captain</option>
-                                                    {captains.map(c => (
-                                                        <option key={c._id} value={c.name}>{c.name}</option>
-                                                    ))}
-                                                </select>
+                                                />
                                             </div>
                                         </div>
 
@@ -567,18 +557,14 @@ const TableMaster = () => {
                                                 Waiter <span className="text-[#f97316]">*</span>
                                             </label>
                                             <div className="col-span-9">
-                                                <select
+                                                <SearchableSelect
                                                     required
+                                                    name="waiter"
                                                     value={formData.waiter}
+                                                    options={waiters}
+                                                    placeholder="Select waiter"
                                                     onChange={(e) => setFormData({ ...formData, waiter: e.target.value })}
-                                                    className="w-full rounded-md px-4 py-2 outline-none text-sm font-semibold transition-shadow focus:ring-1 focus:ring-[#f97316] cursor-pointer"
-                                                    style={{ border: '1px solid #f97316' }}
-                                                >
-                                                    <option value="">Select waiter</option>
-                                                    {waiters.map(w => (
-                                                        <option key={w._id} value={w.name}>{w.name}</option>
-                                                    ))}
-                                                </select>
+                                                />
                                             </div>
                                         </div>
                                     </div>

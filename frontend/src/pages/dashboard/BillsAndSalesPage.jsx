@@ -326,13 +326,13 @@ const BillsAndSalesPage = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
             
-            <main className="dashboard-main flex flex-col overflow-hidden relative">
+            <main className="dashboard-main flex flex-col h-full min-h-0 overflow-hidden relative">
                 <Header 
                     toggleSidebar={toggleSidebar} 
                     title="PARTY MANAGEMENT" 
                 />
                 
-                <div className="flex flex-col h-full bg-slate-50 relative flex-1 overflow-hidden">
+                <div className="flex flex-col bg-slate-50 relative flex-1 min-h-0 overflow-y-auto">
                     {/* Header/Filters */}
                     <div className="bg-white px-6 py-4 border-b border-slate-100 flex items-center justify-between shadow-sm sticky top-0 z-10 shrink-0">
                         <div className="flex items-center gap-4">

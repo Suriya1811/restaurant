@@ -4,7 +4,7 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import {
-    Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, CheckSquare, Square
+    Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, XCircle
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -22,7 +22,7 @@ const SalesSummaryHub = () => {
         if (initialFilter === 'group') return 'Group Wise';
         if (initialFilter === 'item') return 'Item Wise';
         if (initialFilter === 'month') return 'Month-wise';
-        return 'Captain Wise';
+        return 'Group Wise';
     };
 
     const [salesType, setSalesType] = useState(getInitialType());
@@ -146,7 +146,7 @@ const SalesSummaryHub = () => {
             'Item Wise': 'item',
             'Month-wise': 'month'
         };
-        navigate(`/dashboard/self-service/reports?category=sales&filter=${typeMap[salesType]}`, { replace: true });
+        navigate(`/dashboard/self-service/reports?category=sales&filter=${typeMap[salesType] || 'group'}`, { replace: true });
 
         fetchReport();
     }, [salesType, fetchReport, navigate]);
@@ -168,7 +168,7 @@ const SalesSummaryHub = () => {
             ];
         }
 
-        const cols = [{ key: 'sno', label: 'S.No.' }];
+        const cols = [];
 
         if (salesType === 'Captain Wise') {
             cols.push({ key: 'captain', label: 'Captain' });
@@ -176,7 +176,7 @@ const SalesSummaryHub = () => {
         } else if (salesType === 'Brand Wise') {
             cols.push({ key: 'brandName', label: 'Brand Name' });
         } else if (salesType === 'Group Wise') {
-            cols.push({ key: 'groupName', label: 'Group Name' });
+            cols.push({ key: 'groupName', label: 'Group Wise' });
         } else if (salesType === 'Item Wise') {
             cols.push({ key: 'itemName', label: 'Item Name' });
         }
@@ -196,15 +196,14 @@ const SalesSummaryHub = () => {
         return allColumns.filter(c => visibleColumnKeys.includes(c.key));
     }, [allColumns, visibleColumnKeys]);
 
-    const toggleColumn = (key) => {
-        const currentKeys = visibleColumnKeys || allColumns.map(c => c.key);
-        if (currentKeys.includes(key)) {
-            if (currentKeys.length <= 1) return;
-            setVisibleColumnKeys(currentKeys.filter(k => k !== key));
-        } else {
-            setVisibleColumnKeys([...currentKeys, key]);
-        }
-    };
+    const gridTemplateColumns = useMemo(() => {
+        return activeColumns.map(col => {
+            if (['sno'].includes(col.key)) return '70px';
+            if (['groupName', 'brandName', 'itemName', 'captain', 'month'].includes(col.key)) return 'minmax(180px, 2fr)';
+            if (['netQty'].includes(col.key)) return 'minmax(180px, 1.3fr)';
+            return 'minmax(130px, 1fr)';
+        }).join(' ');
+    }, [activeColumns]);
 
     const fmt = (num) => (num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -346,17 +345,40 @@ const SalesSummaryHub = () => {
 
     const headerActions = (
         <div className="flex items-center gap-2">
-            <button onClick={exportToCSV} className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-emerald-600 border border-emerald-200 bg-white hover:bg-emerald-50 rounded-[4px] shadow-sm transition-colors cursor-pointer">
-                <span className="bg-emerald-600 text-white rounded-[2px] p-0.5 text-[10px] px-1.5">X</span> Excel
+            <button
+                onClick={exportToCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-emerald-300 bg-white hover:bg-emerald-50 rounded shadow-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+            >
+                <span className="bg-emerald-600 text-white rounded p-0.5 text-[10px] px-1 font-extrabold leading-none">X</span>
+                Excel
             </button>
-            <button onClick={exportToPDF} className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-red-600 border border-red-200 bg-white hover:bg-red-50 rounded-[4px] shadow-sm transition-colors cursor-pointer">
-                <FileText size={16} /> PDF
+            <button
+                onClick={exportToPDF}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 border border-red-300 bg-white hover:bg-red-50 rounded shadow-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+            >
+                <FileText size={15} className="text-red-500" />
+                PDF
             </button>
-            <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-blue-600 border border-blue-200 bg-white hover:bg-blue-50 rounded-[4px] shadow-sm transition-colors cursor-pointer">
-                <Printer size={16} /> Print
+            <button
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-500 border border-blue-300 bg-white hover:bg-blue-50 rounded shadow-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+            >
+                <Printer size={15} className="text-blue-500" />
+                Print
             </button>
-            <button onClick={() => setShowColumnModal(!showColumnModal)} className="btn-column-settings">
-                <Settings size={14} /> <span>Column Settings</span>
+            <button
+                onClick={() => setShowColumnModal(!showColumnModal)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#ff6b00] hover:bg-[#e66000] rounded shadow-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+            >
+                <Settings size={15} className="flex-shrink-0" />
+                <span className="whitespace-nowrap">COLUMN SETTINGS</span>
+            </button>
+            <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 border border-red-400 bg-white hover:bg-red-50 rounded shadow-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+            >
+                <XCircle size={15} className="text-red-500 flex-shrink-0" />
+                <span className="whitespace-nowrap">CLOSE</span>
             </button>
         </div>
     );
@@ -369,11 +391,12 @@ const SalesSummaryHub = () => {
                 <div className="mobile-overlay" onClick={() => setIsMobileSidebarOpen(false)}></div>
             )}
 
-            <main className="dashboard-main flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+            <main className="dashboard-main flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50">
                 <Header
                     toggleSidebar={toggleSidebar}
-                    title={salesType === 'Month-wise' ? 'SALES SUMMARY - MONTH-WISE' : 'SALES SUMMARY HUB'}
+                    title="SALES SUMMARY"
                     headerActions={headerActions}
+                    showClose={false}
                 />
 
                 <div className="flex-1 flex flex-col min-h-0 m-2 lg:m-4 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden relative">
@@ -444,16 +467,16 @@ const SalesSummaryHub = () => {
                     )}
 
                     {/* Filters Row */}
-                    <div className="px-5 py-4 flex flex-wrap items-center gap-6 border-b border-slate-100 bg-white">
+                    <div className="px-5 py-3.5 flex flex-wrap items-center gap-4 border-b border-slate-200 bg-white flex-shrink-0">
                         {/* Sales Type */}
-                        <div className="min-w-[160px]">
+                        <div className="min-w-[150px]">
                             <div className="relative">
                                 <select
-                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-800 text-[13px] font-semibold py-2 px-3 pr-8 rounded focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                     value={salesType}
                                     onChange={(e) => setSalesType(e.target.value)}
                                 >
-                                    <option value="Captain Wise">Sales Type</option>
+                                    <option value="Group Wise">Sales Type</option>
                                     <option value="Captain Wise">Captain Wise</option>
                                     <option value="Brand Wise">Brand Wise</option>
                                     <option value="Group Wise">Group Wise</option>
@@ -464,42 +487,41 @@ const SalesSummaryHub = () => {
                             </div>
                         </div>
 
-                        {/* Captain Wise Filters */}
-                        {salesType === 'Captain Wise' && (
-                            <>
-                                <div className="min-w-[160px]">
-                                    <div className="relative">
-                                        <select
-                                            className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
-                                            value={captain}
-                                            onChange={(e) => setCaptain(e.target.value)}
-                                        >
-                                            {captainOptions.map((c, i) => (
-                                                <option key={i} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                                    </div>
-                                </div>
-                                <div className="min-w-[160px]">
-                                    <div className="relative">
-                                        <select
-                                            className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
-                                        >
-                                            {categoryOptions.map((c, i) => (
-                                                <option key={i} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                        {/* Captain Selection Dropdown */}
+                        <div className="min-w-[150px]">
+                            <div className="relative">
+                                <select
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-800 text-[13px] font-semibold py-2 px-3 pr-8 rounded focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    value={captain}
+                                    onChange={(e) => setCaptain(e.target.value)}
+                                >
+                                    {captainOptions.map((c, i) => (
+                                        <option key={i} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            </div>
+                        </div>
+
+                        {/* Group/Brand Filter */}
+                        <div className="min-w-[150px]">
+                            <div className="relative">
+                                <select
+                                    className="w-full appearance-none bg-white border border-slate-300 text-slate-800 text-[13px] font-semibold py-2 px-3 pr-8 rounded focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                >
+                                    <option value="All">Group/Brand</option>
+                                    {categoryOptions.filter(c => c !== 'All').map((c, i) => (
+                                        <option key={i} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            </div>
+                        </div>
 
                         {/* Dates */}
-                        <div className="min-w-[150px]">
+                        <div className="min-w-[140px]">
                             <div className="relative">
                                 <input
                                     type="date"
@@ -507,11 +529,11 @@ const SalesSummaryHub = () => {
                                     onChange={(e) => setFromDate(e.target.value)}
                                     placeholder="From Date"
                                     title="From Date"
-                                    className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full bg-white border border-slate-300 text-slate-800 text-[13px] font-semibold py-2 px-3 rounded focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 />
                             </div>
                         </div>
-                        <div className="min-w-[150px]">
+                        <div className="min-w-[140px]">
                             <div className="relative">
                                 <input
                                     type="date"
@@ -519,55 +541,61 @@ const SalesSummaryHub = () => {
                                     onChange={(e) => setToDate(e.target.value)}
                                     placeholder="To Date"
                                     title="To Date"
-                                    className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                    className="w-full bg-white border border-slate-300 text-slate-800 text-[13px] font-semibold py-2 px-3 rounded focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                 />
                             </div>
                         </div>
 
-                        {/* Refresh Button */}
-                        <div>
-                            <button
-                                className="flex items-center justify-center gap-2 px-5 py-2 bg-[#ff6b00] hover:bg-[#e66000] text-white text-[13px] font-bold rounded-[4px] shadow-sm transition-colors min-h-[38px] cursor-pointer"
-                                onClick={fetchReport}
-                                disabled={loading}
-                            >
-                                <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
-                            </button>
-                        </div>
                     </div>
 
-                    {/* Table Area */}
-                    <div className="flex-1 overflow-auto bg-white custom-scrollbar relative px-5 pb-5 mt-2">
-                        <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
-                            <thead className="bg-[#0a1128] text-[#ff6b00] sticky top-0 z-10 text-[12px] font-bold border-b-2 border-slate-200">
-                                <tr>
-                                    {activeColumns.map((col) => (
-                                        <th key={col.key} className={`py-3.5 px-4 ${['cash', 'card', 'upi', 'salesQty', 'returnQty', 'netQty', 'salesValue', 'totalAmount'].includes(col.key) ? 'text-center' : 'text-left'}`}>
-                                            <div className="flex flex-col items-center">
-                                                <span>{col.label}</span>
-                                                {col.subtext && <span className="text-[10px] text-[#ff6b00]/80 font-semibold">{col.subtext}</span>}
-                                            </div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-[13px] font-bold">
+                    {/* Table Area with Fixed Height, Scrollable Body, and Fixed Bottom Summary */}
+                    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-x-auto custom-scrollbar p-3">
+                        <div className="flex-1 flex flex-col min-h-0 min-w-[900px] border border-slate-200 rounded-lg overflow-hidden bg-white">
+
+                            {/* Dark Navy Table Header */}
+                            <div
+                                className="grid bg-[#0a1128] text-[#ff6b00] text-[13px] font-extrabold border-b border-slate-800 flex-shrink-0"
+                                style={{ gridTemplateColumns }}
+                            >
+                                {activeColumns.map((col) => {
+                                    const isCenter = ['cash', 'card', 'upi', 'salesQty', 'returnQty', 'netQty', 'salesValue', 'totalAmount'].includes(col.key);
+                                    return (
+                                        <div
+                                            key={col.key}
+                                            className={`py-3.5 px-4 flex flex-col ${isCenter ? 'items-center justify-center text-center' : 'items-start justify-center text-left'}`}
+                                        >
+                                            <span>{col.label}</span>
+                                            {col.subtext && <span className="text-[10px] text-[#ff6b00]/80 font-medium">{col.subtext}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Scrollable Table Body */}
+                            <div className="flex-1 overflow-y-auto min-h-0 bg-white custom-scrollbar relative divide-y divide-slate-100">
                                 {loading ? (
-                                    <tr>
-                                        <td colSpan={activeColumns.length} className="py-16 text-center">
-                                            <Loader2 className="animate-spin text-[#ff6b00] mx-auto mb-2" size={32} />
-                                            <span className="text-slate-500 font-medium">Loading report data...</span>
-                                        </td>
-                                    </tr>
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[250px] text-slate-500 py-16">
+                                        <Loader2 className="animate-spin text-[#ff6b00] mb-2" size={32} />
+                                        <span className="font-semibold text-sm">Loading report data...</span>
+                                    </div>
                                 ) : filteredRows.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={activeColumns.length} className="py-16 text-center text-slate-400 font-semibold">
-                                            No data available for the selected period.
-                                        </td>
-                                    </tr>
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400 py-12">
+                                        <svg className="w-16 h-16 text-slate-300 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="4" y="2" width="16" height="20" rx="3" />
+                                            <circle cx="9" cy="7" r="1" fill="currentColor" />
+                                            <line x1="12" y1="7" x2="16" y2="7" />
+                                            <line x1="8" y1="11" x2="16" y2="11" />
+                                            <line x1="8" y1="15" x2="13" y2="15" />
+                                        </svg>
+                                        <p className="text-slate-500 font-semibold text-sm">No data available for the selected period.</p>
+                                    </div>
                                 ) : (
                                     filteredRows.map((row) => (
-                                        <tr key={row.id} className="hover:bg-slate-50 text-slate-800 transition-colors">
+                                        <div
+                                            key={row.id}
+                                            className="grid text-slate-800 text-[13px] font-bold hover:bg-slate-50 transition-colors"
+                                            style={{ gridTemplateColumns }}
+                                        >
                                             {activeColumns.map(col => {
                                                 const isNumeric = ['cash', 'card', 'upi', 'salesQty', 'returnQty', 'netQty', 'salesValue', 'totalAmount'].includes(col.key);
                                                 const isMoney = ['cash', 'card', 'upi', 'salesValue', 'totalAmount'].includes(col.key);
@@ -578,31 +606,48 @@ const SalesSummaryHub = () => {
                                                 }
 
                                                 return (
-                                                    <td key={col.key} className={`py-4 px-4 ${isNumeric ? 'text-center' : 'text-left'}`}>
+                                                    <div
+                                                        key={col.key}
+                                                        className={`py-3.5 px-4 flex items-center ${isNumeric ? 'justify-center text-center' : 'justify-start text-left'}`}
+                                                    >
                                                         {displayVal}
-                                                    </td>
+                                                    </div>
                                                 );
                                             })}
-                                        </tr>
+                                        </div>
                                     ))
                                 )}
-                            </tbody>
-                            <tfoot className="sticky bottom-0 bg-white border-t-2 border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[14px]">
-                                <tr>
-                                    {activeColumns.map((col, idx) => {
-                                        const isFirstCell = idx === 0;
-                                        const isSummable = totals[col.key] !== null;
-                                        const isMoney = ['cash', 'card', 'upi', 'salesValue', 'totalAmount'].includes(col.key);
+                            </div>
 
-                                        return (
-                                            <td key={`footer-${col.key}`} className={`py-4 px-4 font-bold text-[#ff6b00] ${isSummable ? 'text-center' : 'text-left'}`}>
-                                                {isFirstCell ? 'Total' : isSummable ? (isMoney ? `₹${fmt(totals[col.key])}` : fmt(totals[col.key])) : '-'}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            </tfoot>
-                        </table>
+                            {/* Fixed Bottom Total Summary Row */}
+                            <div
+                                className="grid bg-white border-t-2 border-slate-200 divide-x divide-slate-200 flex-shrink-0"
+                                style={{ gridTemplateColumns }}
+                            >
+                                {activeColumns.map((col, idx) => {
+                                    const isFirstCell = idx === 0;
+                                    const isSummable = totals[col.key] !== null && totals[col.key] !== undefined;
+                                    const isMoney = ['cash', 'card', 'upi', 'salesValue', 'totalAmount'].includes(col.key);
+
+                                    let displayVal = '-';
+                                    if (isFirstCell) {
+                                        displayVal = 'Total';
+                                    } else if (isSummable) {
+                                        displayVal = isMoney ? `₹${fmt(totals[col.key])}` : fmt(totals[col.key]);
+                                    }
+
+                                    return (
+                                        <div
+                                            key={`footer-${col.key}`}
+                                            className={`py-4 px-4 font-extrabold text-[#ff6b00] text-xl flex items-center ${isFirstCell ? 'justify-start pl-6' : 'justify-center text-center'}`}
+                                        >
+                                            {displayVal}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </main>

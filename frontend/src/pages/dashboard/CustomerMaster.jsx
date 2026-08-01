@@ -271,7 +271,7 @@ const CustomerMaster = () => {
                     }
                 />
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -282,15 +282,9 @@ const CustomerMaster = () => {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <div className="flex items-center gap-6">
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Registry</span>
-                                    <span className="text-lg font-bold text-slate-800">{filteredCustomers.length} <span className="text-xs text-slate-400">Profiles</span></span>
-                                </div>
-                            </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -348,6 +342,14 @@ const CustomerMaster = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Bottom Total Buttons */}
+                        <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm">{filteredCustomers.length}</span>
+                            </div>
                         </div>
                     </div>
                 ) : (

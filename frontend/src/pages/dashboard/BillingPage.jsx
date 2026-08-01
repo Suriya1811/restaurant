@@ -221,6 +221,95 @@ const BillingPage = () => {
     const isRestoringTableBill = useRef(false);
     const customerFormRef = useRef(null);
     const morePanelRef = useRef(null);
+    const notificationDropdownRef = useRef(null);
+
+    const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+    const [notifications, setNotifications] = useState([
+        {
+            id: 'SWG-9841',
+            source: 'Swiggy',
+            customer: 'Rohan Sharma',
+            phone: '9876543210',
+            address: 'Sector 62, Noida',
+            items: [
+                { name: 'Paneer Butter Masala', quantity: 1, unit_price: 260 },
+                { name: 'Garlic Naan', quantity: 2, unit_price: 50 }
+            ],
+            total: 360,
+            time: 'Just now',
+            status: 'NEW',
+            createdAt: new Date().toISOString()
+        },
+        {
+            id: 'ZOM-7312',
+            source: 'Zomato',
+            customer: 'Ananya Verma',
+            phone: '9812345678',
+            address: 'Indirapuram, Ghaziabad',
+            items: [
+                { name: 'Chicken Biryani', quantity: 1, unit_price: 320 },
+                { name: 'Cold Drink (300ml)', quantity: 1, unit_price: 40 }
+            ],
+            total: 360,
+            time: '4 mins ago',
+            status: 'NEW',
+            createdAt: new Date().toISOString()
+        }
+    ]);
+
+    const playOrderRingingSound = () => {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const playTone = (freq, startTime, duration, vol = 0.35) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+                gain.gain.setValueAtTime(vol, ctx.currentTime + startTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + startTime);
+                osc.stop(ctx.currentTime + startTime + duration);
+            };
+            // Dual ringing chime (repeats 3 times for a distinct restaurant order bell alert)
+            [0, 0.4, 0.8].forEach(offset => {
+                playTone(880, offset, 0.25);
+                playTone(1174.66, offset + 0.1, 0.35);
+            });
+        } catch (e) {
+            console.error("Order notification sound alert error:", e);
+        }
+    };
+
+    const unreadNotificationCount = useMemo(() => {
+        return notifications.filter(n => n.status === 'NEW').length;
+    }, [notifications]);
+
+    const prevUnreadCountRef = useRef(unreadNotificationCount);
+
+    useEffect(() => {
+        if (unreadNotificationCount > prevUnreadCountRef.current) {
+            playOrderRingingSound();
+        }
+        prevUnreadCountRef.current = unreadNotificationCount;
+    }, [unreadNotificationCount]);
+
+    useEffect(() => {
+        const handleClickOutsideNotification = (event) => {
+            if (showNotificationDropdown && notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
+                setShowNotificationDropdown(false);
+            }
+        };
+        if (showNotificationDropdown) {
+            document.addEventListener('mousedown', handleClickOutsideNotification);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideNotification);
+        };
+    }, [showNotificationDropdown]);
 
     useEffect(() => {
         const handleClickOutsideCustomer = (event) => {
@@ -841,7 +930,6 @@ const BillingPage = () => {
 
     // Create New Bill
     const createNewBill = async () => {
-        if (!selectedCounter) return null;
         try {
             const savedUser = localStorage.getItem('user');
             const { token } = JSON.parse(savedUser);
@@ -896,12 +984,13 @@ const BillingPage = () => {
         // Automatically create a new bill if we have a counter but no active bill.
         // Skip if we are in the middle of restoring a bill from a table click.
         const autoCreate = async () => {
-            if (selectedCounter && !currentBillId && !loading && !isRestoringTableBill.current) {
+            // Prevent auto-creating a bill if a table is selected; wait for first item
+            if (selectedCounter && !currentBillId && !loading && !isRestoringTableBill.current && !selectedTableId) {
                 await createNewBill();
             }
         };
         autoCreate();
-    }, [selectedCounter, currentBillId, loading]);
+    }, [selectedCounter, currentBillId, loading, selectedTableId]);
 
     const updateItemQuantity = async (productId, delta) => {
         const item = billItems.find(i => i.product_id === productId);
@@ -994,10 +1083,6 @@ const BillingPage = () => {
         // Fix: Automatically try to create a bill if one is missing (e.g. initial load failed)
         let activeId = currentBillId;
         if (!activeId) {
-            if (!selectedCounter) {
-                alert("Please select a counter in Settings, or create one in Counter Master if none exist.");
-                return;
-            }
             setBillNumber('Auto-Generating...');
             activeId = await createNewBill();
             if (!activeId) {
@@ -1759,7 +1844,8 @@ const BillingPage = () => {
                 setReturnReasons({});
                 setShowReturnForm(false);
                 setLoadedBillMode('NONE');
-                alert("Return processed successfully and logged to backend.");
+                const returnBillNo = data.return_bill_number || (data.data?.returns && data.data.returns.length > 0 ? data.data.returns[data.data.returns.length - 1].return_bill_number : null) || `RET-${Date.now().toString().slice(-6)}`;
+                alert(`Return processed successfully!\n\nGenerated Return Bill Number: ${returnBillNo}`);
             }
         } catch (err) { console.error("Return failed", err); }
     };
@@ -1876,7 +1962,60 @@ const BillingPage = () => {
     };
 
     const handleNotificationClick = () => {
-        alert("System notifications: Backend connected successfully.");
+        setShowNotificationDropdown(prev => !prev);
+    };
+
+    const loadOrderToCurrentBill = (order) => {
+        // Map order items into billItems format
+        const formattedItems = order.items.map((it, idx) => ({
+            product_id: `thirdparty_${Date.now()}_${idx}`,
+            name: it.name,
+            unit_price: it.unit_price,
+            quantity: it.quantity,
+            total_price: it.unit_price * it.quantity,
+            is_complementary: false
+        }));
+        setBillItems(formattedItems);
+        setCustomerName(order.customer || '');
+        setCustomerPhone(order.phone || '');
+        setCustomerAddress(order.address || '');
+        setOrderMode('DELIVERY');
+
+        // Mark as ACCEPTED / LOADED
+        setNotifications(prev => prev.map(n => n.id === order.id ? { ...n, status: 'ACCEPTED' } : n));
+        setShowNotificationDropdown(false);
+        alert(`Third-Party Order (${order.source} #${order.id}) loaded into Sales Bill successfully!`);
+    };
+
+    const dismissNotification = (orderId) => {
+        setNotifications(prev => prev.filter(n => n.id !== orderId));
+    };
+
+    const simulateTestIncomingOrder = () => {
+        const sources = ['Swiggy', 'Zomato'];
+        const randomSource = sources[Math.floor(Math.random() * sources.length)];
+        const randId = `${randomSource === 'Swiggy' ? 'SWG' : 'ZOM'}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const sampleCustomers = ['Vikram Sethi', 'Neha Kapoor', 'Karan Mehra', 'Deepika Rao'];
+        const sampleCustomer = sampleCustomers[Math.floor(Math.random() * sampleCustomers.length)];
+
+        const newOrder = {
+            id: randId,
+            source: randomSource,
+            customer: sampleCustomer,
+            phone: '98' + Math.floor(1000005 + Math.random() * 8999999),
+            address: 'Central Park, Apt 402',
+            items: [
+                { name: 'Special Dal Makhani', quantity: 1, unit_price: 240 },
+                { name: 'Butter Tandoori Roti', quantity: 3, unit_price: 35 }
+            ],
+            total: 345,
+            time: 'Just now',
+            status: 'NEW',
+            createdAt: new Date().toISOString()
+        };
+
+        setNotifications(prev => [newOrder, ...prev]);
+        playOrderRingingSound();
     };
 
     const fetchPartyOrders = async (date = partyMgtDate) => {
@@ -2131,13 +2270,13 @@ const BillingPage = () => {
 
     return (
         <DashboardPageShell>
-        <div className={`pos-layout ${showSidebar ? 'sidebar-open' : 'sidebar-closed'} layout-${billingLayout.toLowerCase().replace('_', '-')}`}>
+        <main className={`dashboard-main pos-layout ${showSidebar ? 'sidebar-open' : 'sidebar-closed'} layout-${billingLayout.toLowerCase().replace('_', '-')}`}>
             {/* Top Navigation Bar - Pitch Black Header Matching Reference Image */}
             <div className="pos-nav" style={{ background: '#050811', height: '50px', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #ff5200' }}>
                 <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                     <span
-                        onClick={() => navigate('/dashboard/self-service/table-select')}
-                        style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', letterSpacing: '1px', cursor: 'pointer' }}
+                        onClick={() => isKotEnabled && navigate('/dashboard/self-service/table-select')}
+                        style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', letterSpacing: '1px', cursor: isKotEnabled ? 'pointer' : 'not-allowed', opacity: isKotEnabled ? 1 : 0.4 }}
                     >
                         TABLE
                     </span>
@@ -2197,16 +2336,219 @@ const BillingPage = () => {
 
                     <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '16px' }}>|</span>
 
-                    {/* Bell Icon with Red Badge */}
-                    <button
-                        type="button"
-                        onClick={handleNotificationClick}
-                        style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                        title="Notifications"
-                    >
-                        <Bell size={18} color="#ffffff" />
-                        <span style={{ position: 'absolute', top: '-4px', right: '-6px', background: '#ea580c', color: '#ffffff', fontSize: '9px', fontWeight: 900, borderRadius: '50%', width: '15px', height: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>9</span>
-                    </button>
+                    {/* Bell Icon with Red Badge & Third-Party Order Notifications Overlay */}
+                    <div style={{ position: 'relative' }} ref={notificationDropdownRef}>
+                        <button
+                            type="button"
+                            onClick={handleNotificationClick}
+                            style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                            title="Third-Party Order Notifications (Swiggy / Zomato)"
+                        >
+                            <Bell size={18} color="#ffffff" />
+                            {unreadNotificationCount > 0 && (
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '-4px',
+                                    right: '-6px',
+                                    background: '#ef4444',
+                                    color: '#ffffff',
+                                    fontSize: '9px',
+                                    fontWeight: 900,
+                                    borderRadius: '50%',
+                                    width: '16px',
+                                    height: '16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1.5px solid #1e293b',
+                                    boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)'
+                                }}>
+                                    {unreadNotificationCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notification Dropdown Overlay */}
+                        {showNotificationDropdown && (
+                            <div className="animate-in zoom-in-95 duration-150" style={{
+                                position: 'absolute',
+                                top: '35px',
+                                right: '0',
+                                width: '350px',
+                                background: '#ffffff',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                                border: '1px solid #cbd5e1',
+                                zIndex: 9999,
+                                overflow: 'hidden'
+                            }}>
+                                {/* Header */}
+                                <div style={{
+                                    padding: '12px 14px',
+                                    background: '#0f172a',
+                                    color: '#ffffff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Bell size={16} color="#f97316" />
+                                        <span style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.3px' }}>
+                                            Third-Party Orders
+                                        </span>
+                                        <span style={{ background: '#ef4444', color: '#fff', fontSize: '9px', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>
+                                            {unreadNotificationCount} New
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={playOrderRingingSound}
+                                            title="Test Ring Sound Alert"
+                                            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 800 }}
+                                        >
+                                            🔊 Ring Test
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNotificationDropdown(false)}
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', padding: '2px 4px' }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Order Notifications List */}
+                                <div style={{ maxHeight: '280px', overflowY: 'auto', padding: '8px' }}>
+                                    {notifications.length === 0 ? (
+                                        <div style={{ padding: '24px 12px', textAlign: 'center', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
+                                            No incoming orders right now.
+                                        </div>
+                                    ) : (
+                                        notifications.map(n => {
+                                            const isSwiggy = n.source.toLowerCase().includes('swiggy');
+                                            const isNew = n.status === 'NEW';
+                                            return (
+                                                <div key={n.id} style={{
+                                                    background: isNew ? '#fff7ed' : '#f8fafc',
+                                                    border: isNew ? '1.5px solid #fed7aa' : '1px solid #e2e8f0',
+                                                    borderRadius: '8px',
+                                                    padding: '10px',
+                                                    marginBottom: '8px',
+                                                    boxShadow: isNew ? '0 2px 4px rgba(234, 88, 12, 0.05)' : 'none'
+                                                }}>
+                                                    {/* Top Row: Source Badge & Order ID */}
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span style={{
+                                                                background: isSwiggy ? '#ff5200' : '#e11d48',
+                                                                color: '#ffffff',
+                                                                fontSize: '9px',
+                                                                fontWeight: 900,
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                textTransform: 'uppercase',
+                                                                letterSpacing: '0.3px'
+                                                            }}>
+                                                                {n.source}
+                                                            </span>
+                                                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#1e293b' }}>
+                                                                #{n.id}
+                                                            </span>
+                                                        </div>
+                                                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+                                                            {n.time}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Customer & Address Details */}
+                                                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
+                                                        {n.customer} ({n.phone})
+                                                    </div>
+                                                    <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>
+                                                        {n.items.map(it => `${it.quantity}x ${it.name}`).join(', ')}
+                                                    </div>
+
+                                                    {/* Bottom Row: Total & Actions */}
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+                                                        <span style={{ fontSize: '12px', fontWeight: 900, color: '#ea580c' }}>
+                                                            Total: ₹{n.total}
+                                                        </span>
+                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => loadOrderToCurrentBill(n)}
+                                                                style={{
+                                                                    background: '#ea580c',
+                                                                    color: '#ffffff',
+                                                                    border: 'none',
+                                                                    padding: '4px 9px',
+                                                                    fontSize: '10px',
+                                                                    fontWeight: 900,
+                                                                    borderRadius: '5px',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 1px 2px rgba(234,88,12,0.3)'
+                                                                }}
+                                                            >
+                                                                LOAD TO BILL
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => dismissNotification(n.id)}
+                                                                style={{
+                                                                    background: '#e2e8f0',
+                                                                    color: '#475569',
+                                                                    border: 'none',
+                                                                    padding: '4px 7px',
+                                                                    fontSize: '10px',
+                                                                    fontWeight: 700,
+                                                                    borderRadius: '5px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Dismiss
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                                {/* Footer Test Simulation Button */}
+                                <div style={{
+                                    padding: '8px 10px',
+                                    background: '#f8fafc',
+                                    borderTop: '1px solid #e2e8f0'
+                                }}>
+                                    <button
+                                        type="button"
+                                        onClick={simulateTestIncomingOrder}
+                                        style={{
+                                            width: '100%',
+                                            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                            color: '#ffffff',
+                                            border: 'none',
+                                            padding: '7px 10px',
+                                            fontSize: '11px',
+                                            fontWeight: 800,
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)'
+                                        }}
+                                    >
+                                        🔔 Simulate Swiggy/Zomato Test Order
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Settings Button */}
                     <div className="settings-btn-wrapper" style={{ position: 'relative' }}>
@@ -2324,17 +2666,7 @@ const BillingPage = () => {
                                         <span className="slider round"></span>
                                     </label>
                                 </div>
-                                <div className="settings-option">
-                                    <span>Direct Quantity Editing</span>
-                                    <label className="switch">
-                                        <input type="checkbox" checked={directQtyEditing} onChange={() => {
-                                            const next = !directQtyEditing;
-                                            setDirectQtyEditing(next);
-                                            localStorage.setItem('pos_direct_qty_editing', String(next));
-                                        }} />
-                                        <span className="slider round"></span>
-                                    </label>
-                                </div>
+
                                 {loyaltyUnlocked && (
                                     <div className="settings-option">
                                         <span>Loyalty System</span>
@@ -2381,7 +2713,7 @@ const BillingPage = () => {
             </div>
 
             {/* Main POS Container */}
-            <div className={`pos-main ${showSidebar ? '' : 'full-width'}`}>
+            <div className={`pos-main flex-1 min-h-0 flex overflow-hidden ${showSidebar ? '' : 'full-width'}`}>
                 {/* Mobile Sidebar Overlay */}
                 {showSidebar && window.innerWidth <= 768 && (
                     <div className="mobile-overlay" onClick={() => setShowSidebar(false)} style={{ zIndex: 1999 }}></div>
@@ -2637,7 +2969,8 @@ const BillingPage = () => {
                         {/* 1. TABLE */}
                         <button
                             type="button"
-                            onClick={() => navigate('/dashboard/self-service/table-select')}
+                            disabled={!isKotEnabled}
+                            onClick={() => isKotEnabled && navigate('/dashboard/self-service/table-select')}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2651,13 +2984,30 @@ const BillingPage = () => {
                                 fontWeight: 900,
                                 fontSize: '11px',
                                 letterSpacing: '0.5px',
-                                cursor: 'pointer',
+                                cursor: isKotEnabled ? 'pointer' : 'not-allowed',
+                                opacity: isKotEnabled ? 1 : 0.4,
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                             }}
-                            title="Table Selection"
+                            title={!isKotEnabled ? "KOT Module is Disabled" : "Table Selection"}
                         >
-                            <TableLogo size={15} color={tableNo ? '#ff5200' : '#334155'} />
-                            <span>{tableNo || 'TABLE'}</span>
+                            {tableNo ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1' }}>
+                                    <span style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', color: ((previousItems && previousItems.length > 0) || (tables && selectedTableId && tables.find(t => t._id === selectedTableId)?.status === 'PRINTED')) ? '#ea580c' : '#16a34a' }}>
+                                        {((previousItems && previousItems.length > 0) || (tables && selectedTableId && tables.find(t => t._id === selectedTableId)?.status === 'PRINTED')) ? 'Running Table' : 'New Table'}
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                        <TableLogo size={12} color="#ff5200" />
+                                        <span style={{ fontSize: '13px', color: '#ff5200', letterSpacing: '0px' }}>
+                                            {tableNo.replace(/table\s*/i, '').trim()}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <TableLogo size={15} color="#334155" />
+                                    <span>TABLE</span>
+                                </>
+                            )}
                         </button>
 
                         {/* 2. CUSTOMER */}
@@ -3083,23 +3433,29 @@ const BillingPage = () => {
                     )}
 
                     {/* KOT NO & BILL NO Display Row matching Reference Image */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                            <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>KOT NO:</span>
-                            <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
-                                {billSearchKots && billSearchKots.length > 0 
-                                    ? billSearchKots[billSearchKots.length - 1].kot_number 
-                                    : (billItems.length > 0 || previousItems.length > 0 ? 'KOT-00078' : 'KOT-00078')}
-                            </span>
+                    {(showKotNumber || showBillNumber) && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, visibility: showKotNumber ? 'visible' : 'hidden' }}>
+                                <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>KOT NO:</span>
+                                <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
+                                    {billSearchKots && billSearchKots.length > 0 
+                                        ? billSearchKots[billSearchKots.length - 1].kot_number 
+                                        : (billItems.length > 0 || previousItems.length > 0 ? 'KOT-00078' : 'KOT-00078')}
+                                </span>
+                            </div>
+                            
+                            {showKotNumber && showBillNumber && (
+                                <span style={{ color: '#cbd5e1', fontSize: '14px', fontWeight: 'bold', padding: '0 12px' }}>|</span>
+                            )}
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flex: 1, visibility: showBillNumber ? 'visible' : 'hidden' }}>
+                                <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>BILL NO:</span>
+                                <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
+                                    {billNumber && !billNumber.startsWith('TEMP-') ? billNumber : '-'}
+                                </span>
+                            </div>
                         </div>
-                        <span style={{ color: '#cbd5e1', fontSize: '14px', fontWeight: 'bold', padding: '0 12px' }}>|</span>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flex: 1 }}>
-                            <span style={{ color: '#ff5200', fontSize: '12px', fontWeight: 900, letterSpacing: '0.5px' }}>BILL NO:</span>
-                            <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 900 }}>
-                                {billNumber && !billNumber.startsWith('TEMP-') ? billNumber : '-'}
-                            </span>
-                        </div>
-                    </div>
+                    )}
 
 
                     <div className={`order-items-header ${showRateColumn ? 'with-rate' : 'no-rate'} ${showRemarksColumn ? 'with-remarks' : ''}`}>
@@ -3137,7 +3493,236 @@ const BillingPage = () => {
 
                     {/* Scrollable area: items list + scrollable summary details */}
                     <div className="bill-scroll-area">
-                        <div className={`order-items-list ${isOrderListCollapsed ? 'hidden' : ''}`}>
+                        {showMorePopup ? (
+                            <div style={{ padding: '10px', background: '#ffffff', borderRadius: '12px', border: '1.5px solid #cbd5e1', margin: '8px', color: '#1e293b' }} className="animate-in zoom-in-95 duration-150">
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', marginBottom: '10px', borderBottom: '1.5px solid #f1f5f9' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <SlidersHorizontal size={16} color="#ea580c" /> More Options
+                                    </span>
+                                    <button type="button" onClick={() => setShowMorePopup(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: '#64748b', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {/* 1. DISCOUNT */}
+                                    <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Discount</span>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.1fr', gap: '6px', alignItems: 'flex-end' }}>
+                                            {/* % input */}
+                                            <div>
+                                                <label style={{ fontSize: '9.5px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '2px', whiteSpace: 'nowrap' }}>% Input (Percent)</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 800, color: '#94a3b8' }}>%</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={discountType === 'PERCENT' ? discount : (subTotal > 0 ? ((discount * 100) / subTotal).toFixed(2) : 0)}
+                                                        onChange={(e) => {
+                                                            setDiscountType('PERCENT');
+                                                            setDiscount(e.target.value);
+                                                        }}
+                                                        style={{ width: '100%', boxSizing: 'border-box', padding: '4px 6px 4px 20px', fontSize: '11px', borderRadius: '6px', border: discountType === 'PERCENT' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* AMT input */}
+                                            <div>
+                                                <label style={{ fontSize: '9.5px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '2px', whiteSpace: 'nowrap' }}>AMT Input (Fixed ₹)</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={discountType === 'FIXED' ? discount : (subTotal > 0 ? ((discount * subTotal) / 100).toFixed(2) : 0)}
+                                                        onChange={(e) => {
+                                                            setDiscountType('FIXED');
+                                                            setDiscount(e.target.value);
+                                                        }}
+                                                        style={{ width: '100%', boxSizing: 'border-box', padding: '4px 6px 4px 20px', fontSize: '11px', borderRadius: '6px', border: discountType === 'FIXED' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Value (calculated) */}
+                                            <div>
+                                                <label style={{ fontSize: '9.5px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '2px', whiteSpace: 'nowrap' }}>Value (calculated)</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff', padding: '4px 6px', borderRadius: '6px', border: '1px solid #e2e8f0', height: '27px', boxSizing: 'border-box' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#ea580c', whiteSpace: 'nowrap' }}>- ₹{billCalculations.discountAmount.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2 & 3. DELIVERY & PACKING CHARGES (SINGLE ROW) */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        {/* DELIVERY CHARGES */}
+                                        <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <label style={{ fontSize: '10px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '3px', whiteSpace: 'nowrap' }}>Delivery Charges</label>
+                                            <div style={{ position: 'relative' }}>
+                                                <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={deliveryCharge}
+                                                    onChange={(e) => setDeliveryCharge(e.target.value)}
+                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '5px 8px 5px 22px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* PACKING CHARGES */}
+                                        <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <label style={{ fontSize: '10px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '3px', whiteSpace: 'nowrap' }}>Packing Charges</label>
+                                            <div style={{ position: 'relative' }}>
+                                                <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={containerCharge}
+                                                    onChange={(e) => setContainerCharge(e.target.value)}
+                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '5px 8px 5px 22px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 4. TAX SUMMARY */}
+                                    <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>Tax Summary</span>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr 1fr', gap: '6px', alignItems: 'center', fontSize: '11px', background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div>
+                                                <span style={{ color: '#64748b', fontWeight: 700, display: 'block', fontSize: '9.5px' }}>Taxable Value</span>
+                                                <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{(taxableValue || 0).toFixed(2)}</span>
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <span style={{ color: '#64748b', fontWeight: 700, display: 'block', fontSize: '9.5px' }}>Tax %</span>
+                                                <span style={{ fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap' }}>{gstPercentage}% ({taxType})</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{ color: '#64748b', fontWeight: 700, display: 'block', fontSize: '9.5px' }}>GST Amount</span>
+                                                <span style={{ fontWeight: 900, color: '#ea580c' }}>₹{taxAmount.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 5. ROUNDED OFF */}
+                                    <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rounded Off</span>
+                                        <span style={{ fontSize: '11px', fontWeight: 900, color: roundOff >= 0 ? '#166534' : '#dc2626' }}>
+                                            {roundOff >= 0 ? `+ ₹${roundOff.toFixed(2)}` : `- ₹${Math.abs(roundOff).toFixed(2)}`}
+                                        </span>
+                                    </div>
+
+                                    {/* 6. COUPON (Visible ONLY if enabled in Extra Modules) */}
+                                    {isCouponEnabled && (
+                                        <div style={{ background: '#f5f3ff', padding: '8px 10px', borderRadius: '10px', border: '1px solid #ddd6fe' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#5b21b6', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                                <Ticket size={12} color="#7c3aed" /> Coupon
+                                            </span>
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <select
+                                                        value={couponSearchName}
+                                                        onChange={(e) => setCouponSearchName(e.target.value)}
+                                                        style={{ width: '100%', height: '28px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', padding: '0 6px', fontWeight: 700, background: '#ffffff' }}
+                                                    >
+                                                        <option value="">Select Coupon</option>
+                                                        {availableCoupons.map(c => (
+                                                            <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Coupon No"
+                                                        value={couponNumber}
+                                                        onChange={(e) => setCouponNumber(e.target.value)}
+                                                        style={{ width: '100%', height: '28px', fontSize: '11px', borderRadius: '6px', border: '1px solid #c4b5fd', padding: '0 6px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleApplyCoupon}
+                                                    style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '0 10px', borderRadius: '6px', height: '28px', fontWeight: 900, fontSize: '10px', cursor: 'pointer' }}
+                                                >
+                                                    APPLY
+                                                </button>
+                                            </div>
+                                            {appliedCoupon && (
+                                                <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                                                    <span style={{ fontSize: '10px', color: '#166534', fontWeight: 800 }}>
+                                                        Applied: {appliedCoupon.coupon_name} (- ₹{couponDiscount.toFixed(2)})
+                                                    </span>
+                                                    <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* 7. LOYALTY (Visible ONLY if enabled in Extra Modules) */}
+                                    {isLoyaltyEnabled && (
+                                        <div style={{ background: '#fffbeb', padding: '8px 10px', borderRadius: '10px', border: '1px solid #fde68a' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                <span style={{ fontSize: '10px', fontWeight: 900, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Gift size={12} color="#d97706" /> Loyalty Points
+                                                </span>
+                                                <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#b45309' }}>Available: {customerPoints} Pts</span>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Points to redeem"
+                                                    value={redeemPointsInput}
+                                                    onChange={(e) => setRedeemPointsInput(e.target.value)}
+                                                    style={{ flex: 1, height: '28px', fontSize: '11px', borderRadius: '6px', border: '1px solid #fcd34d', padding: '0 6px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
+                                                    disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const pts = parseInt(redeemPointsInput);
+                                                        if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
+                                                        if (pts > customerPoints) return alert('Insufficient points');
+                                                        if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
+                                                        setLoyaltyRedeemedPoints(pts);
+                                                        setRedeemPointsInput('');
+                                                        alert(`${pts} Points applied for redemption!`);
+                                                    }}
+                                                    style={{ height: '28px', padding: '0 10px', fontSize: '10px', fontWeight: 900, background: '#d97706', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: customerPoints < (loyaltySettings.target_points || 0) ? 'not-allowed' : 'pointer', opacity: customerPoints < (loyaltySettings.target_points || 0) ? 0.5 : 1 }}
+                                                    disabled={customerPoints < (loyaltySettings.target_points || 0)}
+                                                >
+                                                    REDEEM
+                                                </button>
+                                            </div>
+
+                                            {loyaltyRedeemedPoints > 0 && (
+                                                <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', padding: '4px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                                                    <span style={{ fontSize: '10px', color: '#92400e', fontWeight: 800 }}>
+                                                        Redeeming: {loyaltyRedeemedPoints} Pts (Value: ₹{loyaltyRedeemedPoints * loyaltySettings.point_value})
+                                                    </span>
+                                                    <button type="button" onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMorePopup(false)}
+                                    style={{ width: '100%', marginTop: '10px', padding: '8px', background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                                >
+                                    DONE
+                                </button>
+                            </div>
+                        ) : (
+                            <div className={`order-items-list ${isOrderListCollapsed ? 'hidden' : ''}`}>
                             {billItems.length === 0 && previousItems.length === 0 ? (
                                 <div className="empty-cart">
                                     <ShoppingBag size={48} />
@@ -3441,8 +4026,8 @@ const BillingPage = () => {
                                 </>
                             )}
                         </div>
-
-                        </div>
+                    )}
+                </div>
 
                     <div className="order-footer-fixed relative">
                         <div className="summary-section" style={{ padding: '12px 16px', background: '#ffffff', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', marginBottom: '8px', marginTop: '4px' }}>
@@ -3505,10 +4090,10 @@ const BillingPage = () => {
                                         >
                                             <MoreVertical size={20} />
                                         </button>
-                                    </div>
                                 </div>
                             </div>
-
+                        </div>
+                    </div>
 
 
                         {/* Integrated Sidebar Payment Flow */}
@@ -3523,314 +4108,48 @@ const BillingPage = () => {
                         )}
 
                         <div className="footer-actions-grid">
-                            {showConsolidatedView ? (
-                                <>
-                                    <button type="button" className="action-btn" style={{ gridColumn: '1 / -1', padding: '10px 0', fontSize: '13px', background: '#f1f5f9', color: '#475569', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }} onClick={() => setShowConsolidatedView(false)} title="Go Back">
-                                        BACK
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button type="button" className="action-btn save-bill" onClick={() => handleOrderAction('SAVE')} title="Save draft bill">
-                                        <Save size={15} className="shrink-0" />
-                                        <span>SAVE</span>
-                                    </button>
-                                    <button type="button" className="action-btn save-print-bill" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
-                                        <Printer size={15} className="shrink-0" />
-                                        <span>SAVE & PRINT</span>
-                                    </button>
-                                    <button 
-                                        type="button" 
-                                        disabled={!isKotEnabled}
-                                        className={`action-btn kot-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
-                                        onClick={() => isKotEnabled && handleOrderAction('KOT_SAVE')} 
-                                        title={!isKotEnabled ? "KOT Module is Disabled" : "Save KOT"}
-                                        style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
-                                    >
-                                        <FileText size={15} className="shrink-0" />
-                                        <span>KOT</span>
-                                    </button>
-                                    <button 
-                                        type="button" 
-                                        disabled={!isKotEnabled}
-                                        className={`action-btn kot-print-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
-                                        onClick={() => isKotEnabled && handleOrderAction('KOT')} 
-                                        title={!isKotEnabled ? "KOT Module is Disabled" : "Send KOT to kitchen"}
-                                        style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
-                                    >
-                                        <Printer size={15} className="shrink-0" />
-                                        <span>KOT & PRINT</span>
-                                    </button>
-                                    <button type="button" className="action-btn hold-bill" onClick={holdCurrentBill} title="Hold this bill for later">
-                                        <Pause size={15} className="shrink-0" />
-                                        <span>HOLD</span>
-                                    </button>
-                                </>
-                            )}
+                            <>
+                                <button type="button" className="action-btn save-bill" onClick={() => handleOrderAction('SAVE')} title="Save draft bill">
+                                    <Save size={15} className="shrink-0" />
+                                    <span>SAVE</span>
+                                </button>
+                                <button type="button" className="action-btn save-print-bill" onClick={() => handleOrderAction('PRINT')} title="Save and print final bill">
+                                    <Printer size={15} className="shrink-0" />
+                                    <span>SAVE & PRINT</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    disabled={!isKotEnabled}
+                                    className={`action-btn kot-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
+                                    onClick={() => isKotEnabled && handleOrderAction('KOT_SAVE')} 
+                                    title={!isKotEnabled ? "KOT Module is Disabled" : "Save KOT"}
+                                    style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
+                                >
+                                    <FileText size={15} className="shrink-0" />
+                                    <span>KOT</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    disabled={!isKotEnabled}
+                                    className={`action-btn kot-print-bill ${!isKotEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} 
+                                    onClick={() => isKotEnabled && handleOrderAction('KOT')} 
+                                    title={!isKotEnabled ? "KOT Module is Disabled" : "Send KOT to kitchen"}
+                                    style={!isKotEnabled ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
+                                >
+                                    <Printer size={15} className="shrink-0" />
+                                    <span>KOT & PRINT</span>
+                                </button>
+                                <button type="button" className="action-btn hold-bill" onClick={holdCurrentBill} title="Hold this bill for later">
+                                    <Pause size={15} className="shrink-0" />
+                                    <span>HOLD</span>
+                                </button>
+                            </>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
 
             {/* Modals */}
-            {/* SINGLE CENTERED POPUP MODAL FOR MORE OPTIONS */}
-            {showMorePopup && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(15, 23, 42, 0.65)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 999999,
-                        padding: '24px 16px'
-                    }}
-                    onClick={() => setShowMorePopup(false)}
-                >
-                    <div
-                        ref={morePanelRef}
-                        style={{
-                            width: '100%',
-                            maxWidth: '460px',
-                            maxHeight: '82vh',
-                            overflowY: 'auto',
-                            background: '#ffffff',
-                            borderRadius: '20px',
-                            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
-                            border: '1.5px solid #cbd5e1',
-                            padding: '20px',
-                            color: '#1e293b',
-                            position: 'relative'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="animate-in zoom-in-95 duration-150"
-                    >
-                        {/* Modal Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', marginBottom: '16px', borderBottom: '1.5px solid #f1f5f9' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <SlidersHorizontal size={18} color="#ea580c" /> More Options
-                            </span>
-                            <button type="button" onClick={() => setShowMorePopup(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', color: '#64748b', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {/* 1. DISCOUNT */}
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Discount</span>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                                    {/* % input */}
-                                    <div>
-                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '4px' }}>% Input (Percent)</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>%</span>
-                                            <input
-                                                type="number"
-                                                placeholder="0"
-                                                value={discountType === 'PERCENT' ? discount : (subTotal > 0 ? ((discount * 100) / subTotal).toFixed(2) : 0)}
-                                                onChange={(e) => {
-                                                    setDiscountType('PERCENT');
-                                                    setDiscount(e.target.value);
-                                                }}
-                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '8px', border: discountType === 'PERCENT' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* AMT input */}
-                                    <div>
-                                        <label style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '4px' }}>AMT Input (Fixed ₹)</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
-                                            <input
-                                                type="number"
-                                                placeholder="0"
-                                                value={discountType === 'FIXED' ? discount : (subTotal > 0 ? ((discount * subTotal) / 100).toFixed(2) : 0)}
-                                                onChange={(e) => {
-                                                    setDiscountType('FIXED');
-                                                    setDiscount(e.target.value);
-                                                }}
-                                                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px 6px 22px', fontSize: '12px', borderRadius: '8px', border: discountType === 'FIXED' ? '1.5px solid #ea580c' : '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Value (calculated) */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b' }}>Value (calculated):</span>
-                                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#ea580c' }}>- ₹{billCalculations.discountAmount.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            {/* 2. DELIVERY CHARGES */}
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Delivery Charges</label>
-                                <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
-                                    <input
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={deliveryCharge}
-                                        onChange={(e) => setDeliveryCharge(e.target.value)}
-                                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 24px', fontSize: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* 3. PACKING CHARGES */}
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Packing Charges</label>
-                                <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>₹</span>
-                                    <input
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={containerCharge}
-                                        onChange={(e) => setContainerCharge(e.target.value)}
-                                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 24px', fontSize: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontWeight: 800, background: '#ffffff' }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* 4. TAX SUMMARY */}
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Tax Summary</span>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700 }}>
-                                        <span>Taxable Value:</span>
-                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{(taxableValue || 0).toFixed(2)}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700 }}>
-                                        <span>Tax %:</span>
-                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{gstPercentage}% ({taxType})</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 700, paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
-                                        <span>GST Amount:</span>
-                                        <span style={{ fontWeight: 900, color: '#ea580c' }}>₹{taxAmount.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 5. ROUNDED OFF */}
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rounded Off</span>
-                                <span style={{ fontSize: '12px', fontWeight: 900, color: roundOff >= 0 ? '#166534' : '#dc2626' }}>
-                                    {roundOff >= 0 ? `+ ₹${roundOff.toFixed(2)}` : `- ₹${Math.abs(roundOff).toFixed(2)}`}
-                                </span>
-                            </div>
-
-                            {/* 6. COUPON (Visible ONLY if enabled in Extra Modules) */}
-                            {isCouponEnabled && (
-                                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#5b21b6', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
-                                        <Ticket size={14} color="#7c3aed" /> Coupon
-                                    </span>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <select
-                                                value={couponSearchName}
-                                                onChange={(e) => setCouponSearchName(e.target.value)}
-                                                style={{ width: '100%', height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #c4b5fd', padding: '0 8px', fontWeight: 700, background: '#ffffff' }}
-                                            >
-                                                <option value="">Select Coupon</option>
-                                                {availableCoupons.map(c => (
-                                                    <option key={c._id} value={c.coupon_name}>{c.coupon_name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <input
-                                                type="number"
-                                                placeholder="Coupon No"
-                                                value={couponNumber}
-                                                onChange={(e) => setCouponNumber(e.target.value)}
-                                                style={{ width: '100%', height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #c4b5fd', padding: '0 8px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleApplyCoupon}
-                                            style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '0 12px', borderRadius: '8px', height: '34px', fontWeight: 900, fontSize: '11px', cursor: 'pointer' }}
-                                        >
-                                            APPLY
-                                        </button>
-                                    </div>
-                                    {appliedCoupon && (
-                                        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '6px 10px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                                            <span style={{ fontSize: '10px', color: '#166534', fontWeight: 800 }}>
-                                                Applied: {appliedCoupon.coupon_name} (- ₹{couponDiscount.toFixed(2)})
-                                            </span>
-                                            <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* 7. LOYALTY (Visible ONLY if enabled in Extra Modules) */}
-                            {isLoyaltyEnabled && (
-                                <div style={{ background: '#fffbeb', padding: '12px', borderRadius: '12px', border: '1px solid #fde68a' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Gift size={14} color="#d97706" /> Loyalty Points
-                                        </span>
-                                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#b45309' }}>Available: {customerPoints} Pts</span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <input
-                                            type="number"
-                                            placeholder="Points to redeem"
-                                            value={redeemPointsInput}
-                                            onChange={(e) => setRedeemPointsInput(e.target.value)}
-                                            style={{ flex: 1, height: '34px', fontSize: '11px', borderRadius: '8px', border: '1px solid #fcd34d', padding: '0 8px', fontWeight: 700, background: '#ffffff', boxSizing: 'border-box' }}
-                                            disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const pts = parseInt(redeemPointsInput);
-                                                if (isNaN(pts) || pts <= 0) return alert('Enter valid points');
-                                                if (pts > customerPoints) return alert('Insufficient points');
-                                                if (pts < (loyaltySettings.target_points || 0)) return alert(`Minimum ${loyaltySettings.target_points} points required to redeem`);
-                                                setLoyaltyRedeemedPoints(pts);
-                                                setRedeemPointsInput('');
-                                                alert(`${pts} Points applied for redemption!`);
-                                            }}
-                                            style={{ height: '34px', padding: '0 12px', fontSize: '11px', fontWeight: 900, background: '#d97706', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: customerPoints < (loyaltySettings.target_points || 0) ? 'not-allowed' : 'pointer', opacity: customerPoints < (loyaltySettings.target_points || 0) ? 0.5 : 1 }}
-                                            disabled={customerPoints < (loyaltySettings.target_points || 0)}
-                                        >
-                                            REDEEM
-                                        </button>
-                                    </div>
-
-                                    {loyaltyRedeemedPoints > 0 && (
-                                        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', padding: '6px 10px', borderRadius: '6px', border: '1px solid #fde68a' }}>
-                                            <span style={{ fontSize: '10px', color: '#92400e', fontWeight: 800 }}>
-                                                Redeeming: {loyaltyRedeemedPoints} Pts (Value: ₹{loyaltyRedeemedPoints * loyaltySettings.point_value})
-                                            </span>
-                                            <button type="button" onClick={() => setLoyaltyRedeemedPoints(0)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 800, fontSize: '10px', cursor: 'pointer' }}>REMOVE</button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowMorePopup(false)}
-                            style={{ width: '100%', marginTop: '16px', padding: '10px', background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-                        >
-                            DONE
-                        </button>
-                    </div>
-                </div>
-            )}
             {showPayModePopup && (
                 <PayModePopup
                     grandTotal={grandTotal}
@@ -4573,7 +4892,7 @@ const BillingPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </main>
         </DashboardPageShell>
     );
 };

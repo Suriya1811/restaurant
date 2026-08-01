@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { exportToCSV, exportToPDF, printTable } from '../../utils/exportUtils';
 import ActionDropdown from '../../components/dashboard/ActionDropdown';
 
@@ -371,7 +372,7 @@ const TaxMaster = () => {
                 />
 
                 {!showDrawer ? (
-                    <div className="master-content-layout fade-in">
+                    <div className="master-content-layout fade-in flex flex-col">
                         <div className="toolbar-premium">
                             <div className="search-premium">
                                 <Search size={20} />
@@ -413,7 +414,7 @@ const TaxMaster = () => {
                             </div>
                         </div>
 
-                        <div className="table-container-premium">
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -562,19 +563,14 @@ const TaxMaster = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-4 text-[14px] font-bold text-slate-800">Sales Account <span className="text-red-500">*</span></label>
                                                 <div className="col-span-8 relative">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
-                                                        className="w-full px-3 py-2 bg-white rounded-md text-sm outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-semibold cursor-pointer appearance-none pr-8 text-slate-800"
-                                                        style={{ border: '1px solid #f97316' }}
+                                                        name="sales_account_id"
                                                         value={formData.sales_account_id}
+                                                        options={ledgers.map(l => ({ value: l._id, label: `${l.name} (${l.group})` }))}
+                                                        placeholder="Select sales account"
                                                         onChange={(e) => setFormData({ ...formData, sales_account_id: e.target.value })}
-                                                    >
-                                                        <option value="">Select sales account</option>
-                                                        {ledgers.map(l => (
-                                                            <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown size={18} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+                                                    />
                                                 </div>
                                             </div>
 
@@ -582,17 +578,17 @@ const TaxMaster = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-4 text-[14px] font-bold text-slate-800">Local / Central Tax <span className="text-red-500">*</span></label>
                                                 <div className="col-span-8 relative">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
-                                                        className="w-full px-3 py-2 bg-white rounded-md text-sm outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-semibold cursor-pointer appearance-none pr-8 text-slate-800"
-                                                        style={{ border: '1px solid #f97316' }}
+                                                        name="local_central"
                                                         value={formData.local_central}
+                                                        options={[
+                                                            { value: 'LOCAL', label: 'Local' },
+                                                            { value: 'CENTRAL', label: 'Central' }
+                                                        ]}
+                                                        placeholder="Select Local / Central"
                                                         onChange={(e) => setFormData({ ...formData, local_central: e.target.value })}
-                                                    >
-                                                        <option value="LOCAL">Local</option>
-                                                        <option value="CENTRAL">Central</option>
-                                                    </select>
-                                                    <ChevronDown size={18} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -603,18 +599,17 @@ const TaxMaster = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-4 text-[14px] font-bold text-slate-800">Registration Type <span className="text-red-500">*</span></label>
                                                 <div className="col-span-8 relative">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
-                                                        className="w-full px-3 py-2 bg-white rounded-md text-sm outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-semibold cursor-pointer appearance-none pr-8 text-slate-800"
-                                                        style={{ border: '1px solid #f97316' }}
+                                                        name="registration_type"
                                                         value={formData.registration_type}
+                                                        options={[
+                                                            { value: 'REGULAR', label: 'Regular' },
+                                                            { value: 'COMPOSITION', label: 'Composition' }
+                                                        ]}
+                                                        placeholder="Select registration type"
                                                         onChange={(e) => setFormData({ ...formData, registration_type: e.target.value })}
-                                                    >
-                                                        <option value="">Select registration type</option>
-                                                        <option value="REGULAR">Regular</option>
-                                                        <option value="COMPOSITION">Composition</option>
-                                                    </select>
-                                                    <ChevronDown size={18} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+                                                    />
                                                 </div>
                                             </div>
 
@@ -622,19 +617,14 @@ const TaxMaster = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-4 text-[14px] font-bold text-slate-800">Purchase Account <span className="text-red-500">*</span></label>
                                                 <div className="col-span-8 relative">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
-                                                        className="w-full px-3 py-2 bg-white rounded-md text-sm outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-semibold cursor-pointer appearance-none pr-8 text-slate-800"
-                                                        style={{ border: '1px solid #f97316' }}
+                                                        name="purchase_account_id"
                                                         value={formData.purchase_account_id}
+                                                        options={ledgers.map(l => ({ value: l._id, label: `${l.name} (${l.group})` }))}
+                                                        placeholder="Select purchase account"
                                                         onChange={(e) => setFormData({ ...formData, purchase_account_id: e.target.value })}
-                                                    >
-                                                        <option value="">Select purchase account</option>
-                                                        {ledgers.map(l => (
-                                                            <option key={l._id} value={l._id}>{l.name} ({l.group})</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown size={18} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+                                                    />
                                                 </div>
                                             </div>
 
@@ -642,17 +632,17 @@ const TaxMaster = () => {
                                             <div className="grid grid-cols-12 items-center gap-2">
                                                 <label className="col-span-4 text-[14px] font-bold text-slate-800">Taxable / Exempted <span className="text-red-500">*</span></label>
                                                 <div className="col-span-8 relative">
-                                                    <select
+                                                    <SearchableSelect
                                                         required
-                                                        className="w-full px-3 py-2 bg-white rounded-md text-sm outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-semibold cursor-pointer appearance-none pr-8 text-slate-800"
-                                                        style={{ border: '1px solid #f97316' }}
+                                                        name="tax_type"
                                                         value={formData.tax_type}
+                                                        options={[
+                                                            { value: 'TAXABLE', label: 'Taxable' },
+                                                            { value: 'EXEMPTED', label: 'Exempted' }
+                                                        ]}
+                                                        placeholder="Select tax type"
                                                         onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
-                                                    >
-                                                        <option value="TAXABLE">Taxable</option>
-                                                        <option value="EXEMPTED">Exempted</option>
-                                                    </select>
-                                                    <ChevronDown size={18} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+                                                    />
                                                 </div>
                                             </div>
                                         </div>

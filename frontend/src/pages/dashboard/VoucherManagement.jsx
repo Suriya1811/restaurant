@@ -379,8 +379,8 @@ const VouchersPage = () => {
         <DashboardPageShell className="bg-[#F8FAFC]">
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
             
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
-                <main className="flex-1 overflow-y-auto">
+            <main className="dashboard-main flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+                <div className="flex-1 overflow-y-auto">
                     <div className="mx-auto w-full">
                         
                         {/* Header */}
@@ -695,8 +695,8 @@ const VouchersPage = () => {
                         </div>
                     </div>
                 </div>
-                </main>
             </div>
+        </main>
 
             {/* Create Voucher Modal */}
             {showModal && (

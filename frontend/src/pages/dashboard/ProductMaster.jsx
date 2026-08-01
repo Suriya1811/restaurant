@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
@@ -51,6 +51,210 @@ import {
 import { TableSkeleton } from '../../components/Skeleton';
 import { useFormNavigation } from '../../hooks/useFormNavigation';
 import SaveConfirmationModal from '../../components/common/SaveConfirmationModal';
+
+/* ─── Searchable Dropdown Select Component ─── */
+const SearchableSelect = memo(({
+    name,
+    value,
+    options = [],
+    placeholder = "Select...",
+    onChange,
+    onKeyDown,
+    inputRef,
+    required = false,
+    className = "",
+    uppercase = false
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [highlightedIndex, setHighlightedIndex] = useState(0);
+    const containerRef = useRef(null);
+    const searchInputRef = useRef(null);
+    const displayBtnRef = useRef(null);
+
+    const normalizedOptions = useMemo(() => {
+        if (!Array.isArray(options)) return [];
+        return options.map(opt => {
+            if (typeof opt === 'object' && opt !== null) {
+                const val = opt.value !== undefined ? opt.value : (opt.name !== undefined ? opt.name : (opt.percentage !== undefined ? String(opt.percentage) : ''));
+                const labelStr = opt.label || (opt.percentage !== undefined ? `${opt.name || 'GST'} (${opt.percentage}%)` : opt.name) || String(val || '');
+                return { value: String(val), label: String(labelStr) };
+            }
+            return { value: String(opt), label: String(opt) };
+        });
+    }, [options]);
+
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm.trim()) return normalizedOptions;
+        const term = searchTerm.toLowerCase();
+        return normalizedOptions.filter(o =>
+            String(o.label).toLowerCase().includes(term) ||
+            String(o.value).toLowerCase().includes(term)
+        );
+    }, [normalizedOptions, searchTerm]);
+
+    const selectedOption = useMemo(() => {
+        return normalizedOptions.find(o => String(o.value) === String(value));
+    }, [normalizedOptions, value]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false);
+                setSearchTerm('');
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setHighlightedIndex(0);
+            setTimeout(() => {
+                if (searchInputRef.current) searchInputRef.current.focus();
+            }, 50);
+        }
+    }, [isOpen]);
+
+    const handleSelect = (optValue) => {
+        if (onChange) {
+            onChange({ target: { name, value: optValue, type: 'select-one' } });
+        }
+        setIsOpen(false);
+        setSearchTerm('');
+        if (displayBtnRef.current) displayBtnRef.current.focus();
+    };
+
+    const handleBtnKeyDown = (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            setIsOpen(true);
+        } else if (onKeyDown) {
+            onKeyDown(e, name);
+        }
+    };
+
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(prev => (prev + 1) % Math.max(1, filteredOptions.length));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(prev => (prev - 1 + filteredOptions.length) % Math.max(1, filteredOptions.length));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (filteredOptions.length > 0 && highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+                handleSelect(filteredOptions[highlightedIndex].value);
+            }
+        } else if (e.key === 'Escape') {
+            setIsOpen(false);
+            setSearchTerm('');
+            if (displayBtnRef.current) displayBtnRef.current.focus();
+        } else if (e.key === 'Tab') {
+            setIsOpen(false);
+            if (onKeyDown) onKeyDown(e, name);
+        }
+    };
+
+    const setRef = (node) => {
+        displayBtnRef.current = node;
+        if (inputRef) {
+            if (typeof inputRef === 'function') inputRef(node);
+            else inputRef.current = node;
+        }
+    };
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            {required && (
+                <input
+                    tabIndex={-1}
+                    value={value || ''}
+                    onChange={() => {}}
+                    required={required}
+                    style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }}
+                />
+            )}
+
+            <button
+                ref={setRef}
+                type="button"
+                onClick={() => setIsOpen(prev => !prev)}
+                onKeyDown={handleBtnKeyDown}
+                className={`w-full text-left flex items-center justify-between px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold ${uppercase ? 'uppercase' : ''} ${className}`}
+            >
+                <span className={`truncate ${!selectedOption ? 'text-slate-400 font-normal' : 'text-slate-800'}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180 text-orange-500' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-orange-200 rounded-md shadow-2xl z-[9999] overflow-hidden animate-in fade-in duration-150">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50 flex items-center gap-1.5">
+                        <Search size={14} className="text-slate-400 shrink-0" />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder="Type to search..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setHighlightedIndex(0);
+                            }}
+                            onKeyDown={handleSearchKeyDown}
+                            className="w-full bg-transparent text-xs outline-none font-semibold text-slate-800 placeholder-slate-400"
+                        />
+                        {searchTerm && (
+                            <button type="button" onMouseDown={(e) => { e.preventDefault(); setSearchTerm(''); }} className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1">
+                                ✕
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="max-h-[280px] overflow-y-auto p-1.5 space-y-0.5 pointer-events-auto">
+                        {filteredOptions.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-slate-400 font-medium text-center">
+                                No matching options
+                            </div>
+                        ) : (
+                            filteredOptions.map((opt, idx) => {
+                                const isSelected = String(opt.value) === String(value);
+                                const isHighlighted = idx === highlightedIndex;
+                                return (
+                                    <div
+                                        key={`${opt.value}-${idx}`}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleSelect(opt.value);
+                                        }}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleSelect(opt.value);
+                                        }}
+                                        onMouseEnter={() => setHighlightedIndex(idx)}
+                                        className={`px-3 py-2 text-xs rounded cursor-pointer transition-colors flex items-center justify-between font-semibold select-none pointer-events-auto ${
+                                            isSelected ? 'bg-orange-50 text-orange-700 font-bold' : isHighlighted ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
+                                        } ${uppercase ? 'uppercase' : ''}`}
+                                    >
+                                        <span className="truncate">{opt.label}</span>
+                                        {isSelected && <Check size={14} className="text-orange-600 shrink-0 ml-2" />}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+});
 
 const ProductMaster = () => {
     const { user, hasModuleAccess } = useAuth();
@@ -300,9 +504,9 @@ const ProductMaster = () => {
         setShowBulkMenu(false);
     };
 
-    const fetchData = async () => {
+    const fetchData = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const [prodRes, catRes, brandRes, unitRes, taxRes] = await Promise.all([
                 fetchWithAuth(`${import.meta.env.VITE_API_URL}/products`),
                 fetchWithAuth(`${import.meta.env.VITE_API_URL}/categories`),
@@ -326,7 +530,7 @@ const ProductMaster = () => {
         } catch (err) {
             console.error("Failed to fetch data", err);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -869,8 +1073,12 @@ const ProductMaster = () => {
             const result = await res.json();
             if (!result.success) throw new Error(result.error || result.message || 'Operation failed');
 
-            fetchData();
             if (type === 'group') {
+                const createdCat = result.data || { _id: Date.now().toString(), name: payload.name, hsn_code: payload.hsn_code };
+                setCategories(prev => {
+                    const exists = prev.some(c => c.name === createdCat.name);
+                    return exists ? prev : [...prev, createdCat];
+                });
                 setShowGroupModal(false);
                 setQuickGroupData({ name: '', description: '', hsn_code: '' });
                 setFormData(p => ({
@@ -878,18 +1086,49 @@ const ProductMaster = () => {
                     category: payload.name,
                     hsn_code: payload.hsn_code || p.hsn_code
                 }));
+                fetchData(false);
+                setTimeout(() => {
+                    const el = inputRefs.current['hsn_code'] || inputRefs.current['category'];
+                    if (el) { el.focus(); if (el.select) el.select(); }
+                }, 100);
             }
             if (type === 'brand') {
+                const createdBrand = result.data || { _id: Date.now().toString(), name: payload.name };
+                setBrands(prev => {
+                    const exists = prev.some(b => b.name === createdBrand.name);
+                    return exists ? prev : [...prev, createdBrand];
+                });
                 setShowBrandModal(false);
                 setQuickBrandData({ name: '', description: '' });
                 setFormData(p => ({ ...p, brand: payload.name }));
+                fetchData(false);
+                setTimeout(() => {
+                    const el = inputRefs.current['unit'] || inputRefs.current['brand'];
+                    if (el) { el.focus(); if (el.select) el.select(); }
+                }, 100);
             }
             if (type === 'unit') {
+                const createdUnit = result.data || { _id: Date.now().toString(), name: payload.name };
+                setUnits(prev => {
+                    const exists = prev.some(u => u.name === createdUnit.name);
+                    return exists ? prev : [...prev, createdUnit];
+                });
                 setShowUnitModal(false);
                 setQuickUnitData({ name: '', description: '', accept_decimal: false });
                 setFormData(p => ({ ...p, unit: payload.name }));
+                fetchData(false);
+                setTimeout(() => {
+                    const el = inputRefs.current['purchase_price'] || inputRefs.current['unit'];
+                    if (el) { el.focus(); if (el.select) el.select(); }
+                }, 100);
             }
             if (type === 'tax') {
+                if (result.data) {
+                    setTaxes(prev => {
+                        const exists = prev.some(t => t._id === result.data._id);
+                        return exists ? prev : [...prev, result.data];
+                    });
+                }
                 setShowTaxModal(false);
                 setQuickTaxData({ name: '', percentage: 0 });
                 if (result.data) {
@@ -902,6 +1141,11 @@ const ProductMaster = () => {
                         igst_purchase: String(payload.percentage)
                     }));
                 }
+                fetchData(false);
+                setTimeout(() => {
+                    const el = inputRefs.current['opening_stock'] || inputRefs.current['gst_sales'];
+                    if (el) { el.focus(); if (el.select) el.select(); }
+                }, 100);
             }
 
             alert(`${type.toUpperCase()} created successfully!`);
@@ -1280,18 +1524,16 @@ const ProductMaster = () => {
                                                 <div className="grid grid-cols-12 items-center gap-2">
                                                     <label className="col-span-3 text-[12px] font-bold text-slate-700">Group</label>
                                                     <div className="col-span-9 flex gap-1.5 items-center">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['category'] = el; }}
+                                                        <SearchableSelect
+                                                            inputRef={el => { if (el) inputRefs.current['category'] = el; }}
                                                             name="category"
                                                             required
                                                             value={formData.category}
+                                                            options={categories}
+                                                            placeholder="Choose Class"
                                                             onChange={handleInputChange}
                                                             onKeyDown={(e) => handleFormKeyDown(e, 'category')}
-                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Choose Class</option>
-                                                            {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
-                                                        </select>
+                                                        />
                                                         <button type="button" onClick={() => setShowGroupModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
                                                     </div>
                                                 </div>
@@ -1348,36 +1590,33 @@ const ProductMaster = () => {
                                                 <div className="grid grid-cols-12 items-center gap-2">
                                                     <label className="col-span-3 text-[12px] font-bold text-slate-700">Brand</label>
                                                     <div className="col-span-9 flex gap-1.5 items-center">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['brand'] = el; }}
+                                                        <SearchableSelect
+                                                            inputRef={el => { if (el) inputRefs.current['brand'] = el; }}
                                                             name="brand"
                                                             required
                                                             value={formData.brand}
+                                                            options={brands}
+                                                            placeholder="Select Brand"
                                                             onChange={handleInputChange}
                                                             onKeyDown={(e) => handleFormKeyDown(e, 'brand')}
-                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                        >
-                                                            <option value="">Select Brand</option>
-                                                            {brands.map(b => <option key={b._id} value={b.name}>{b.name}</option>)}
-                                                        </select>
+                                                        />
                                                         <button type="button" onClick={() => setShowBrandModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-12 items-center gap-2">
                                                     <label className="col-span-3 text-[12px] font-bold text-slate-700">Unit</label>
                                                     <div className="col-span-9 flex gap-1.5 items-center">
-                                                        <select
-                                                            ref={el => { if (el) inputRefs.current['unit'] = el; }}
+                                                        <SearchableSelect
+                                                            inputRef={el => { if (el) inputRefs.current['unit'] = el; }}
                                                             name="unit"
                                                             required
                                                             value={formData.unit}
+                                                            options={units}
+                                                            placeholder="SELECT UNIT"
+                                                            uppercase
                                                             onChange={handleInputChange}
                                                             onKeyDown={(e) => handleFormKeyDown(e, 'unit')}
-                                                            className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 uppercase transition-all font-semibold"
-                                                        >
-                                                            <option value="">SELECT UNIT</option>
-                                                            {units.map(u => <option key={u._id} value={u.name}>{u.name}</option>)}
-                                                        </select>
+                                                        />
                                                         <button type="button" onClick={() => setShowUnitModal(true)} className="w-[36px] h-[36px] bg-[#ea580c] hover:bg-orange-600 text-white rounded font-bold text-lg flex items-center justify-center transition-colors shadow-sm flex-shrink-0">+</button>
                                                     </div>
                                                 </div>
@@ -1475,37 +1714,29 @@ const ProductMaster = () => {
                                                     <div className="grid grid-cols-12 items-center gap-2">
                                                         <label className="col-span-5 text-[12px] font-bold text-slate-700">GST Sale (%)</label>
                                                         <div className="col-span-7">
-                                                            <select
-                                                                ref={el => { if (el) inputRefs.current['gst_sales'] = el; }}
+                                                            <SearchableSelect
+                                                                inputRef={el => { if (el) inputRefs.current['gst_sales'] = el; }}
                                                                 name="gst_sales"
                                                                 value={formData.gst_sales}
+                                                                options={taxes}
+                                                                placeholder="Select Tax"
                                                                 onChange={handleInputChange}
                                                                 onKeyDown={(e) => handleFormKeyDown(e, 'gst_sales')}
-                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                            >
-                                                                <option value="">Select Tax</option>
-                                                                {taxes.map(t => (
-                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                                ))}
-                                                            </select>
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-12 items-center gap-2">
                                                         <label className="col-span-5 text-[12px] font-bold text-slate-700">IGST Sale (%)</label>
                                                         <div className="col-span-7">
-                                                            <select
-                                                                ref={el => { if (el) inputRefs.current['igst_sales'] = el; }}
+                                                            <SearchableSelect
+                                                                inputRef={el => { if (el) inputRefs.current['igst_sales'] = el; }}
                                                                 name="igst_sales"
                                                                 value={formData.igst_sales}
+                                                                options={taxes}
+                                                                placeholder="Select Tax"
                                                                 onChange={handleInputChange}
                                                                 onKeyDown={(e) => handleFormKeyDown(e, 'igst_sales')}
-                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                            >
-                                                                <option value="">Select Tax</option>
-                                                                {taxes.map(t => (
-                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                                ))}
-                                                            </select>
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1513,37 +1744,29 @@ const ProductMaster = () => {
                                                     <div className="grid grid-cols-12 items-center gap-2">
                                                         <label className="col-span-5 text-[12px] font-bold text-slate-700">GST Purchase (%)</label>
                                                         <div className="col-span-7">
-                                                            <select
-                                                                ref={el => { if (el) inputRefs.current['gst_purchase'] = el; }}
+                                                            <SearchableSelect
+                                                                inputRef={el => { if (el) inputRefs.current['gst_purchase'] = el; }}
                                                                 name="gst_purchase"
                                                                 value={formData.gst_purchase}
+                                                                options={taxes}
+                                                                placeholder="Select Tax"
                                                                 onChange={handleInputChange}
                                                                 onKeyDown={(e) => handleFormKeyDown(e, 'gst_purchase')}
-                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                            >
-                                                                <option value="">Select Tax</option>
-                                                                {taxes.map(t => (
-                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                                ))}
-                                                            </select>
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-12 items-center gap-2">
                                                         <label className="col-span-5 text-[12px] font-bold text-slate-700">IGST Purchase (%)</label>
                                                         <div className="col-span-7">
-                                                            <select
-                                                                ref={el => { if (el) inputRefs.current['igst_purchase'] = el; }}
+                                                            <SearchableSelect
+                                                                inputRef={el => { if (el) inputRefs.current['igst_purchase'] = el; }}
                                                                 name="igst_purchase"
                                                                 value={formData.igst_purchase}
+                                                                options={taxes}
+                                                                placeholder="Select Tax"
                                                                 onChange={handleInputChange}
                                                                 onKeyDown={(e) => handleFormKeyDown(e, 'igst_purchase')}
-                                                                className="w-full px-3 py-2 bg-white border border-orange-300 rounded text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-semibold"
-                                                            >
-                                                                <option value="">Select Tax</option>
-                                                                {taxes.map(t => (
-                                                                    <option key={t._id} value={t.percentage}>{t.name} ({t.percentage}%)</option>
-                                                                ))}
-                                                            </select>
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
