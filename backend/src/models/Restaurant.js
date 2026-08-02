@@ -117,6 +117,7 @@ const restaurantSchema = new mongoose.Schema({
     pay_mode_enabled: { type: Boolean, default: true },
     stock_level_enabled: { type: Boolean, default: true },
     kot_enabled: { type: Boolean, default: true },
+    new_table_timeout_minutes: { type: Number, default: 3 },
     party_order_enabled: { type: Boolean, default: true },
     split_rate_tax_enabled: { type: Boolean, default: false },
     data_auto_lock_enabled: { type: Boolean, default: false },

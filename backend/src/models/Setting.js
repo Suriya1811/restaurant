@@ -14,7 +14,8 @@ const settingSchema = new mongoose.Schema({
         email: String,
         gstin: String,
         currency: { type: String, default: '₹' },
-        footer_note: String
+        footer_note: String,
+        new_table_timeout_minutes: { type: Number, default: 3 }
     },
     printer: {
         thermal_80mm: { type: Boolean, default: true },

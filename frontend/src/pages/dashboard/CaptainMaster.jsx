@@ -378,17 +378,18 @@ const CaptainMaster = () => {
                                     <option value="ACTIVE">Active</option>
                                     <option value="DEACTIVE">Deactive</option>
                                 </select>
-                                <div className="relative ml-auto">
+                                <div className="relative">
                                     <button
                                         type="button"
                                         onClick={() => setShowBulkMenu(!showBulkMenu)}
-                                        className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                        className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                        style={{ height: '32px' }}
                                     >
-                                        Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                        Actions {selectedIds.length > 0 && <span className="bg-slate-800 text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
                                         <ChevronDown size={14} />
                                     </button>
                                     {showBulkMenu && (
-                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                        <div className="absolute left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
                                             <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
                                             <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
                                             <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
@@ -396,9 +397,15 @@ const CaptainMaster = () => {
                                     )}
                                 </div>
                             </div>
+                            <div className="ml-auto flex-shrink-0">
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg shadow-xs text-xs font-black uppercase tracking-wider" style={{ height: '32px' }}>
+                                    <span>TOTAL RECORDS:</span>
+                                    <span className="text-sm font-black text-slate-900">{filteredCaptains.length}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
+                        <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 235px)' }}>
                             <table className="table-premium">
                                 <thead>
                                     <tr>
@@ -478,14 +485,6 @@ const CaptainMaster = () => {
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
-
-                        {/* Bottom Total Buttons */}
-                        <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
-                                <span>TOTAL RECORDS:</span>
-                                <span className="text-sm">{filteredCaptains.length}</span>
-                            </div>
                         </div>
                     </div>
                 ) : (

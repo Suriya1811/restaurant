@@ -57,6 +57,26 @@ export const printDocumentToPrinter = (htmlContent, printerType = 'SALES_BILL', 
 <head>
     <meta charset="UTF-8">
     <title>${title} [Target: ${selectedPrinter}]</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: 80mm auto; margin: 0; }
+        html, body {
+            font-family: 'Courier New', Courier, monospace, 'Lucida Console', system-ui, sans-serif;
+            width: 72mm;
+            margin: 0 auto;
+            padding: 3mm 2mm 15mm 2mm;
+            color: #000000;
+            background: #ffffff;
+            font-size: 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { color: #000000; }
+        @media print {
+            body { width: 72mm !important; margin: 0 auto !important; }
+        }
+    </style>
 </head>
 <body>
     ${htmlContent}

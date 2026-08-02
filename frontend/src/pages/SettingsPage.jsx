@@ -667,6 +667,36 @@ const SettingsPage = () => {
                                                 })}
                                             </div>
                                         </div>
+
+                                        {/* New Table Timeout Setting */}
+                                        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                            <div>
+                                                <span className="text-[13px] font-bold text-slate-800">
+                                                    New Table Auto-Release Timeout (Un-KOT Idle)
+                                                </span>
+                                                <p className="text-[11px] text-slate-500 font-medium">
+                                                    Automatically releases vacant tables if opened without any KOT generated within the selected timeframe.
+                                                </p>
+                                            </div>
+                                            <div className="relative w-48">
+                                                <select
+                                                    value={moduleForm.new_table_timeout_minutes !== undefined ? moduleForm.new_table_timeout_minutes : 3}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value);
+                                                        handleToggleModuleSetting('new_table_timeout_minutes', val);
+                                                    }}
+                                                    className="w-full appearance-none bg-white border border-orange-300 text-slate-800 text-[13px] font-bold py-1.5 px-3 pr-8 rounded-[6px] focus:outline-none focus:border-[#ff5a1f] cursor-pointer shadow-2xs"
+                                                >
+                                                    <option value={1}>1 Minute</option>
+                                                    <option value={2}>2 Minutes</option>
+                                                    <option value={3}>3 Minutes (Default)</option>
+                                                    <option value={5}>5 Minutes</option>
+                                                    <option value={10}>10 Minutes</option>
+                                                    <option value={0}>Disabled</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Card 2: PRINTER SETTINGS */}

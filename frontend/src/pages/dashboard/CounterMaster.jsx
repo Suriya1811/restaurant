@@ -226,11 +226,11 @@ const CounterMaster = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-4 ml-auto">
+                        <div className="flex items-center gap-2">
                             <select 
                                 value={statusFilter} 
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-premium w-40 !py-1.5 !px-3"
+                                className="input-premium w-40 !py-1.5 !px-3 font-bold text-slate-700 cursor-pointer"
                                 style={{ height: '32px', minHeight: '32px', fontSize: '12px' }}
                             >
                                 <option value="ALL">All Status</option>
@@ -238,9 +238,15 @@ const CounterMaster = () => {
                                 <option value="DEACTIVE">Deactive</option>
                             </select>
                         </div>
+                        <div className="ml-auto flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg shadow-xs text-xs font-black uppercase tracking-wider" style={{ height: '32px' }}>
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm font-black text-slate-900">{filteredCounters.length}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 275px)' }}>
+                    <div className="table-container-premium flex-1 overflow-auto" style={{ maxHeight: 'calc(100vh - 235px)' }}>
                         <table className="table-premium">
                             <thead>
                                 <tr>
@@ -309,14 +315,6 @@ const CounterMaster = () => {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
-
-                    {/* Bottom Total Buttons */}
-                    <div className="mt-2 flex items-center justify-end gap-3 flex-shrink-0">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider">
-                            <span>TOTAL RECORDS:</span>
-                            <span className="text-sm">{filteredCounters.length}</span>
-                        </div>
                     </div>
                 </div>
 

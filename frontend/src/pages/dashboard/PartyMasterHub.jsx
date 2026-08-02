@@ -4,12 +4,11 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell';
 import {
-    Loader2, RefreshCw, Printer, Settings, X, ChevronDown, FileText, Search, PlusCircle, Save, Download
+    Loader2, Printer, Settings, X, ChevronDown, FileText, Search, PlusCircle, Save, Download, Layers
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SearchableSelect from '@/components/common/SearchableSelect';
-import '../dashboard/Dashboard.css';
 
 const PartyMasterHub = () => {
     const location = useLocation();
@@ -305,6 +304,38 @@ const PartyMasterHub = () => {
 
     return (
         <DashboardPageShell className="bg-slate-50">
+            {/* Inline stylesheet for spreadsheet layout with custom grid lines matching Item Display Page */}
+            <style>{`
+                .item-table-grid {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .item-table-grid th {
+                    background: #0f172a !important;
+                    color: #ff7a00 !important;
+                    font-weight: 800;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    border: 1px solid #e2e8f0 !important;
+                    padding: 14px 12px !important;
+                    text-align: left;
+                    white-space: nowrap;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                }
+                .item-table-grid td {
+                    border: 1px solid #e2e8f0 !important;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    color: #334155;
+                    background: white;
+                    white-space: nowrap;
+                }
+                .item-table-grid tr:hover td {
+                    background: #f8fafc;
+                }
+            `}</style>
             <Sidebar isCollapsed={isCollapsed} isMobileOpen={isMobileSidebarOpen} onMobileClose={() => setIsMobileSidebarOpen(false)} />
 
             {isMobileSidebarOpen && window.innerWidth <= 768 && (
@@ -387,129 +418,125 @@ const PartyMasterHub = () => {
 
                     {/* ── MODE 1: ORDER DISPLAY (LIST VIEW) ── */}
                     {viewMode === 'list' ? (
-                        <>
-                            {/* Filter Controls Row */}
-                            <div className="px-5 py-4 flex flex-wrap items-center gap-6 border-b border-slate-100 bg-white">
-                                {/* Search Order */}
-                                <div className="min-w-[200px] flex-1 max-w-xs">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <div className="master-content-layout fade-in !pt-2 flex flex-col h-full overflow-hidden p-4">
+                            {/* Premium Toolbar */}
+                            <div className="toolbar-premium no-print mb-3">
+                                <div className="flex flex-row items-center gap-4 flex-1 flex-wrap">
+                                    {/* Search Order */}
+                                    <div className="search-premium" style={{ width: '320px', flexShrink: 0 }}>
+                                        <Search size={20} />
                                         <input
                                             type="text"
                                             placeholder="Search Order..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 pl-9 pr-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00]"
+                                            className="border-orange-500 focus:ring-orange-500"
+                                            style={{ borderColor: '#f97316' }}
                                         />
                                     </div>
-                                </div>
 
-                                {/* From Date */}
-                                <div className="min-w-[150px]">
-                                    <div className="relative">
+                                    {/* Filter Controls */}
+                                    <div className="flex flex-row items-center gap-2 flex-wrap">
+                                        {/* From Date */}
                                         <input
                                             type="date"
                                             value={fromDate}
                                             onChange={(e) => setFromDate(e.target.value)}
                                             placeholder="From Date"
                                             title="From Date"
-                                            className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                            className="filter-select-premium font-semibold cursor-pointer"
                                         />
-                                    </div>
-                                </div>
 
-                                {/* To Date */}
-                                <div className="min-w-[150px]">
-                                    <div className="relative">
+                                        {/* To Date */}
                                         <input
                                             type="date"
                                             value={toDate}
                                             onChange={(e) => setToDate(e.target.value)}
                                             placeholder="To Date"
                                             title="To Date"
-                                            className="w-full bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
+                                            className="filter-select-premium font-semibold cursor-pointer"
                                         />
-                                    </div>
-                                </div>
 
-                                {/* Function Type */}
-                                <div className="min-w-[160px]">
-                                    <div className="relative">
+                                        {/* Function Type */}
                                         <select
+                                            className="filter-select-premium"
                                             value={selectedFunction}
                                             onChange={(e) => setSelectedFunction(e.target.value)}
-                                            className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         >
-                                            <option value="">Function Type</option>
+                                            <option value="">ALL FUNCTIONS</option>
                                             {functionTypes.map(ft => (
                                                 <option key={ft._id} value={ft.name}>{ft.name}</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                                    </div>
-                                </div>
 
-                                {/* Hall */}
-                                <div className="min-w-[160px]">
-                                    <div className="relative">
+                                        {/* Hall */}
                                         <select
+                                            className="filter-select-premium"
                                             value={selectedHall}
                                             onChange={(e) => setSelectedHall(e.target.value)}
-                                            className="w-full appearance-none bg-white border border-slate-300 text-slate-700 text-[13px] font-semibold py-2 px-3 pr-8 rounded-[4px] focus:outline-none focus:border-[#ff6b00] cursor-pointer"
                                         >
-                                            <option value="">Hall</option>
+                                            <option value="">ALL HALLS</option>
                                             <option value="Main Hall">Main Hall</option>
                                             <option value="Banquet Hall">Banquet Hall</option>
                                             <option value="VIP Lounge">VIP Lounge</option>
                                             <option value="Outdoor Terrace">Outdoor Terrace</option>
                                         </select>
-                                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                                     </div>
-                                </div>
 
-                                {/* Refresh Button */}
-                                <div>
-                                    <button
-                                        onClick={fetchOrders}
-                                        disabled={loading}
-                                        className="flex items-center justify-center gap-2 px-5 py-2 bg-[#ff6b00] hover:bg-[#e66000] text-white text-[13px] font-bold rounded-[4px] shadow-sm transition-colors min-h-[38px] cursor-pointer"
-                                    >
-                                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
-                                    </button>
+                                    {/* Total Records - right aligned in toolbar */}
+                                    <div className="ml-auto flex-shrink-0">
+                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg shadow-xs text-xs font-black uppercase tracking-wider">
+                                            <span>TOTAL RECORDS:</span>
+                                            <span className="text-sm font-black text-slate-900">{processedRows.length}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Table Area */}
-                            <div className="flex-1 overflow-auto bg-white custom-scrollbar relative px-5 pb-5 mt-2">
-                                <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1000px]">
-                                    <thead className="bg-[#0a1128] text-[#ff6b00] sticky top-0 z-10 text-[12px] font-bold border-b-2 border-slate-200">
+                            {/* Responsive Scrollable Table Container */}
+                            <div
+                                className="table-container-premium flex-1"
+                                style={{
+                                    overflowX: 'auto',
+                                    overflowY: 'auto',
+                                    maxHeight: 'calc(100vh - 220px)',
+                                    maxWidth: '100%',
+                                    borderRadius: '1rem',
+                                    background: 'white',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                                }}
+                            >
+                                <table className="item-table-grid">
+                                    <thead>
                                         <tr>
                                             {activeColumns.map((col) => (
-                                                <th key={col.key} className="py-3.5 px-4 text-left">
+                                                <th key={col.key}>
                                                     <span>{col.label}</span>
                                                 </th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100 text-[13px] font-bold">
+                                    <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={activeColumns.length} className="py-16 text-center">
-                                                    <Loader2 className="animate-spin text-[#ff6b00] mx-auto mb-2" size={32} />
-                                                    <span className="text-slate-500 font-medium">Loading party orders...</span>
+                                                <td colSpan={activeColumns.length} style={{ textAlign: 'center', padding: '80px 0' }}>
+                                                    <Loader2 className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+                                                    <p className="font-black text-slate-300 uppercase tracking-[0.2em] text-xs">Querying Archives...</p>
                                                 </td>
                                             </tr>
                                         ) : processedRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={activeColumns.length} className="py-16 text-center text-slate-400 font-semibold">
-                                                    No party orders found.
+                                                <td colSpan={activeColumns.length} style={{ textAlign: 'center', padding: '80px 0' }}>
+                                                    <Layers size={64} className="text-slate-200 mx-auto mb-4" />
+                                                    <p className="font-bold text-slate-400">No party orders found.</p>
                                                 </td>
                                             </tr>
                                         ) : (
                                             processedRows.map((row) => (
-                                                <tr key={row.id} className="hover:bg-slate-50 text-slate-800 transition-colors">
+                                                <tr key={row.id} className="group hover:bg-slate-50 transition-all">
                                                     {activeColumns.map(col => (
-                                                        <td key={col.key} className="py-4 px-4 text-left">
+                                                        <td key={col.key} className={col.key === 'customer_name' ? 'font-black text-slate-900' : ''}>
                                                             {row[col.key] ?? '---'}
                                                         </td>
                                                     ))}
@@ -519,15 +546,7 @@ const PartyMasterHub = () => {
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Footer Pagination Bar */}
-                            <div className="px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-end gap-2 text-xs font-bold text-slate-600">
-                                <span>Pages</span>
-                                <button className="px-2 py-1 border border-slate-200 rounded hover:bg-slate-50">&lt;</button>
-                                <span className="px-2 py-1 border border-[#ff6b00] text-[#ff6b00] rounded">1</span>
-                                <button className="px-2 py-1 border border-slate-200 rounded hover:bg-slate-50">&gt;</button>
-                            </div>
-                        </>
+                        </div>
                     ) : (
                         /* ── MODE 2: PARTY ORDER CREATION (MATCHING ITEM CREATION UI STYLE) ── */
                         <div className="flex-1 p-6 lg:p-8 bg-white overflow-hidden flex flex-col justify-between">

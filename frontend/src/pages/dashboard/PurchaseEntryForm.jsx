@@ -567,7 +567,7 @@ export default function PurchaseEntryForm() {
                                     setShowColSettings(true);
                                 }}
                                 style={{
-                                    background: '#FF5722',
+                                    background: '#0f172a',
                                     color: '#FFFFFF',
                                     border: 'none',
                                     borderRadius: '6px',
@@ -578,7 +578,7 @@ export default function PurchaseEntryForm() {
                                     alignItems: 'center',
                                     gap: '6px',
                                     cursor: 'pointer',
-                                    boxShadow: '0 2px 4px rgba(255,87,34,0.25)'
+                                    boxShadow: '0 2px 4px rgba(15,23,42,0.25)'
                                 }}
                             >
                                 <Settings size={15} /> <span>COLUMN SETTINGS</span>

@@ -17,7 +17,14 @@ if (!process.env.JWT_SECRET) {
 }
 
 // ─── Connect to MongoDB ───────────────────────────────────────────────────────
-connectDB();
+connectDB().then(() => {
+    try {
+        const { startTableCleanupService } = require('./services/tableCleanupService');
+        startTableCleanupService();
+    } catch (e) {
+        console.error('Failed to start table cleanup service:', e);
+    }
+});
 
 const app = express();
 

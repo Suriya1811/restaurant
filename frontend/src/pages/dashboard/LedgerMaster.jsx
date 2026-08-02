@@ -503,9 +503,8 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
         return matchesSearch && matchesGroup && matchesActive;
     });
 
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredLedgers.length / pageSize);
-    const paginatedLedgers = filteredLedgers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    // Display all filtered ledgers in scrollable table
+    const paginatedLedgers = filteredLedgers;
 
     // Unique groups for filtering
     const availableGroupsForFilter = [
@@ -696,7 +695,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                             />
                         </div>
-                        <div className="flex items-center gap-4 ml-auto">
+                        <div className="flex items-center gap-2">
                             <select
                                 value={groupFilter}
                                 onChange={e => { setGroupFilter(e.target.value); setCurrentPage(1); }}
@@ -718,25 +717,34 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                 <option value="Active">Active</option>
                                 <option value="Deactive">Deactive</option>
                             </select>
+
+                            {/* Action Dropdown Button - placed next to All Status */}
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                    className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                    style={{ height: '32px' }}
+                                >
+                                    Actions {selectedIds.length > 0 && <span className="bg-slate-800 text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                    <ChevronDown size={14} />
+                                </button>
+                                {showBulkMenu && (
+                                    <div className="absolute left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                        <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
+                                        <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
+                                        <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Action Dropdown Button - right aligned, white/orange */}
-                        <div className="relative ml-auto">
-                            <button
-                                type="button"
-                                onClick={() => setShowBulkMenu(!showBulkMenu)}
-                                className="px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                            >
-                                Actions {selectedIds.length > 0 && <span className="bg-[#ea580c] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
-                                <ChevronDown size={14} />
-                            </button>
-                            {showBulkMenu && (
-                                <div className="absolute right-0 mt-1 w-40 bg-white border border-orange-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
-                                    <button onClick={() => handleBulkAction('ACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-emerald-700 transition-colors">Activate</button>
-                                    <button onClick={() => handleBulkAction('DEACTIVATE')} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700 transition-colors">Deactivate</button>
-                                    <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
-                                </div>
-                            )}
+                        {/* Total Records - right aligned in toolbar */}
+                        <div className="ml-auto flex-shrink-0">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg shadow-xs text-xs font-black uppercase tracking-wider" style={{ height: '32px' }}>
+                                <span>TOTAL RECORDS:</span>
+                                <span className="text-sm font-black text-slate-900">{filteredLedgers.length}</span>
+                            </div>
                         </div>
 
                             {/* Column Settings Drawer Panel */}
@@ -808,7 +816,7 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                         style={{
                             overflowX: 'auto',
                             overflowY: 'auto',
-                            maxHeight: 'calc(100vh - 275px)',
+                            maxHeight: 'calc(100vh - 235px)',
                             maxWidth: '100%',
                             borderRadius: '1rem',
                             background: 'white',
@@ -904,67 +912,6 @@ export default function LedgerMaster({ defaultOpenCreate = false }) {
                                     )}
                                 </tbody>
                             </table>
-                        </div>
-
-                        {/* Bottom Total Bar + Pagination */}
-                        <div className="mt-2 flex items-center justify-between gap-3 flex-shrink-0">
-                            {!loading && filteredLedgers.length > 0 && (
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                                        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredLedgers.length)} of {filteredLedgers.length}
-                                    </span>
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            disabled={currentPage === 1}
-                                            onClick={() => setCurrentPage(currentPage - 1)}
-                                            className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                                        >
-                                            <ChevronLeft size={16} />
-                                        </button>
-                                        {Array.from({ length: totalPages }).map((_, idx) => {
-                                            const p = idx + 1;
-                                            if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
-                                                return (
-                                                    <button
-                                                        key={p}
-                                                        onClick={() => setCurrentPage(p)}
-                                                        className={`w-8 h-8 rounded border text-xs font-bold ${currentPage === p
-                                                            ? 'bg-[#f97316] border-[#f97316] text-white shadow'
-                                                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                        }`}
-                                                    >
-                                                        {p}
-                                                    </button>
-                                                );
-                                            } else if (p === currentPage - 2 || p === currentPage + 2) {
-                                                return <span key={p} className="text-slate-400 px-1 text-sm font-bold">...</span>;
-                                            }
-                                            return null;
-                                        })}
-                                        <button
-                                            disabled={currentPage === totalPages}
-                                            onClick={() => setCurrentPage(currentPage + 1)}
-                                            className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
-                                        >
-                                            <ChevronRight size={16} />
-                                        </button>
-                                    </div>
-                                    <select
-                                        value={pageSize}
-                                        onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-                                        className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-600 bg-white outline-none"
-                                    >
-                                        <option value={9}>9 / page</option>
-                                        <option value={25}>25 / page</option>
-                                        <option value={50}>50 / page</option>
-                                        <option value={100}>100 / page</option>
-                                    </select>
-                                </div>
-                            )}
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-400 text-[#ea580c] rounded-lg shadow-sm text-xs font-black uppercase tracking-wider ml-auto">
-                                <span>TOTAL RECORDS:</span>
-                                <span className="text-sm">{filteredLedgers.length}</span>
-                            </div>
                         </div>
                     </div>
                 ) : (

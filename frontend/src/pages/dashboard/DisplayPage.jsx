@@ -596,7 +596,7 @@ const DisplayPage = () => {
 
                             {/* Filter By */}
                             <div className="flex-[1.5] min-w-[240px]">
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-2">
                                     <select
                                         value={filterBy}
                                         onChange={(e) => {
@@ -639,6 +639,24 @@ const DisplayPage = () => {
                                             <span className="text-[13px] text-slate-400 font-medium">Select type first</span>
                                         </div>
                                     )}
+
+                                    {/* Actions Dropdown Button - placed next to Select type first */}
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                            className="px-4 h-[42px] bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                                        >
+                                            Actions {selectedIds.length > 0 && <span className="bg-slate-800 text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                            <ChevronDown size={14} />
+                                        </button>
+                                        {showBulkMenu && (
+                                            <div className="absolute left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-[13px]">
+                                                <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
+                                                <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -664,28 +682,11 @@ const DisplayPage = () => {
                                 />
                             </div>
 
-                            {/* Action / Refresh Buttons */}
-                            <div className="ml-auto">
-                                <div className="flex items-center gap-3 relative">
-                                    {/* Top Action Button */}
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowBulkMenu(!showBulkMenu)}
-                                            className="flex items-center gap-2 px-5 h-[42px] bg-slate-800 text-white rounded-[4px] text-[13px] font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wide cursor-pointer"
-                                        >
-                                            Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px] ml-1">{selectedIds.length}</span>}
-                                            <ChevronDown size={14} />
-                                        </button>
-                                        {showBulkMenu && (
-                                            <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-[13px]">
-                                                <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
-                                                <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button onClick={handleReset} className="flex items-center gap-2 px-6 h-[42px] bg-[#ff6b00] text-white rounded-[4px] text-[13px] font-bold hover:bg-[#e66000] transition-colors shadow-sm uppercase tracking-wide">
-                                        <RefreshCw size={15} /> Refresh
-                                    </button>
+                            {/* Total Records - right aligned */}
+                            <div className="ml-auto flex-shrink-0">
+                                <div className="inline-flex items-center gap-2 px-4 h-[42px] bg-slate-50 border border-slate-200 text-slate-700 rounded-lg shadow-xs text-xs font-black uppercase tracking-wider">
+                                    <span>TOTAL RECORDS:</span>
+                                    <span className="text-sm font-black text-slate-900">{filteredRecords.length}</span>
                                 </div>
                             </div>
                         </div>

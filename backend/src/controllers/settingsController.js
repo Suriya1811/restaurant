@@ -80,6 +80,7 @@ exports.getUserSettings = async (req, res) => {
                     pay_mode_enabled: restaurant.pay_mode_enabled !== undefined ? restaurant.pay_mode_enabled : true,
                     stock_level_enabled: restaurant.stock_level_enabled !== undefined ? restaurant.stock_level_enabled : true,
                     kot_enabled: restaurant.kot_enabled !== undefined ? restaurant.kot_enabled : true,
+                    new_table_timeout_minutes: restaurant.new_table_timeout_minutes !== undefined ? restaurant.new_table_timeout_minutes : 3,
                     party_order_enabled: restaurant.party_order_enabled !== undefined ? restaurant.party_order_enabled : true,
                     split_rate_tax_enabled: restaurant.split_rate_tax_enabled !== undefined ? restaurant.split_rate_tax_enabled : false,
                     data_auto_lock_enabled: restaurant.data_auto_lock_enabled !== undefined ? restaurant.data_auto_lock_enabled : false,
@@ -686,6 +687,7 @@ exports.updateModuleSettings = async (req, res) => {
         if (req.body.unlock_days !== undefined) updatePayload.unlock_days = req.body.unlock_days;
         if (req.body.lock_date_up_to !== undefined) updatePayload.lock_date_up_to = req.body.lock_date_up_to;
         if (req.body.cards_per_row !== undefined) updatePayload.cards_per_row = req.body.cards_per_row;
+        if (req.body.new_table_timeout_minutes !== undefined) updatePayload.new_table_timeout_minutes = req.body.new_table_timeout_minutes;
 
         const restaurant = await Restaurant.findByIdAndUpdate(
             req.user.restaurant_id,

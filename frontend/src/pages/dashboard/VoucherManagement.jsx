@@ -23,10 +23,34 @@ const EMPTY_FORM_STATE = (defaultType = '') => ({
     narration: ''
 });
 
+const ALL_COLUMNS = [
+    { id: 'date', label: 'Date' },
+    { id: 'voucher_number', label: 'Voucher Number' },
+    { id: 'voucher_type', label: 'Voucher Type' },
+    { id: 'particulars', label: 'Particulars' },
+    { id: 'cash_in', label: 'Cash In' },
+    { id: 'cash_out', label: 'Cash Out' },
+    { id: 'bank_in', label: 'Bank In' },
+    { id: 'bank_out', label: 'Bank Out' },
+    { id: 'total_in', label: 'Total In' },
+    { id: 'total_out', label: 'Total Out' },
+    { id: 'type', label: 'Type' },
+    { id: 'cancel_type', label: 'Cancel Type' },
+    { id: 'status', label: 'Status' }
+];
+
 const VouchersPage = () => {
     const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    
+    // Column visibility states
+    const [visibleColumns, setVisibleColumns] = useState(() => {
+        const saved = localStorage.getItem('voucherManagementColumns');
+        return saved ? JSON.parse(saved) : ALL_COLUMNS.map(c => c.id);
+    });
+    const [tempVisibleColumns, setTempVisibleColumns] = useState(visibleColumns);
+    const [showColumnFilter, setShowColumnFilter] = useState(false);
     
     // Data states
     const [vouchers, setVouchers] = useState([]);
@@ -399,22 +423,15 @@ const VouchersPage = () => {
                                     <Printer size={14} />
                                     <span className="text-[10px] uppercase font-black text-blue-500">Print</span>
                                 </button>
-                                <div className="relative">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowBulkMenu(!showBulkMenu)}
-                                        className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                        Actions {selectedIds.length > 0 && <span className="bg-[#ff6b00] text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
-                                    </button>
-                                    {showBulkMenu && (
-                                        <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
-                                            <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
-                                            <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
-                                        </div>
-                                    )}
-                                </div>
-                                <button className="btn-column-settings" title="Column Settings">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTempVisibleColumns(visibleColumns);
+                                        setShowColumnFilter(true);
+                                    }}
+                                    className="btn-column-settings cursor-pointer"
+                                    title="Column Settings"
+                                >
                                     <Settings size={14} />
                                     <span>Column Settings</span>
                                 </button>
@@ -430,8 +447,8 @@ const VouchersPage = () => {
                         </div>
 
                         <div className="p-4 md:p-6 space-y-4 flex-1 flex flex-col min-h-0 overflow-hidden">
-                            {/* Filters Row */}
-                            <div className="flex items-center justify-between gap-6 pb-2 flex-shrink-0">
+                            {/* Filters Sub-Header Panel */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 flex-shrink-0">
                                 <div className="flex-1 max-w-sm">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" size={16} />
@@ -444,11 +461,11 @@ const VouchersPage = () => {
                                         />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-3">
                                     <div>
                                         <div className="relative border border-slate-200 rounded-lg bg-white w-40">
                                             <select 
-                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
+                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg cursor-pointer"
                                                 value={filterType}
                                                 onChange={e => setFilterType(e.target.value)}
                                             >
@@ -463,7 +480,7 @@ const VouchersPage = () => {
                                     <div>
                                         <div className="relative border border-slate-200 rounded-lg bg-white w-40">
                                             <select 
-                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg"
+                                                className="w-full bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg cursor-pointer"
                                                 value={cancelFilter}
                                                 onChange={e => setCancelFilter(e.target.value)}
                                             >
@@ -473,6 +490,24 @@ const VouchersPage = () => {
                                             </select>
                                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" size={14} />
                                         </div>
+                                    </div>
+                                    {/* Action Dropdown Button - placed next to Cancel Type */}
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBulkMenu(!showBulkMenu)}
+                                            className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                            style={{ height: '32px' }}
+                                        >
+                                            Actions {selectedIds.length > 0 && <span className="bg-slate-800 text-white px-1.5 py-0.5 rounded-full text-[10px]">{selectedIds.length}</span>}
+                                            <ChevronDown size={14} />
+                                        </button>
+                                        {showBulkMenu && (
+                                            <div className="absolute left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 font-bold text-xs">
+                                                <button onClick={() => handleBulkAction('CANCEL')} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-amber-700 transition-colors">Cancel</button>
+                                                <button onClick={() => handleBulkAction('DELETE')} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition-colors">Delete</button>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} placeholder="From Date" title="From Date" className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
@@ -614,33 +649,24 @@ const VouchersPage = () => {
                                                     className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
                                                 />
                                             </th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Date</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Number</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Voucher Type</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase text-left">Particulars</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cash In</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cash Out</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Bank In</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Bank Out</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Total In</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Total Out</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Type</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Cancel Type</th>
-                                            <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Status</th>
+                                            {ALL_COLUMNS.filter(c => visibleColumns.includes(c.id)).map(col => (
+                                                <th key={col.id} className={`py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase ${col.id === 'particulars' ? 'text-left' : ''}`}>
+                                                    {col.label}
+                                                </th>
+                                            ))}
                                             <th className="py-4 px-3 text-[11px] font-black text-[#ea580c] uppercase">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {loading ? (
-                                            <tr><td colSpan="15" className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
+                                            <tr><td colSpan={visibleColumns.length + 2} className="py-8 text-center text-slate-400"><Loader2 className="animate-spin inline mr-2" size={20} /> Loading...</td></tr>
                                         ) : filteredVouchers.length === 0 ? (
-                                            <tr><td colSpan="15" className="py-8 text-center text-slate-400">No vouchers found</td></tr>
+                                            <tr><td colSpan={visibleColumns.length + 2} className="py-8 text-center text-slate-400">No vouchers found</td></tr>
                                         ) : (
                                             filteredVouchers.map((v) => {
                                                 const isReceipt = v.voucher_type?.toLowerCase().includes('receipt');
                                                 const cashIn = isReceipt ? v.amount : '-';
                                                 const cashOut = !isReceipt ? v.amount : '-';
-                                                // Assuming mock bank is '-' for now
                                                 const bankIn = '-';
                                                 const bankOut = '-';
                                                 const totalIn = cashIn;
@@ -656,21 +682,47 @@ const VouchersPage = () => {
                                                                 className="w-4 h-4 rounded accent-[#ff6b00] cursor-pointer"
                                                             />
                                                         </td>
-                                                        <td className="py-3 px-3 text-xs font-black text-slate-700 whitespace-nowrap">
-                                                            {new Date(v.date).toLocaleDateString('en-GB')}
-                                                        </td>
-                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_number}</td>
-                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_type}</td>
-                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700 text-left">{v.narration || '-'}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashIn !== '-' ? cashIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashOut !== '-' ? cashOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankIn}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankOut}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalIn !== '-' ? totalIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalOut !== '-' ? totalOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
-                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">{typeStr}</td>
-                                                        <td className="py-3 px-3 text-xs font-semibold text-slate-700">-</td>
-                                                        <td className="py-3 px-3 text-xs font-bold text-slate-700">Active</td>
+                                                        {visibleColumns.includes('date') && (
+                                                            <td className="py-3 px-3 text-xs font-black text-slate-700 whitespace-nowrap">
+                                                                {new Date(v.date).toLocaleDateString('en-GB')}
+                                                            </td>
+                                                        )}
+                                                        {visibleColumns.includes('voucher_number') && (
+                                                            <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_number}</td>
+                                                        )}
+                                                        {visibleColumns.includes('voucher_type') && (
+                                                            <td className="py-3 px-3 text-xs font-semibold text-slate-700">{v.voucher_type}</td>
+                                                        )}
+                                                        {visibleColumns.includes('particulars') && (
+                                                            <td className="py-3 px-3 text-xs font-semibold text-slate-700 text-left">{v.narration || '-'}</td>
+                                                        )}
+                                                        {visibleColumns.includes('cash_in') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashIn !== '-' ? cashIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        )}
+                                                        {visibleColumns.includes('cash_out') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{cashOut !== '-' ? cashOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        )}
+                                                        {visibleColumns.includes('bank_in') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankIn}</td>
+                                                        )}
+                                                        {visibleColumns.includes('bank_out') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{bankOut}</td>
+                                                        )}
+                                                        {visibleColumns.includes('total_in') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalIn !== '-' ? totalIn.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        )}
+                                                        {visibleColumns.includes('total_out') && (
+                                                            <td className="py-3 px-3 text-xs font-medium text-slate-700">{totalOut !== '-' ? totalOut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                                                        )}
+                                                        {visibleColumns.includes('type') && (
+                                                            <td className="py-3 px-3 text-xs font-semibold text-slate-700">{typeStr}</td>
+                                                        )}
+                                                        {visibleColumns.includes('cancel_type') && (
+                                                            <td className="py-3 px-3 text-xs font-semibold text-slate-700">-</td>
+                                                        )}
+                                                        {visibleColumns.includes('status') && (
+                                                            <td className="py-3 px-3 text-xs font-bold text-slate-700">Active</td>
+                                                        )}
                                                         <td className="py-3 px-3">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 <button className="flex items-center gap-1 px-1.5 py-1 border border-orange-500 text-orange-500 rounded text-[10px] font-bold hover:bg-orange-50 transition-colors">
@@ -876,6 +928,66 @@ const VouchersPage = () => {
                 onConfirm={confirmSave}
                 onCancel={cancelSave}
             />
+
+            {/* Column Settings Drawer Modal */}
+            {showColumnFilter && (
+                <>
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999]" onClick={() => setShowColumnFilter(false)} />
+                    <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-2xl border-l border-slate-200 z-[10000] flex flex-col animate-in slide-in-from-right duration-300">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Column Settings</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Select columns to display</p>
+                            </div>
+                            <button onClick={() => setShowColumnFilter(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all text-slate-500 hover:text-slate-800 cursor-pointer">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {ALL_COLUMNS.map(col => (
+                                <label key={col.id} className="flex items-center gap-3 cursor-pointer group py-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={tempVisibleColumns.includes(col.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setTempVisibleColumns(prev => [...prev, col.id]);
+                                            } else {
+                                                setTempVisibleColumns(prev => prev.filter(id => id !== col.id));
+                                            }
+                                        }}
+                                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                                        style={{ accentColor: '#f97316' }}
+                                    />
+                                    <span className="text-xs font-bold text-slate-700 group-hover:text-orange-500 transition-colors uppercase tracking-tight">
+                                        {col.label}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setTempVisibleColumns(ALL_COLUMNS.map(c => c.id))}
+                                className="flex-1 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                                RESET
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setVisibleColumns(tempVisibleColumns);
+                                    localStorage.setItem('voucherManagementColumns', JSON.stringify(tempVisibleColumns));
+                                    setShowColumnFilter(false);
+                                }}
+                                className="flex-1 py-2 text-xs font-bold text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors cursor-pointer"
+                            >
+                                APPLY
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </DashboardPageShell>
     );
 };

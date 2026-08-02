@@ -48,6 +48,7 @@ const tableSchema = new mongoose.Schema({
     running_amount: { type: Number, default: 0 },   // Live bill total
     bill_id: { type: String, default: null },        // Linked active bill _id
     kot_status: { type: String, enum: ['NONE', 'KOT_SENT', 'READY'], default: 'NONE' }, // kitchen order status
+    temp_opened_at: { type: Date, default: null },   // Temporary timestamp for opened vacant tables before KOT
 }, {
     timestamps: true
 });

@@ -101,6 +101,24 @@ exports.cancelReservation = async (req, res) => {
     }
 };
 
+// Temporary open a vacant table (NEW TABLE opened in POS before KOT)
+exports.tempOpenTable = async (req, res) => {
+    try {
+        const table = await Table.findOne({ _id: req.params.id, company_id: req.user.restaurant_id });
+        if (!table) return res.status(404).json({ success: false, error: 'Table not found' });
+
+        // Only set temp_opened_at if table is AVAILABLE and no active order
+        if (table.status === 'AVAILABLE' && !table.bill_id) {
+            table.temp_opened_at = table.temp_opened_at || new Date();
+            await table.save();
+        }
+
+        res.status(200).json({ success: true, data: table });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 // Occupy a table — captain starts taking order (marks OCCUPIED + records start time)
 exports.occupyTable = async (req, res) => {
     try {
@@ -111,6 +129,7 @@ exports.occupyTable = async (req, res) => {
         table.status = 'OCCUPIED';
         table.occupied_since = table.occupied_since || new Date(); // only set on first occupy
         table.printed_at = null;
+        table.temp_opened_at = null; // Clear temporary timer once converted to KOT / OCCUPIED
         table.running_amount = running_amount || 0;
         table.bill_id = bill_id || null;
         await table.save();
@@ -130,6 +149,7 @@ exports.markTablePrinted = async (req, res) => {
 
         table.status = 'PRINTED';
         table.printed_at = new Date();
+        table.temp_opened_at = null; // Clear temp timer
         if (running_amount !== undefined) table.running_amount = running_amount;
         await table.save();
 
@@ -148,6 +168,7 @@ exports.freeTable = async (req, res) => {
         table.status = 'AVAILABLE';
         table.occupied_since = null;
         table.printed_at = null;
+        table.temp_opened_at = null;
         table.running_amount = 0;
         table.bill_id = null;
         table.kot_status = 'NONE';
@@ -264,5 +285,56 @@ exports.transferItems = async (req, res) => {
     } catch (error) {
         console.error("Transfer items error:", error);
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Scan and clean up expired temporary un-KOT new table sessions
+exports.cleanupExpiredNewTables = async (companyId = null) => {
+    try {
+        const Setting = require('../models/Setting');
+        let query = {
+            status: 'AVAILABLE',
+            bill_id: null,
+            temp_opened_at: { $ne: null }
+        };
+        if (companyId) {
+            query.company_id = companyId;
+        }
+
+        const openTables = await Table.find(query);
+        if (!openTables || openTables.length === 0) return { released: 0 };
+
+        let releasedCount = 0;
+        const now = new Date();
+
+        for (const table of openTables) {
+            let timeoutMinutes = 3; // default
+            try {
+                const setting = await Setting.findOne({ company_id: table.company_id });
+                if (setting && setting.general && setting.general.new_table_timeout_minutes !== undefined) {
+                    timeoutMinutes = Number(setting.general.new_table_timeout_minutes);
+                }
+            } catch (e) {}
+
+            // If timeoutMinutes <= 0, auto-release is disabled
+            if (timeoutMinutes <= 0) continue;
+
+            const openedTime = new Date(table.temp_opened_at).getTime();
+            const diffMinutes = (now.getTime() - openedTime) / (1000 * 60);
+
+            if (diffMinutes >= timeoutMinutes) {
+                table.temp_opened_at = null;
+                table.running_amount = 0;
+                table.bill_id = null;
+                table.status = 'AVAILABLE';
+                table.kot_status = 'NONE';
+                await table.save();
+                releasedCount++;
+            }
+        }
+        return { released: releasedCount };
+    } catch (error) {
+        console.error("Cleanup expired new tables error:", error);
+        return { released: 0, error: error.message };
     }
 };

@@ -790,16 +790,15 @@ const BillingPage = () => {
                 }
             } else {
                 // ── Fresh session: AVAILABLE or RESERVED table ──
-                // Mark the table as OCCUPIED immediately (captain opened it)
+                // Mark the table as temp-open (NEW TABLE opened in POS before KOT)
                 if (tableId) {
                     const savedUser = localStorage.getItem('user');
                     if (savedUser) {
                         const { token } = JSON.parse(savedUser);
-                        fetch(`${import.meta.env.VITE_API_URL}/tables/${tableId}/occupy`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({ running_amount: 0 })
-                        }).catch(e => console.error('Occupy table error', e));
+                        fetch(`${import.meta.env.VITE_API_URL}/tables/${tableId}/temp-open`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                        }).catch(e => console.error('Temp open table error', e));
                     }
                 }
             }
@@ -991,6 +990,64 @@ const BillingPage = () => {
         };
         autoCreate();
     }, [selectedCounter, currentBillId, loading, selectedTableId]);
+
+    // ── AUTOMATIC NEW TABLE TIMEOUT MONITOR (Un-KOT Idle Handling) ──
+    const tempOpenedTimeRef = useRef(null);
+
+    useEffect(() => {
+        if (selectedTableId && (!previousItems || previousItems.length === 0)) {
+            if (!tempOpenedTimeRef.current) {
+                tempOpenedTimeRef.current = Date.now();
+            }
+        } else {
+            tempOpenedTimeRef.current = null;
+        }
+    }, [selectedTableId, previousItems]);
+
+    useEffect(() => {
+        const checkNewTableTimeout = () => {
+            if (!selectedTableId || (previousItems && previousItems.length > 0) || !tempOpenedTimeRef.current) {
+                return;
+            }
+
+            let timeoutMinutes = 3;
+            try {
+                const settingsStr = localStorage.getItem('moduleSettings');
+                if (settingsStr) {
+                    const settings = JSON.parse(settingsStr);
+                    if (settings.new_table_timeout_minutes !== undefined) {
+                        timeoutMinutes = Number(settings.new_table_timeout_minutes);
+                    }
+                }
+            } catch (e) {}
+
+            if (timeoutMinutes <= 0) return; // Disabled
+
+            const elapsedMinutes = (Date.now() - tempOpenedTimeRef.current) / (1000 * 60);
+            if (elapsedMinutes >= timeoutMinutes) {
+                console.log(`[NewTableTimeout] ${timeoutMinutes}m idle timeout expired for un-KOT table ${selectedTableId}. Releasing...`);
+                // Clear draft cart & unselect table
+                setBillItems([]);
+                setSelectedTableId(null);
+                setTableNo('');
+                setPersons('');
+                tempOpenedTimeRef.current = null;
+
+                // Notify backend cleanup
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    const { token } = JSON.parse(savedUser);
+                    fetch(`${import.meta.env.VITE_API_URL}/tables/cleanup-expired`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(e => console.error('Cleanup table API error', e));
+                }
+            }
+        };
+
+        const interval = setInterval(checkNewTableTimeout, 5000);
+        return () => clearInterval(interval);
+    }, [selectedTableId, previousItems]);
 
     const updateItemQuantity = async (productId, delta) => {
         const item = billItems.find(i => i.product_id === productId);
@@ -2992,8 +3049,13 @@ const BillingPage = () => {
                         >
                             {tableNo ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1' }}>
-                                    <span style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', color: ((previousItems && previousItems.length > 0) || (tables && selectedTableId && tables.find(t => t._id === selectedTableId)?.status === 'PRINTED')) ? '#ea580c' : '#16a34a' }}>
-                                        {((previousItems && previousItems.length > 0) || (tables && selectedTableId && tables.find(t => t._id === selectedTableId)?.status === 'PRINTED')) ? 'Running Table' : 'New Table'}
+                                    <span style={{
+                                        fontSize: '8px',
+                                        fontWeight: 900,
+                                        textTransform: 'uppercase',
+                                        color: ((previousItems && previousItems.length > 0) || (tables && selectedTableId && ['OCCUPIED', 'PRINTED'].includes(tables.find(t => t._id === selectedTableId)?.status)) || (tables && selectedTableId && (tables.find(t => t._id === selectedTableId)?.running_amount || 0) > 0)) ? '#ea580c' : '#16a34a'
+                                    }}>
+                                        {((previousItems && previousItems.length > 0) || (tables && selectedTableId && ['OCCUPIED', 'PRINTED'].includes(tables.find(t => t._id === selectedTableId)?.status)) || (tables && selectedTableId && (tables.find(t => t._id === selectedTableId)?.running_amount || 0) > 0)) ? 'Running Table' : 'New Table'}
                                     </span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
                                         <TableLogo size={12} color="#ff5200" />
