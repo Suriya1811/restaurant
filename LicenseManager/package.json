@@ -1,0 +1,19 @@
+{
+  "name": "yugam-license-manager",
+  "version": "1.0.0",
+  "description": "Developer-Only Offline License Generator and Enterprise Customer Management System for Yugam POS",
+  "main": "src/gui/server.js",
+  "scripts": {
+    "start": "node src/gui/server.js",
+    "cli": "node src/cli/index.js",
+    "gen-keys": "node src/core/KeyGenerator.js"
+  },
+  "keywords": [
+    "license",
+    "enterprise",
+    "generator",
+    "pos"
+  ],
+  "author": "Yugam Software",
+  "license": "ISC"
+}

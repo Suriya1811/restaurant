@@ -291,9 +291,10 @@ ipcMain.handle('window:minimize', () => {
 
 ipcMain.handle('window:toggleMaximize', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    // Always stay in fullscreen — never go to regular maximize
     if (mainWindow.isFullScreen()) {
       mainWindow.setFullScreen(false);
+      mainWindow.setSize(1280, 800);
+      mainWindow.center();
     } else {
       mainWindow.setFullScreen(true);
     }
@@ -313,12 +314,12 @@ ipcMain.handle('window:requestClose', async () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     const { response } = await dialog.showMessageBox(mainWindow, {
       type: 'question',
-      buttons: ['Yes', 'Cancel'],
+      buttons: ['YES', 'NO'],
       defaultId: 1,
       cancelId: 1,
-      title: 'Close Software',
-      message: 'Close Software',
-      detail: 'Are you sure you want to close the software?',
+      title: 'Exit Application',
+      message: 'Exit Application',
+      detail: 'Are you sure you want to close the tool?',
       noLink: true
     });
     if (response === 0) {

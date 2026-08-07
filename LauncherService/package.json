@@ -1,0 +1,19 @@
+{
+  "name": "yugam-launcher-service",
+  "version": "1.0.0",
+  "description": "Yugam Hotel POS — Service Manager",
+  "main": "src/main/index.js",
+  "author": "Yugam Software",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "tree-kill": "^1.2.2"
+  },
+  "devDependencies": {
+    "electron": "28.2.0",
+    "electron-builder": "^24.13.3"
+  }
+}

@@ -6,6 +6,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yugam Software - Premium POS System</title>
     <meta name="description" content="Production-ready premium POS system for billing, stock management, accounting, and more." />
+    <script>
+      if (!window.electronAPI) {
+        window.electronAPI = {
+          isElectron: false,
+          window: {
+            minimize: function() {
+              if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(function(){});
+              }
+              fetch('/api/launcher/window-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'minimize' })
+              }).catch(function(){});
+            },
+            toggleMaximize: function() {
+              fetch('/api/launcher/window-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle-maximize' })
+              }).catch(function(){});
+            },
+            isMaximized: function() {
+              return !!document.fullscreenElement;
+            },
+            requestClose: function() {
+              showChromeExitModal();
+            }
+          }
+        };
+      }
+
+      function showChromeExitModal() {
+        var existing = document.getElementById('pos-exit-modal-overlay');
+        if (existing) {
+          existing.style.display = 'flex';
+          return;
+        }
+
+        var overlay = document.createElement('div');
+        overlay.id = 'pos-exit-modal-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI",Tahoma,sans-serif;color:#fff;';
+
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:14px;width:90%;max-width:440px;padding:26px;box-shadow:0 25px 60px rgba(0,0,0,0.9);text-align:left;';
+
+        card.innerHTML = `
+          <h3 style="margin:0 0 10px 0;font-size:20px;font-weight:700;color:#ef4444;display:flex;align-items:center;gap:10px;">
+            <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            Exit Application
+          </h3>
+          <p style="margin:0 0 24px 0;font-size:14px;color:#94a3b8;line-height:1.5;">Are you sure you want to close the tool?</p>
+          <div style="display:flex;justify-content:flex-end;gap:12px;">
+            <button id="pos-exit-no" style="padding:10px 22px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-weight:700;cursor:pointer;font-size:13px;">NO</button>
+            <button id="pos-exit-yes" style="padding:10px 22px;border-radius:8px;border:none;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 4px 14px rgba(239,68,68,0.4);">YES</button>
+          </div>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        document.getElementById('pos-exit-no').onclick = function() {
+          overlay.style.display = 'none';
+        };
+
+        document.getElementById('pos-exit-yes').onclick = function() {
+          fetch('/api/launcher/window-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'close' })
+          }).catch(function(){});
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(function(){});
+          }
+          window.close();
+        };
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

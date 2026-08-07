@@ -600,4 +600,33 @@
 .is-embedded .dashboard-content > div[class*="FAFAFB"] {
     padding: 0.25rem 0.75rem !important;
     flex-shrink: 0 !important;
+}
+
+/* ============================================================
+   RESPONSIVE REPORTS — Tablet & Mobile (<1200px)
+   ============================================================ */
+@media (max-width: 1199px) {
+    .reports-layout {
+        flex-direction: column !important;
+    }
+    
+    .reports-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .reports-content {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 767px) {
+    .reports-filter-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem !important;
+    }
 }

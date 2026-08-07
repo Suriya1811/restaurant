@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement } from 'react';
+import { useState, Children, cloneElement, isValidElement } from 'react';
 import Footer from './Footer';
 
 /**
@@ -9,6 +9,11 @@ import Footer from './Footer';
  * and occupies only the main column — matching the unified-bottom-row design.
  */
 const DashboardPageShell = ({ children, companyName, className = '' }) => {
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+    const toggleMobileSidebar = () => setIsMobileOpen(prev => !prev);
+    const closeMobileSidebar = () => setIsMobileOpen(false);
+
     const childArray = Children.toArray(children);
     const firstChild = childArray[0];
     const isFirstChildMain = firstChild && isValidElement(firstChild) && (
@@ -23,7 +28,42 @@ const DashboardPageShell = ({ children, companyName, className = '' }) => {
         .filter(Boolean)
         .join(' ');
 
-    const wrappedMainEls = mainEls.map((child, idx) => {
+    const wrappedSidebarEl = sidebarEl && isValidElement(sidebarEl)
+        ? cloneElement(sidebarEl, {
+            isMobileOpen: sidebarEl.props.isMobileOpen !== undefined ? sidebarEl.props.isMobileOpen : isMobileOpen,
+            onMobileClose: sidebarEl.props.onMobileClose || closeMobileSidebar
+        })
+        : sidebarEl;
+
+    const injectHeaderToggle = (node) => {
+        if (!isValidElement(node)) return node;
+
+        const isHeaderNode =
+            node.type?.name === 'Header' ||
+            (node.props && (node.props.title !== undefined || node.props.isMaster !== undefined));
+
+        if (isHeaderNode) {
+            return cloneElement(node, {
+                toggleSidebar: node.props.toggleSidebar || toggleMobileSidebar
+            });
+        }
+
+        if (node.props && node.props.children) {
+            if (Array.isArray(node.props.children)) {
+                return cloneElement(node, {
+                    children: Children.map(node.props.children, child => injectHeaderToggle(child))
+                });
+            } else if (isValidElement(node.props.children)) {
+                return cloneElement(node, {
+                    children: injectHeaderToggle(node.props.children)
+                });
+            }
+        }
+
+        return node;
+    };
+
+    const wrappedMainEls = mainEls.map((child) => {
         if (!isValidElement(child)) return child;
         const childProps = child.props;
         const isMain =
@@ -34,6 +74,8 @@ const DashboardPageShell = ({ children, companyName, className = '' }) => {
 
         const existingChildren = childProps.children;
         const mainInlineStyle = childProps.style || {};
+
+        const enhancedChildren = Children.map(existingChildren, item => injectHeaderToggle(item));
 
         return cloneElement(child, {
             ...childProps,
@@ -46,7 +88,7 @@ const DashboardPageShell = ({ children, companyName, className = '' }) => {
             },
             children: (
                 <>
-                    {existingChildren}
+                    {enhancedChildren}
                     <Footer companyName={companyName} />
                 </>
             )
@@ -55,7 +97,7 @@ const DashboardPageShell = ({ children, companyName, className = '' }) => {
 
     return (
         <div className={shellClass}>
-            {sidebarEl}
+            {wrappedSidebarEl}
             {wrappedMainEls}
         </div>
     );

@@ -11,10 +11,15 @@ const CompanySelection = () => {
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const getApiBase = () => {
+        return import.meta.env.VITE_API_URL || '/api';
+    };
+
     useEffect(() => {
         const fetchCompanies = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/companies`);
+                const apiBase = getApiBase();
+                const response = await fetch(`${apiBase}/auth/companies`);
                 const result = await response.json();
                 if (result.success) {
                     setCompanies(result.data || []);
@@ -30,7 +35,8 @@ const CompanySelection = () => {
 
     const handleSelectCompany = async (company) => {
         try {
-            const statusRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/company-status/${encodeURIComponent(company.company_name)}`);
+            const apiBase = getApiBase();
+            const statusRes = await fetch(`${apiBase}/auth/company-status/${encodeURIComponent(company.company_name)}`);
             const statusResult = await statusRes.json();
             
             if (statusResult.success && !statusResult.has_admin) {

@@ -37,9 +37,9 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
         logout();
     };
 
-    // Close sidebar on navigation on mobile (also respond to query changes)
+    // Close sidebar on navigation on mobile & tablet (<1200px)
     useEffect(() => {
-        if (window.innerWidth <= 768 && onMobileClose) {
+        if (window.innerWidth < 1200 && onMobileClose) {
             onMobileClose();
         }
     }, [location.pathname, location.search]);
@@ -356,22 +356,31 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onMobileClose }) => {
     };
 
     return (
-        <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'show' : ''}`}>
-            <div className="sidebar-brand" style={{ padding: isCollapsed ? '0.4rem 0' : '0.5rem 1rem', height: '54px', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <img src={logoSidebar} alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '36px' : '165px', maxHeight: '40px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease' }} />
-            </div>
+        <>
+            {isMobileOpen && (
+                <div
+                    className="sidebar-backdrop"
+                    onClick={onMobileClose}
+                    aria-hidden="true"
+                />
+            )}
+            <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'show' : ''}`}>
+                <div className="sidebar-brand" style={{ padding: isCollapsed ? '0.4rem 0' : '0.5rem 1rem', height: '54px', display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <img src={logoSidebar} alt="Yugam Software" style={{ width: '100%', maxWidth: isCollapsed ? '36px' : '165px', maxHeight: '40px', height: 'auto', objectFit: 'contain', transition: 'all 0.3s ease' }} />
+                </div>
 
-            <nav className="sidebar-nav">
-                {menuStructure.map(item => renderMenuItem(item))}
-            </nav>
+                <nav className="sidebar-nav">
+                    {menuStructure.map(item => renderMenuItem(item))}
+                </nav>
 
-            <div className="sidebar-footer" style={{ height: '54px', minHeight: '54px', maxHeight: '54px', display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
-                <button onClick={logoutWithBackup} className="logout-btn">
-                    <LogOut size={18} />
-                    {!isCollapsed && <span>Logout</span>}
-                </button>
-            </div>
-        </aside>
+                <div className="sidebar-footer" style={{ height: '54px', minHeight: '54px', maxHeight: '54px', display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
+                    <button onClick={logoutWithBackup} className="logout-btn">
+                        <LogOut size={18} />
+                        {!isCollapsed && <span>Logout</span>}
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 };
 

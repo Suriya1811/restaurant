@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { User, LogOut, X, Minus, Square, Building2, Phone, Mail, UserCircle, Calendar, HelpCircle, Info } from 'lucide-react';
+import { User, LogOut, X, Minus, Square, Building2, Phone, Mail, UserCircle, Calendar, HelpCircle, Info, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import logoSidebar from '../../assets/logo_sidebar.png';
@@ -199,6 +199,17 @@ const Header = ({ toggleSidebar, restaurantName, title, actions, headerActions, 
         >
             {/* Left side (flex 1 to match right and keep center truly centered) */}
             <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 0%', minWidth: 0, justifyContent: 'flex-start', ...(window.electronAPI?.isElectron ? { WebkitAppRegion: 'no-drag', appRegion: 'no-drag' } : {}) }}>
+                {toggleSidebar && (
+                    <button
+                        type="button"
+                        onClick={toggleSidebar}
+                        className="mobile-menu-toggle-btn"
+                        aria-label="Toggle Navigation Menu"
+                        title="Toggle Navigation Menu"
+                    >
+                        <Menu size={20} />
+                    </button>
+                )}
                 {title && (
                     <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: isMasterHeader ? '#0f172a' : '#ffffff', margin: 0, letterSpacing: '-0.01em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{title}</h2>
                 )}

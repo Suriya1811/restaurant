@@ -1,0 +1,18 @@
+{
+  "appUrl": "http://127.0.0.1:5055",
+  "backendPort": 5055,
+  "mongoHost": "127.0.0.1",
+  "mongoPort": 27017,
+  "mongoServiceName": "MongoDB",
+  "projectPath": "C:\\Users\\Naveen\\OneDrive\\Documents\\resfin\\backend",
+  "backendStartCommand": "npm start",
+  "startupDelay": 2,
+  "autoStartMongo": true,
+  "autoStartBackend": true,
+  "autoLaunchKiosk": true,
+  "kioskMode": true,
+  "theme": "dark-fluent",
+  "healthCheckInterval": 3000,
+  "healthCheckTimeout": 2000,
+  "maxHealthRetries": 30
+}

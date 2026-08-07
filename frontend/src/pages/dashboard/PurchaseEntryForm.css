@@ -778,3 +778,61 @@
     .pef-header, .pef-action-bar, .pef-add-row, .pef-del-btn { display: none !important; }
     .pef-container { background: #fff; }
 }
+
+/* ============================================================
+   RESPONSIVE PURCHASE ENTRY — Tablet & Mobile (<1200px)
+   ============================================================ */
+
+@media (max-width: 1199px) {
+    .pef-container {
+        height: auto !important;
+        overflow-y: auto !important;
+        padding: 0.75rem !important;
+    }
+
+    .pef-bill-header {
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    .pef-supplier-column {
+        border-left: none !important;
+        border-right: none !important;
+        border-top: 1px solid #f1f5f9 !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        padding: 1rem 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .pef-left-fields,
+    .pef-right-fields {
+        width: 100% !important;
+    }
+
+    .pef-table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pef-table {
+        min-width: 750px !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .pef-modal {
+        max-width: 95vw !important;
+        padding: 1.25rem !important;
+    }
+
+    .pef-field-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.25rem !important;
+    }
+
+    .pef-label {
+        width: 100% !important;
+    }
+}

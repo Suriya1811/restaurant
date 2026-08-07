@@ -3,6 +3,10 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
+const getApiBaseUrl = () => {
+    return import.meta.env.VITE_API_URL || '/api';
+};
+
 // Global 401 interceptor — installed once, cleared on unmount
 let globalInterceptorId = null;
 
@@ -36,7 +40,7 @@ export const AuthProvider = ({ children }) => {
             if (savedUser) {
                 const parsedUser = JSON.parse(savedUser);
                 if (parsedUser?.token) {
-                    const apiBase = import.meta.env.VITE_API_URL;
+                    const apiBase = getApiBaseUrl();
                     const res = await axios.get(`${apiBase}/settings/backup/status`, {
                         headers: { 'Authorization': `Bearer ${parsedUser.token}` }
                     });
@@ -134,7 +138,7 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.setItem('startup_backup_done', 'true');
 
         try {
-            const apiBase = import.meta.env.VITE_API_URL;
+            const apiBase = getApiBaseUrl();
             const res = await axios.get(`${apiBase}/settings/backup/status`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -174,7 +178,7 @@ export const AuthProvider = ({ children }) => {
 
     const fetchModuleSettings = async (token) => {
         try {
-            const apiBase = import.meta.env.VITE_API_URL;
+            const apiBase = getApiBaseUrl();
             const res = await axios.get(`${apiBase}/settings`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -215,7 +219,7 @@ export const AuthProvider = ({ children }) => {
 
         const initAutoBackup = async () => {
             try {
-                const apiBase = import.meta.env.VITE_API_URL;
+                const apiBase = getApiBaseUrl();
                 const { data } = await axios.get(`${apiBase}/settings/backup/status`, {
                     headers: { 'Authorization': `Bearer ${user.token}` }
                 });
@@ -250,7 +254,8 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (userData) => {
         try {
-            const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, userData);
+            const apiBase = getApiBaseUrl();
+            const { data } = await axios.post(`${apiBase}/auth/register`, userData);
             // DO NOT create a login session automatically
             return { success: true, data: data };
         } catch (error) {
@@ -263,7 +268,8 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (credentials) => {
         try {
-            const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, credentials);
+            const apiBase = getApiBaseUrl();
+            const { data } = await axios.post(`${apiBase}/auth/login`, credentials);
             // Backend login returns: { success, token, user, restaurant, permissions }
             const normalizedUser = {
                 ...data.user,

@@ -42,7 +42,11 @@ const isElectron = process.env.ELECTRON_APP === 'true';
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow Electron renderer (no origin), localhost, and configured frontend URLs
+        // Allow requests with no origin (same-origin static files, Electron, mobile apps)
+        if (!origin || isElectron || process.env.HOST === '0.0.0.0') {
+            return callback(null, true);
+        }
+
         const allowed = [
             'http://localhost:5055',
             'http://localhost:5173',
@@ -51,10 +55,13 @@ const corsOptions = {
             'https://hotelpostool.vercel.app',
         ].filter(Boolean);
 
-        if (!origin || isElectron || allowed.includes(origin)) {
+        // Allow LAN IPv4 addresses (192.168.x.x, 10.x.x.x, 172.x.x.x) or localhost/127.0.0.1 on any port
+        const isLanOrLocal = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
+
+        if (allowed.includes(origin) || isLanOrLocal) {
             callback(null, true);
         } else {
-            callback(new Error(`CORS blocked: ${origin}`));
+            callback(null, false);
         }
     },
     credentials:          true,
@@ -68,10 +75,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cors(corsOptions));
 
-// Helmet – relaxed CSP so the Electron-served SPA works
+// Helmet – relaxed CSP so the Electron-served SPA works over LAN IP / HTTP
 app.use(helmet({
-    contentSecurityPolicy: false, // React handles its own CSP
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    originAgentCluster: false,
 }));
 
 if (process.env.NODE_ENV === 'development') {
@@ -110,8 +119,44 @@ app.use('/api/coupons',      require('./routes/couponRoutes'));
 app.use('/api/units',        require('./routes/unitRoutes'));
 app.use('/api/taxes',        require('./routes/taxRoutes'));
 app.use('/api/function-types', require('./routes/functionTypeRoutes'));
-// ─── Health check ─────────────────────────────────────────────────────────────
+// ─── Health check & Launcher Window Actions ──────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+app.post('/api/launcher/window-action', (req, res) => {
+    const action = req.body?.action || req.query?.action;
+    const clientIp = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || '';
+    const isLocal = clientIp.includes('127.0.0.1') || clientIp.includes('::1') || clientIp === '::ffff:127.0.0.1';
+
+    // If request comes from a remote phone or tablet over LAN, do NOT execute taskkill or powershell on host laptop
+    if (!isLocal) {
+        return res.json({ success: true, message: 'Handled for remote mobile device' });
+    }
+
+    const { exec } = require('child_process');
+
+    if (action === 'close') {
+        res.json({ success: true, message: 'Closing Chrome Kiosk' });
+        setTimeout(() => {
+            exec('taskkill /F /IM chrome.exe', () => {});
+        }, 100);
+        return;
+    }
+
+    if (action === 'minimize') {
+        res.json({ success: true, message: 'Minimizing Windows' });
+        exec('powershell -command "(new-object -com shell.application).minimizeall()"', () => {});
+        return;
+    }
+
+    if (action === 'toggle-maximize') {
+        res.json({ success: true, message: 'Toggling Full Screen' });
+        const psCmd = `powershell -command "$wshell = New-Object -ComObject wscript.shell; if ($wshell.AppActivate('Yugam Software') -or $wshell.AppActivate('Chrome') -or $wshell.AppActivate('Google Chrome')) { $wshell.SendKeys('{F11}') }"`;
+        exec(psCmd, () => {});
+        return;
+    }
+
+    res.json({ success: true, message: 'Handled' });
+});
 
 // ─── Serve React Frontend (Electron / production) ─────────────────────────────
 const frontendBuild = process.env.FRONTEND_BUILD;
@@ -135,8 +180,9 @@ app.use(errorHandler);
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5055;
-app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'production'} mode on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'production'} mode on ${HOST}:${PORT}`);
 });
 
 module.exports = app;

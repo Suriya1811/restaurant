@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yugam Service Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <!-- Titlebar -->
+  <header class="titlebar">
+    <div class="tb-brand">
+      <div class="brand-icon"></div>
+      <span>Yugam Service Manager v2.0</span>
+    </div>
+
+    <!-- Tab Bar in Titlebar / Subheader -->
+    <div class="tb-tabs">
+      <button class="tab-btn active" data-tab="tab-service">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        Service Controller
+      </button>
+      <button class="tab-btn" data-tab="tab-database">
+        <svg viewBox="0 0 24 24"><path d="M12 3C7.58 3 4 4.79 4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7c0-2.21-3.58-4-8-4zm0 2c3.87 0 6 1.5 6 2s-2.13 2-6 2-6-1.5-6-2 2.13-2 6-2zM6 17V14.77c1.61.77 3.72 1.23 6 1.23s4.39-.46 6-1.23V17c0 .5-2.13 2-6 2s-6-1.5-6-2zm0-5V9.77C7.61 10.55 9.72 11 12 11s4.39-.46 6-1.23V12c0 .5-2.13 2-6 2s-6-1.5-6-2z"/></svg>
+        Database Provider
+      </button>
+      <button class="tab-btn" data-tab="tab-license">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        License Manager
+      </button>
+    </div>
+
+    <div class="tb-controls">
+      <button id="tb-min" title="Minimize">─</button>
+      <button id="tb-max" title="Maximize">☐</button>
+      <button id="tb-close" class="close" title="Close">✕</button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="main">
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- INFRASTRUCTURE SETUP WIZARD (STEPS 1 TO 6) -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="wizard-container" id="wizard-view" style="display:none;">
+      <div class="wizard-card">
+        <!-- Progress Stepper Header -->
+        <div class="stepper">
+          <div class="step-bubble active" data-step="1">1</div>
+          <div class="step-line"></div>
+          <div class="step-bubble" data-step="2">2</div>
+          <div class="step-line"></div>
+          <div class="step-bubble" data-step="3">3</div>
+          <div class="step-line"></div>
+          <div class="step-bubble" data-step="4">4</div>
+          <div class="step-line"></div>
+          <div class="step-bubble" data-step="5">5</div>
+          <div class="step-line"></div>
+          <div class="step-bubble" data-step="6">6</div>
+        </div>
+
+        <div class="wizard-step-title-bar">
+          <h2 id="wiz-step-title">Step 1: Database Configuration</h2>
+          <span class="wiz-step-badge" id="wiz-step-count">Step 1 of 6</span>
+        </div>
+        <p class="wiz-step-desc" id="wiz-step-desc">Configure and test your local database provider before proceeding.</p>
+
+        <div class="wiz-body">
+          <!-- STEP 1: Database Configuration -->
+          <div class="wiz-pane active" id="wiz-pane-1">
+            <form id="wiz-form-db" class="config-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="wiz-db-type">Database Engine</label>
+                  <select id="wiz-db-type" class="form-control">
+                    <option value="mongodb" selected>MongoDB (Default)</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="postgres">PostgreSQL</option>
+                    <option value="mssql">Microsoft SQL Server</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="wiz-db-host">Host Address</label>
+                  <input type="text" id="wiz-db-host" class="form-control" value="127.0.0.1" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="wiz-db-port">Port</label>
+                  <input type="number" id="wiz-db-port" class="form-control" value="27017" required>
+                </div>
+                <div class="form-group">
+                  <label for="wiz-db-name">Database Name</label>
+                  <input type="text" id="wiz-db-name" class="form-control" value="restaurant_new" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="wiz-db-user">Username (Optional)</label>
+                  <input type="text" id="wiz-db-user" class="form-control" placeholder="db_user">
+                </div>
+                <div class="form-group">
+                  <label for="wiz-db-pass">Password (Optional)</label>
+                  <input type="password" id="wiz-db-pass" class="form-control" placeholder="••••••••">
+                </div>
+              </div>
+              <div id="wiz-db-result" class="test-result-box" style="margin-bottom:12px;"></div>
+              <div class="wiz-nav">
+                <div></div>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" class="btn btn-secondary" id="btn-wiz-test-db">🔌 Test Connection</button>
+                  <button type="button" class="btn btn-primary" id="btn-wiz-1-next" disabled>Continue to Backend Setup ➔</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- STEP 2: Backend Configuration -->
+          <div class="wiz-pane" id="wiz-pane-2">
+            <div class="wiz-info-box">
+              <div class="info-item">
+                <span class="info-key">Backend Bind Address</span>
+                <span class="info-val highlight">0.0.0.0 (All Network Interfaces)</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Backend HTTP Port</span>
+                <span class="info-val mono">5055</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Detected Server Local IPv4</span>
+                <span class="info-val highlight" id="wiz-net-ipv4">192.168.1.100</span>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:10px;">All devices (Mobile, Tablet, Kitchen Display, Cashier PC) inside the restaurant will connect to this server machine via the local IPv4 address.</p>
+            <div class="wiz-nav" style="margin-top:20px;">
+              <button type="button" class="btn btn-secondary" id="btn-wiz-2-back">← Back</button>
+              <button type="button" class="btn btn-primary" id="btn-wiz-2-next">Verify Network &amp; Generate Device Identity ➔</button>
+            </div>
+          </div>
+
+          <!-- STEP 3: Device Fingerprint Generation -->
+          <div class="wiz-pane" id="wiz-pane-3">
+            <div class="license-grid">
+              <div class="lic-card">
+                <span class="lic-label">Installation ID</span>
+                <span class="lic-val highlight" id="wiz-fp-install-id">—</span>
+              </div>
+              <div class="lic-card">
+                <span class="lic-label">Device Fingerprint</span>
+                <span class="lic-val mono" id="wiz-fp-device-id">—</span>
+              </div>
+              <div class="lic-card">
+                <span class="lic-label">Machine GUID</span>
+                <span class="lic-val mono" id="wiz-fp-guid">—</span>
+              </div>
+              <div class="lic-card">
+                <span class="lic-label">MAC Address</span>
+                <span class="lic-val mono" id="wiz-fp-mac">—</span>
+              </div>
+            </div>
+            <div class="form-actions" style="margin-top:16px;">
+              <button type="button" class="btn btn-secondary" id="btn-wiz-export-request">📥 Export Device Request File (.json)</button>
+            </div>
+            <div class="wiz-nav" style="margin-top:20px;">
+              <button type="button" class="btn btn-secondary" id="btn-wiz-3-back">← Back</button>
+              <button type="button" class="btn btn-primary" id="btn-wiz-3-next">Proceed to License Import ➔</button>
+            </div>
+          </div>
+
+          <!-- STEP 4: License Import & Validation -->
+          <div class="wiz-pane" id="wiz-pane-4">
+            <div class="wiz-info-box" id="wiz-lic-status-box">
+              <div style="font-weight:700; font-size:14px;" id="wiz-lic-status-title">Checking License File...</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;" id="wiz-lic-status-desc">Please import a valid enterprise signed license file (.json).</div>
+            </div>
+
+            <div class="form-actions" style="margin-top:16px;">
+              <button type="button" class="btn btn-primary" id="btn-wiz-import-lic">🔑 Select &amp; Import License File (.json / .lic)</button>
+            </div>
+
+            <div class="wiz-nav" style="margin-top:20px;">
+              <button type="button" class="btn btn-secondary" id="btn-wiz-4-back">← Back</button>
+              <button type="button" class="btn btn-primary" id="btn-wiz-4-next" disabled>Validate License &amp; Save Launcher Settings ➔</button>
+            </div>
+          </div>
+
+          <!-- STEP 5: Launcher Configuration -->
+          <div class="wiz-pane" id="wiz-pane-5">
+            <div class="wiz-info-box">
+              <div style="font-weight:700; font-size:14px; color:var(--green);">✓ Infrastructure Settings Ready</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">Database provider, network interfaces, device binding, and enterprise license verified.</div>
+            </div>
+            <div class="wiz-nav" style="margin-top:20px;">
+              <button type="button" class="btn btn-secondary" id="btn-wiz-5-back">← Back</button>
+              <button type="button" class="btn btn-primary" id="btn-wiz-5-next">Save Infrastructure Configuration &amp; Launch Backend ➔</button>
+            </div>
+          </div>
+
+          <!-- STEP 6: Backend Startup -->
+          <div class="wiz-pane" id="wiz-pane-6">
+            <div style="text-align:center; padding:30px 10px;">
+              <div class="status-dot running" style="width:24px; height:24px; margin:0 auto 16px auto;"></div>
+              <h3 style="font-size:18px; font-weight:800; color:#fff;" id="wiz-launch-status">Connecting Database &amp; Launching Backend...</h3>
+              <p style="color:var(--muted); font-size:13px; margin-top:8px;" id="wiz-launch-sub">Verifying API health and local server endpoints...</p>
+            </div>
+            <div class="wiz-nav" style="margin-top:20px;">
+              <div></div>
+              <button type="button" class="btn btn-primary" id="btn-wiz-finish" disabled>Open Launcher Dashboard ➔</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: SERVICE CONTROLLER -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-content active" id="tab-service">
+      <div class="split-view">
+        <!-- Left: Controls + Info -->
+        <div class="panel-left">
+
+          <!-- Big Action Buttons -->
+          <div class="action-zone">
+            <button class="big-btn start" id="btn-start">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span>START</span>
+            </button>
+            <button class="big-btn stop" id="btn-stop">
+              <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+              <span>STOP</span>
+            </button>
+            <button class="big-btn restart" id="btn-restart">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              <span>RESTART</span>
+            </button>
+          </div>
+
+          <!-- Status Indicator Banner -->
+          <div class="status-banner" id="status-banner">
+            <div class="status-dot stopped" id="status-dot"></div>
+            <div class="status-text">
+              <span class="status-label" id="status-label">Backend Stopped</span>
+              <span class="status-sub" id="status-sub">Click START to launch the service</span>
+            </div>
+          </div>
+
+          <!-- Server Information Panel -->
+          <div class="info-panel">
+            <div class="info-title">Server Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-key">Status</span>
+                <span class="info-val" id="info-state">Stopped</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">PID</span>
+                <span class="info-val mono" id="info-pid">—</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Port</span>
+                <span class="info-val mono" id="info-port">5055</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Health</span>
+                <span class="info-val" id="info-health">—</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Database</span>
+                <span class="info-val" id="info-db">—</span>
+              </div>
+              <div class="info-item">
+                <span class="info-key">Machine</span>
+                <span class="info-val" id="info-hostname">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Network Access Panel -->
+          <div class="info-panel">
+            <div class="info-title">Network Access</div>
+            <div class="url-list" id="url-list">
+              <div class="url-row">
+                <span class="url-label">Localhost</span>
+                <span class="url-link mono" id="url-local">http://localhost:5055</span>
+                <button class="copy-btn" data-url="http://localhost:5055">Copy</button>
+              </div>
+              <div class="url-row">
+                <span class="url-label">Loopback</span>
+                <span class="url-link mono" id="url-loop">http://127.0.0.1:5055</span>
+                <button class="copy-btn" data-url="http://127.0.0.1:5055">Copy</button>
+              </div>
+              <div class="url-row">
+                <span class="url-label">IPv4 (LAN)</span>
+                <span class="url-link mono" id="url-ipv4">—</span>
+                <button class="copy-btn" id="copy-ipv4">Copy</button>
+              </div>
+            </div>
+            <p class="hint">Open any browser manually and navigate to a URL above.<br>Smartphones &amp; tablets on the same WiFi use the IPv4 URL.</p>
+          </div>
+        </div>
+
+        <!-- Right: Console Log Feed -->
+        <div class="panel-right">
+          <div class="console">
+            <div class="console-header">
+              <span>Console Log Stream</span>
+              <button class="sm-btn" id="btn-clear">Clear Log</button>
+            </div>
+            <div class="console-body" id="console-body"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: DATABASE PROVIDER -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-database">
+      <div class="form-container">
+        <h2 class="section-title">Database Provider Configuration</h2>
+        <p class="section-desc">Select and configure your local database provider. Credentials are stored securely locally.</p>
+
+        <form id="form-database" class="config-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="db-type">Database Engine</label>
+              <select id="db-type" class="form-control">
+                <option value="mongodb">MongoDB (Default)</option>
+                <option value="mysql">MySQL</option>
+                <option value="postgres">PostgreSQL</option>
+                <option value="mssql">Microsoft SQL Server</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="db-host">Host Address</label>
+              <input type="text" id="db-host" class="form-control" value="127.0.0.1" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="db-port">Port</label>
+              <input type="number" id="db-port" class="form-control" value="27017" required>
+            </div>
+            <div class="form-group">
+              <label for="db-name">Database Name</label>
+              <input type="text" id="db-name" class="form-control" value="restaurant_new" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="db-user">Username (Optional)</label>
+              <input type="text" id="db-user" class="form-control" placeholder="db_user">
+            </div>
+            <div class="form-group">
+              <label for="db-pass">Password (Optional)</label>
+              <input type="password" id="db-pass" class="form-control" placeholder="••••••••">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-test-db">Test Connection</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-db">Save Configuration</button>
+          </div>
+        </form>
+
+        <div id="db-test-result" class="test-result-box"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: LICENSE MANAGER -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-license">
+      <div class="form-container">
+        <h2 class="section-title">Enterprise License Manager</h2>
+        <p class="section-desc">Hardware fingerprinting &amp; RSA 2048-bit digital signature verification.</p>
+
+        <div class="license-grid">
+          <div class="lic-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="lic-label">Device Fingerprint</span>
+              <button class="copy-btn" id="btn-copy-device-id">Copy</button>
+            </div>
+            <span class="lic-val mono" id="lic-device-id">—</span>
+          </div>
+
+          <div class="lic-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="lic-label">Machine GUID</span>
+              <button class="copy-btn" id="btn-copy-guid">Copy</button>
+            </div>
+            <span class="lic-val mono" id="lic-guid">—</span>
+          </div>
+
+          <div class="lic-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="lic-label">MAC Address</span>
+              <button class="copy-btn" id="btn-copy-mac">Copy</button>
+            </div>
+            <span class="lic-val mono" id="lic-mac">—</span>
+          </div>
+
+          <div class="lic-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="lic-label">Computer Name</span>
+              <button class="copy-btn" id="btn-copy-hostname">Copy</button>
+            </div>
+            <span class="lic-val mono" id="lic-hostname">—</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">Product ID</span>
+            <span class="lic-val highlight" id="lic-product">RESTOBOARD</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">Hotel Name</span>
+            <span class="lic-val" id="lic-hotel">—</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">Customer ID / Hotel ID</span>
+            <span class="lic-val mono" id="lic-cust-hotel">—</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">License ID</span>
+            <span class="lic-val mono" id="lic-id">—</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">Days Remaining</span>
+            <span class="lic-val highlight" id="lic-days">—</span>
+          </div>
+
+          <div class="lic-card">
+            <span class="lic-label">Expiry Date</span>
+            <span class="lic-val" id="lic-expiry">—</span>
+          </div>
+        </div>
+
+        <div class="lic-status-bar" id="lic-status-bar">
+          <span class="lic-status-title">Digital Signature Status:</span>
+          <span class="lic-status-desc" id="lic-sig-desc">Checking digital signature...</span>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="btn-copy-all-device-info">📋 Copy All Device Details</button>
+          <button type="button" class="btn btn-secondary" id="btn-export-request">📥 Export Device Request File</button>
+          <button type="button" class="btn btn-secondary" id="btn-import-license">🔑 Import License File (.json)</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
